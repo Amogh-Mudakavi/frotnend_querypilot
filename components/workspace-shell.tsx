@@ -1,33 +1,24 @@
 'use client'
 
 import Link from 'next/link'
-
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react'
-
 import {
   BookOpen,
-  ChevronDown,
   FileText,
+  FolderKanban,
+  Home,
   LogOut,
   Menu,
+  PanelLeftClose,
+  PanelLeftOpen,
   Plus,
   Search,
   Settings,
-  Trash2,
-  Upload,
   X,
+  Upload,
 } from 'lucide-react'
-
-import {
-  usePathname,
-  useRouter,
-} from 'next/navigation'
+import { PixelDissolveButton } from '@/components/pixel-dissolve-button'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import {
   authApi,
@@ -40,117 +31,39 @@ import {
   type Workspace,
 } from '@/lib/django-api'
 
-const ACTIVE_WORKSPACE_KEY =
-  'querypilot_active_workspace_id'
+const ACTIVE_WORKSPACE_KEY = 'querypilot_active_workspace_id'
+const ONBOARDING_PREFIX = 'querypilot_source_onboarding_seen_'
 
-const ONBOARDING_PREFIX =
-  'querypilot_source_onboarding_seen_'
+// Polling backoff for in-progress document processing: starts fast so the
+// UI feels responsive right after upload, then backs off so a
+// long-running ingestion job doesn't hammer the API forever. Capped both
+// in interval length and in total wall-clock time.
+const POLL_INTERVALS_MS = [1500, 1500, 3000, 3000, 6000, 10000, 15000]
+const POLL_MAX_DURATION_MS = 10 * 60 * 1000 // give up auto-refreshing after 10 minutes
 
-function message(
-  error: unknown,
-) {
-  return error instanceof Error
-    ? error.message
-    : 'Something went wrong. Please try again.'
+function message(error: unknown) {
+  return error instanceof Error ? error.message : 'Something went wrong. Please try again.'
 }
 
-function groupConversations(
-  items: Conversation[],
-) {
-  const now =
-    Date.now()
-
-  const day =
-    86_400_000
-
+function groupConversations(items: Conversation[]) {
+  const now = Date.now()
+  const day = 86_400_000
   const groups = [
-    {
-      label: 'Today',
-      items: [] as Conversation[],
-    },
-    {
-      label: 'Yesterday',
-      items: [] as Conversation[],
-    },
-    {
-      label: 'Previous 7 days',
-      items: [] as Conversation[],
-    },
-    {
-      label: 'Older',
-      items: [] as Conversation[],
-    },
+    { label: 'Today', items: [] as Conversation[] },
+    { label: 'Yesterday', items: [] as Conversation[] },
+    { label: 'Previous 7 Days', items: [] as Conversation[] },
+    { label: 'Older', items: [] as Conversation[] },
   ]
 
-  for (
-    const item of items
-  ) {
-    const age =
-      now -
-      new Date(
-        item.updated_at,
-      ).getTime()
-
-    if (age < day) {
-      groups[0].items.push(
-        item,
-      )
-    } else if (
-      age <
-      day * 2
-    ) {
-      groups[1].items.push(
-        item,
-      )
-    } else if (
-      age <
-      day * 7
-    ) {
-      groups[2].items.push(
-        item,
-      )
-    } else {
-      groups[3].items.push(
-        item,
-      )
-    }
+  for (const item of items) {
+    const age = now - new Date(item.updated_at).getTime()
+    if (age < day) groups[0].items.push(item)
+    else if (age < day * 2) groups[1].items.push(item)
+    else if (age < day * 7) groups[2].items.push(item)
+    else groups[3].items.push(item)
   }
 
-  return groups.filter(
-    (group) =>
-      group.items.length >
-      0,
-  )
-}
-
-function statusLabel(
-  status: Document['status'],
-) {
-  switch (status) {
-    case 'ready':
-      return 'Ready'
-
-    case 'processing':
-      return 'Processing'
-
-    case 'pending':
-      return 'Pending'
-
-    case 'failed':
-      return 'Failed'
-
-    default:
-      return status
-  }
-}
-
-function sourceTypeLabel(
-  sourceType: string,
-) {
-  return (
-    sourceType?.toUpperCase() ||
-    'FILE'
-  )
+  return groups.filter((group) => group.items.length > 0)
 }
 
 function SourceModal({
@@ -164,28 +77,11 @@ function SourceModal({
   onClose: () => void
   onUploaded: () => Promise<void>
 }) {
-  const [
-    file,
-    setFile,
-  ] = useState<File | null>(
-    null,
-  )
-
-  const [
-    uploading,
-    setUploading,
-  ] = useState(false)
-
-  const [
-    error,
-    setError,
-  ] = useState('')
-
-  const [
-    notice,
-    setNotice,
-  ] = useState('')
-
+  const [file, setFile] = useState<File | null>(null)
+  const [uploading, setUploading] = useState(false)
+  const [error, setError] = useState('')
+  const [notice, setNotice] = useState('')
+  const [dragActive, setDragActive] = useState(false)
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
@@ -193,183 +89,225 @@ function SourceModal({
       setFile(null)
       setError('')
       setNotice('')
+      setDragActive(false)
     }
   }, [open])
 
-  useEffect(() => {
-    return () => {
-      if (closeTimerRef.current) clearTimeout(closeTimerRef.current)
-    }
+  useEffect(() => () => {
+    if (closeTimerRef.current) clearTimeout(closeTimerRef.current)
   }, [])
 
-  if (!open) {
-    return null
+  if (!open) return null
+
+  const upload = async () => {
+    if (!file) {
+      setError('Choose a file first.')
+      return
+    }
+    setUploading(true)
+    setError('')
+    setNotice('')
+    try {
+      const result = await documentApi.upload(workspaceId, file)
+      setNotice(result.duplicate ? 'This source already exists in this workspace.' : 'Source uploaded. Processing has started.')
+      setFile(null)
+      await onUploaded()
+      if (!result.duplicate) closeTimerRef.current = setTimeout(onClose, 550)
+    } catch (err) {
+      setError(message(err))
+    } finally {
+      setUploading(false)
+    }
   }
 
-  const upload =
-    async () => {
-      if (!file) {
-        setError(
-          'Choose a file first.',
-        )
-
-        return
-      }
-
-      setUploading(true)
-      setError('')
-      setNotice('')
-
-      try {
-        const result =
-          await documentApi.upload(
-            workspaceId,
-            file,
-          )
-
-        setNotice(
-          result.duplicate
-            ? 'This source already exists in the notebook.'
-            : 'Source uploaded. Processing has started.',
-        )
-
-        setFile(null)
-
-        await onUploaded()
-
-        if (!result.duplicate) {
-          closeTimerRef.current = setTimeout(
-            onClose,
-            550,
-          )
-        }
-      } catch (err) {
-        setError(
-          message(err),
-        )
-      } finally {
-        setUploading(false)
-      }
-    }
-
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/65 p-5">
-      <div className="w-full max-w-3xl rounded-2xl border border-border bg-background p-6 shadow-2xl md:p-8">
-        <div className="flex items-start justify-between gap-5">
+    <div className="fixed inset-0 z-[60] grid place-items-center bg-black/75 p-5 backdrop-blur-md">
+      <div className="w-full max-w-2xl overflow-hidden rounded-[24px] border border-white/[0.09] bg-[#0a0f11] shadow-[0_30px_100px_rgba(0,0,0,0.55)]">
+        <div className="flex items-start justify-between gap-5 border-b border-white/[0.07] px-7 py-6 md:px-8 md:py-7">
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-600">
-              Add sources
-            </p>
-
-            <h2 className="mt-2 text-2xl font-medium tracking-[-0.03em]">
-              Add sources to your notebook
-            </h2>
-
-            <p className="mt-2 text-sm leading-6 text-muted-foreground">
-              Every conversation in this workspace will be able to use these sources.
-            </p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary/90">Add sources</p>
+            <h2 className="mt-2.5 text-[28px] font-medium tracking-[-0.04em] text-foreground">Add sources to your workspace</h2>
+            <p className="mt-2 max-w-xl text-[13px] leading-6 text-muted-foreground">Every conversation in this workspace will be able to use these sources.</p>
           </div>
-
-          <button
-            type="button"
-            aria-label="Close source dialog"
-            onClick={onClose}
-            className="grid size-9 place-items-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"
-          >
-            <X size={18} />
-          </button>
+          <button type="button" aria-label="Close source dialog" onClick={onClose} className="grid size-10 shrink-0 place-items-center rounded-xl border border-white/[0.06] bg-white/[0.02] text-muted-foreground transition-all duration-200 hover:border-white/[0.1] hover:bg-white/[0.05] hover:text-foreground"><X size={18} /></button>
         </div>
 
-        <div className="mt-7 rounded-2xl border border-dashed border-border bg-muted/20 px-5 py-12 text-center">
-          <Upload
-            size={24}
-            className="mx-auto text-muted-foreground"
+        <div className="px-6 pb-6 pt-5 md:px-8 md:pb-8">
+          <div
+            className={`rounded-[22px] border border-dashed px-6 py-12 text-center transition-all duration-300 ${dragActive ? 'border-primary/70 bg-primary/[0.055] shadow-[inset_0_0_0_1px_rgba(13,148,136,0.12)]' : 'border-white/[0.10] bg-white/[0.018] hover:border-white/[0.16] hover:bg-white/[0.025]'}`}
+            onDragEnter={(event) => { event.preventDefault(); setDragActive(true) }}
+            onDragOver={(event) => { event.preventDefault(); setDragActive(true) }}
+            onDragLeave={() => setDragActive(false)}
+            onDrop={(event) => { event.preventDefault(); setDragActive(false); setError(''); setNotice(''); setFile(event.dataTransfer.files?.[0] ?? null) }}
+          >
+            <div className="mx-auto grid size-14 place-items-center rounded-2xl border border-white/[0.08] bg-white/[0.03] text-primary shadow-[0_12px_35px_rgba(0,0,0,0.18)]">
+              <Upload size={22} />
+            </div>
+            <p className="mt-5 text-[18px] font-medium tracking-[-0.02em] text-foreground">Drop a file here</p>
+            <p className="mt-1.5 text-[12px] leading-5 text-muted-foreground">PDF, DOCX, XLSX, and CSV up to 50 MB.</p>
+            <div className="mt-7 inline-flex">
+              <PixelDissolveButton
+                label={file ? 'CHOOSE ANOTHER FILE' : 'CHOOSE A FILE'}
+                color="#2C5F34"
+                dissolveColor="#004d00"
+                onClick={() => document.getElementById(`querypilot-source-input-${workspaceId}`)?.click()}
+                className="!min-w-0 !min-h-11 !rounded-xl !px-5 !py-0 !text-[11px] !font-medium !tracking-[0.09em]"
+              />
+              <input id={`querypilot-source-input-${workspaceId}`} type="file" className="sr-only" accept=".pdf,.docx,.xlsx,.csv" onChange={(event) => setFile(event.target.files?.[0] ?? null)} />
+            </div>
+            {file && <p className="mx-auto mt-5 max-w-lg truncate text-[12px] text-muted-foreground">Selected: {file.name}</p>}
+            {error && <p className="mx-auto mt-4 max-w-lg text-[12px] text-red-300">{error}</p>}
+            {notice && <p className="mx-auto mt-4 max-w-lg text-[12px] text-emerald-300">{notice}</p>}
+            <div className="mt-6 flex justify-center">
+              <PixelDissolveButton
+                label={uploading ? 'UPLOADING' : 'ADD SELECTED SOURCE'}
+                color={file && !uploading ? '#e8f4f1' : '#1a2023'}
+                dissolveColor={file && !uploading ? '#2C5F34' : '#7b8a8c'}
+                disabled={!file || uploading}
+                onClick={() => void upload()}
+                className="!min-w-0 !min-h-11 !rounded-xl !px-5 !py-0 !text-[11px] !font-medium !tracking-[0.09em] !text-[#08100f] disabled:!text-white/45"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function WorkspaceSidebar({
+  pathname,
+  workspace,
+  user,
+  conversations,
+  search,
+  setSearch,
+  onCreateChat,
+  onBack,
+  onOpenSource,
+  onLogout,
+  loggingOut,
+  onNavigate,
+  onToggleSidebar,
+}: {
+  pathname: string
+  workspace: Workspace | null
+  user: User | null
+  conversations: { label: string; items: Conversation[] }[]
+  search: string
+  setSearch: (value: string) => void
+  onCreateChat: () => void
+  onBack: () => void
+  onOpenSource: () => void
+  onLogout: () => void
+  loggingOut: boolean
+  onNavigate?: () => void
+  onToggleSidebar?: () => void
+}) {
+  const initials = user?.username?.slice(0, 1).toUpperCase() || 'A'
+
+  return (
+    <div className="flex h-full min-h-0 flex-col bg-[#070707] text-foreground">
+      <div className="border-b border-white/[0.07] px-5 pb-5 pt-5">
+        <div className="flex items-center justify-between gap-3">
+          <button type="button" onClick={onBack} className="group flex min-w-0 items-center gap-3 text-left">
+            <span className="truncate text-[19px] font-medium tracking-[-0.04em] text-foreground">QueryPilot</span>
+          </button>
+          {onToggleSidebar && (
+            <button type="button" onClick={onToggleSidebar} aria-label="Hide sidebar" title="Hide sidebar" className="grid size-9 shrink-0 place-items-center rounded-xl border border-transparent text-muted-foreground transition-all duration-200 hover:border-white/[0.07] hover:bg-white/[0.045] hover:text-foreground">
+              <PanelLeftClose size={17} />
+            </button>
+          )}
+        </div>
+
+        <div className="mt-5 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-3.5 shadow-[0_14px_40px_rgba(0,0,0,0.16)]">
+          <div className="flex items-center gap-3.5">
+            <span className="grid size-10 shrink-0 place-items-center rounded-xl border border-white/[0.08] bg-white/[0.025] text-foreground/70">
+              <BookOpen size={17} />
+            </span>
+            <div className="min-w-0">
+              <p className="truncate text-[13px] font-medium tracking-[-0.01em] text-foreground">{workspace?.title || 'Workspace'}</p>
+              <p className="mt-1 text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Current workspace</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-3">
+          <PixelDissolveButton
+            label="NEW CHAT"
+            color="#29333a"
+            dissolveColor="#00131d4b"
+            onClick={onCreateChat}
+            className="w-full !min-h-11 !rounded-xl !px-5 !py-0 !text-[10px] !font-medium !tracking-[0.1em] !text-white"
           />
+        </div>
 
-          <p className="mt-4 text-lg font-medium">
-            Drop your files here
-          </p>
+        <label className="mt-3 flex h-11 items-center gap-2.5 rounded-xl border border-white/[0.08] bg-[#0a1012]/90 px-3.5 text-[12px] text-muted-foreground transition-all duration-200 focus-within:border-white/[0.16] focus-within:bg-[#0d0e0f] focus-within:shadow-[0_0_0_4px_rgba(255,255,255,0.025)]">
+          <Search size={15} />
+          <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search chats" aria-label="Search chats" className="min-w-0 flex-1 bg-transparent outline-none placeholder:text-muted-foreground/80" />
+          <kbd className="rounded-lg border border-white/[0.08] bg-white/[0.02] px-2 py-1 text-[9px] font-medium text-muted-foreground">\u2318 K</kbd>
+        </label>
 
-          <p className="mt-1 text-xs text-muted-foreground">
-            PDF, DOCX, XLSX, and CSV up to 50 MB.
-          </p>
+        <nav className="mt-4 grid gap-1" aria-label="Primary navigation">
+          <button type="button" onClick={onBack} className="flex h-11 items-center gap-3 rounded-xl px-3.5 text-left text-[13px] font-medium text-foreground/70 transition-all duration-200 hover:bg-white/[0.045] hover:text-foreground"><Home size={16} /> Home</button>
+          <button type="button" onClick={onOpenSource} className="flex h-11 items-center gap-3 rounded-xl px-3.5 text-left text-[13px] font-medium text-foreground/70 transition-all duration-200 hover:bg-white/[0.045] hover:text-foreground"><FileText size={16} /> Documents</button>
+          <button type="button" onClick={onBack} className="flex h-11 items-center gap-3 rounded-xl px-3.5 text-left text-[13px] font-medium text-foreground/70 transition-all duration-200 hover:bg-white/[0.045] hover:text-foreground"><FolderKanban size={16} /> Workspaces</button>
+        </nav>
+      </div>
 
-          <div className="mt-7 flex flex-wrap justify-center gap-3">
-            <label className="cursor-pointer rounded-full bg-foreground px-5 py-2.5 text-sm font-medium text-background transition hover:bg-foreground/90">
-              <Upload
-                size={15}
-                className="mr-2 inline"
-              />
-
-              {file
-                ? 'Choose another file'
-                : 'Upload files'}
-
-              <input
-                type="file"
-                className="sr-only"
-                accept=".pdf,.docx,.xlsx,.csv"
-                onChange={(event) =>
-                  setFile(
-                    event.target.files?.[0] ??
-                      null,
-                  )
-                }
-              />
-            </label>
-
-            <button
-              type="button"
-              disabled
-              className="rounded-full border border-border px-5 py-2.5 text-sm text-muted-foreground opacity-60"
-            >
-              Websites
-            </button>
-
-            <button
-              type="button"
-              disabled
-              className="rounded-full border border-border px-5 py-2.5 text-sm text-muted-foreground opacity-60"
-            >
-              Copied text
-            </button>
+      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,0.10)_transparent]">
+        <div className="flex items-center justify-between px-2.5">
+          <div>
+            <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Conversations</span>
+            <span className="ml-2 text-[10px] text-muted-foreground/50">{conversations.reduce((count, group) => count + group.items.length, 0)}</span>
           </div>
+          <button type="button" onClick={onCreateChat} aria-label="New chat" className="grid size-7 place-items-center rounded-lg text-muted-foreground transition-all duration-200 hover:bg-white/[0.045] hover:text-foreground"><Plus size={14} /></button>
+        </div>
 
-          {file && (
-            <p className="mx-auto mt-5 max-w-lg truncate text-xs text-muted-foreground">
-              Selected: {file.name}
-            </p>
-          )}
-
-          {error && (
-            <p className="mx-auto mt-4 max-w-lg rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
-              {error}
-            </p>
-          )}
-
-          {notice && (
-            <p className="mx-auto mt-4 max-w-lg rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
-              {notice}
-            </p>
-          )}
-
-          <div className="mt-6 flex justify-center">
-            <button
-              type="button"
-              onClick={() =>
-                void upload()
-              }
-              disabled={
-                !file ||
-                uploading
-              }
-              className="rounded-full border border-border px-5 py-2.5 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              {uploading
-                ? 'Uploading…'
-                : 'Add selected source'}
-            </button>
+        {conversations.length === 0 ? (
+          <div className="px-3 pt-10 text-center">
+            <div className="mx-auto grid size-10 place-items-center rounded-xl border border-white/[0.07] bg-white/[0.02] text-muted-foreground"><Plus size={16} /></div>
+            <p className="mt-4 text-[12px] font-medium text-foreground/75">No conversations yet.</p>
+            <p className="mt-2 text-[11px] leading-5 text-muted-foreground">Start a new chat to explore your documents.</p>
           </div>
+        ) : (
+          <div className="mt-4 space-y-6">
+            {conversations.map((group) => (
+              <section key={group.label}>
+                <p className="px-2.5 text-[9px] font-semibold uppercase tracking-[0.2em] text-muted-foreground/70">{group.label}</p>
+                <div className="mt-2 space-y-1">
+                  {group.items.map((conversation) => {
+                    const href = `/workspaces/${workspace?.id}/chat/${conversation.id}`
+                    const active = pathname === href
+                    return (
+                      <Link key={conversation.id} href={href} onClick={onNavigate} className={`group relative block rounded-xl px-3 py-2.5 text-[12px] leading-5 transition-all duration-200 ${active ? 'bg-white/[0.06] text-foreground shadow-[inset_0_0_0_1px_rgba(255,255,255,0.045)]' : 'text-foreground/62 hover:bg-white/[0.035] hover:text-foreground'}`}>
+                        {active && <span className="absolute inset-y-2 left-0 w-0.5 rounded-full bg-white/70" />}
+                        <p className="truncate pr-2 font-medium tracking-[-0.005em]">{conversation.title || 'New Chat'}</p>
+                      </Link>
+                    )
+                  })}
+                </div>
+              </section>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="border-t border-white/[0.07] p-4">
+        <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-3 shadow-[0_10px_30px_rgba(0,0,0,0.16)]">
+          <div className="flex items-center gap-3">
+            <div className="grid size-10 shrink-0 place-items-center rounded-full border border-white/[0.08] bg-[#202224] text-[12px] font-medium text-foreground">{initials}</div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[12px] font-medium">{user?.username || 'Account'}</p>
+              <p className="mt-0.5 truncate text-[10px] text-muted-foreground">{user?.email || ''}</p>
+            </div>
+            <Link href="/settings" onClick={onNavigate} aria-label="Settings" className="grid size-8 place-items-center rounded-lg text-muted-foreground transition-all duration-200 hover:bg-white/[0.045] hover:text-foreground"><Settings size={15} /></Link>
+          </div>
+        </div>
+
+        <div className="mt-2 grid grid-cols-2 gap-1.5">
+          <Link href="/settings" onClick={onNavigate} className="flex h-10 items-center gap-2.5 rounded-xl px-3 text-[11px] font-medium text-foreground/60 transition-all duration-200 hover:bg-white/[0.035] hover:text-foreground"><Settings size={14} /> Settings</Link>
+          <button type="button" onClick={onLogout} disabled={loggingOut} className="flex h-10 items-center gap-2.5 rounded-xl px-3 text-[11px] font-medium text-foreground/60 transition-all duration-200 hover:bg-white/[0.035] hover:text-foreground disabled:opacity-40"><LogOut size={14} /> {loggingOut ? 'Signing out' : 'Sign out'}</button>
         </div>
       </div>
     </div>
@@ -383,1000 +321,241 @@ export function WorkspaceShell({
   workspaceId: number
   children: React.ReactNode
 }) {
-  const router =
-    useRouter()
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const [workspace, setWorkspace] = useState<Workspace | null>(null)
+  const [user, setUser] = useState<User | null>(null)
+  const [documents, setDocuments] = useState<Document[]>([])
+  const [conversations, setConversations] = useState<Conversation[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [sourceModalOpen, setSourceModalOpen] = useState(false)
+  const [mobileOpen, setMobileOpen] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [search, setSearch] = useState('')
+  const [loggingOut, setLoggingOut] = useState(false)
 
-  const pathname =
-    usePathname()
+  const onboardingKey = `${ONBOARDING_PREFIX}${workspaceId}`
+  const pollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const pollInFlightRef = useRef(false)
+  const pollStartedAtRef = useRef<number | null>(null)
 
-  const [
-    workspace,
-    setWorkspace,
-  ] = useState<Workspace | null>(
-    null,
-  )
-
-  const [
-    user,
-    setUser,
-  ] = useState<User | null>(
-    null,
-  )
-
-  const [
-    documents,
-    setDocuments,
-  ] = useState<Document[]>(
-    [],
-  )
-
-  const [
-    conversations,
-    setConversations,
-  ] = useState<Conversation[]>(
-    [],
-  )
-
-  const [
-    loading,
-    setLoading,
-  ] = useState(true)
-
-  const [
-    error,
-    setError,
-  ] = useState('')
-
-  const [
-    sourceModalOpen,
-    setSourceModalOpen,
-  ] = useState(false)
-
-  const [
-    mobileOpen,
-    setMobileOpen,
-  ] = useState(false)
-
-  const [
-    search,
-    setSearch,
-  ] = useState('')
-
-  const [
-    loggingOut,
-    setLoggingOut,
-  ] = useState(false)
-
-  const [activeConversationId, setActiveConversationId] =
-    useState<number | null>(null)
-
-  const onboardingKey =
-    `${ONBOARDING_PREFIX}${workspaceId}`
-
-  const load =
-    useCallback(
-      async () => {
-        setLoading(true)
-        setError('')
-
-        try {
-          const [
-            workspaces,
-            docs,
-            chats,
-            me,
-          ] =
-            await Promise.all([
-              workspaceApi.list(),
-              documentApi.list(
-                workspaceId,
-              ),
-              chatApi.conversations(
-                workspaceId,
-              ),
-              authApi.me(),
-            ])
-
-          const found =
-            workspaces.find(
-              (item) =>
-                item.id ===
-                workspaceId,
-            ) ??
-            null
-
-          if (!found) {
-            router.replace('/workspaces')
-            return
-          }
-
-          setWorkspace(found)
-          setDocuments(docs)
-          setConversations(chats)
-          setUser(me)
-
-          sessionStorage.setItem(
-            ACTIVE_WORKSPACE_KEY,
-            String(workspaceId),
-          )
-        } catch (err) {
-          const apiError =
-            err as {
-              status?: number
-            }
-
-          if (
-            apiError.status ===
-              401 ||
-            apiError.status ===
-              403
-          ) {
-            authApi.clearTokens()
-            router.replace(
-              '/login',
-            )
-
-            return
-          }
-
-          setError(
-            message(err),
-          )
-        } finally {
-          setLoading(false)
-        }
-      },
-      [
-        router,
-        workspaceId,
-      ],
-    )
-
-  useEffect(() => {
-    void load()
-  }, [load])
-
-  useEffect(() => {
-    const match = pathname.match(/\/chat\/(\d+)(?:\/|$)/)
-    setActiveConversationId(match ? Number(match[1]) : null)
-  }, [pathname])
-
-  useEffect(() => {
-    const handleConversationChanged = (
-      event: Event,
-    ) => {
-      const custom =
-        event as CustomEvent<{
-          conversationId?: number
-          title?: string
-          conversation?: Conversation
-        }>
-
-      const detail =
-        custom.detail
-
-      if (
-        detail?.conversation &&
-        detail.conversation.workspace === workspaceId
-      ) {
-        setActiveConversationId(detail.conversation.id)
-        setConversations(
-          (current) => [
-            detail.conversation!,
-            ...current.filter(
-              (item) =>
-                item.id !==
-                detail
-                  .conversation!
-                  .id,
-            ),
-          ],
-        )
-
+  const load = useCallback(async () => {
+    setLoading(true)
+    setError('')
+    try {
+      const [workspaces, docs, chats, me] = await Promise.all([
+        workspaceApi.list(),
+        documentApi.list(workspaceId),
+        chatApi.conversations(workspaceId),
+        authApi.me(),
+      ])
+      const found = workspaces.find((item) => item.id === workspaceId) ?? null
+      if (!found) {
+        router.replace('/workspaces')
         return
       }
+      setWorkspace(found)
+      setDocuments(docs)
+      setConversations(chats)
+      setUser(me)
+      sessionStorage.setItem(ACTIVE_WORKSPACE_KEY, String(workspaceId))
+    } catch (err) {
+      const apiError = err as { status?: number }
+      if (apiError.status === 401 || apiError.status === 403) {
+        authApi.clearTokens()
+        router.replace('/login')
+        return
+      }
+      setError(message(err))
+    } finally {
+      setLoading(false)
+    }
+  }, [router, workspaceId])
 
-      if (
-        typeof detail?.conversationId ===
-          'number' &&
-        typeof detail.title ===
-          'string'
-      ) {
-        setActiveConversationId(detail.conversationId)
-        setConversations(
-          (current) => {
-            const updated =
-              current.map(
-                (item) =>
-                  item.id ===
-                  detail.conversationId
-                    ? {
-                        ...item,
-                        title:
-                          detail.title!,
-                        updated_at:
-                          new Date().toISOString(),
-                      }
-                    : item,
-              )
+  useEffect(() => { void load() }, [load])
 
-            return updated.sort(
-              (
-                a,
-                b,
-              ) =>
-                new Date(
-                  b.updated_at,
-                ).getTime() -
-                new Date(
-                  a.updated_at,
-                ).getTime(),
-            )
-          },
-        )
+  useEffect(() => {
+    const handleConversationChanged = (event: Event) => {
+      const custom = event as CustomEvent<{ conversationId?: number; title?: string; updatedAt?: string; conversation?: Conversation }>
+      const detail = custom.detail
+      if (detail?.conversation && detail.conversation.workspace === workspaceId) {
+        setConversations((current) => [detail.conversation!, ...current.filter((item) => item.id !== detail.conversation!.id)])
+        return
+      }
+      if (typeof detail?.conversationId === 'number' && (typeof detail.title === 'string' || typeof detail.updatedAt === 'string')) {
+        setConversations((current) => current.map((item) => item.id === detail.conversationId ? { ...item, ...(typeof detail.title === 'string' ? { title: detail.title } : {}), updated_at: detail.updatedAt ?? new Date().toISOString() } : item).sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()))
       }
     }
-
-    const handleDocumentsChanged =
-      () => {
-        void documentApi
-          .list(
-            workspaceId,
-          )
-          .then(
-            setDocuments,
-          )
-          .catch(
-            () => {},
-          )
-      }
-
-    window.addEventListener(
-      'querypilot:conversation-changed',
-      handleConversationChanged,
-    )
-
-    window.addEventListener(
-      'querypilot:workspace-documents-changed',
-      handleDocumentsChanged,
-    )
-
+    const handleDocumentsChanged = () => {
+      documentApi.list(workspaceId)
+        .then(setDocuments)
+        .catch((err) => setError(message(err)))
+    }
+    window.addEventListener('querypilot:conversation-changed', handleConversationChanged)
+    window.addEventListener('querypilot:workspace-documents-changed', handleDocumentsChanged)
     return () => {
-      window.removeEventListener(
-        'querypilot:conversation-changed',
-        handleConversationChanged,
-      )
-
-      window.removeEventListener(
-        'querypilot:workspace-documents-changed',
-        handleDocumentsChanged,
-      )
+      window.removeEventListener('querypilot:conversation-changed', handleConversationChanged)
+      window.removeEventListener('querypilot:workspace-documents-changed', handleDocumentsChanged)
     }
   }, [workspaceId])
 
+  // Poll document status while anything is still processing, with backoff
+  // and a hard time cap so a stuck ingestion job doesn't poll forever.
+  // Guards against overlapping requests (pollInFlightRef) instead of
+  // firing a fresh request every tick regardless of whether the last one
+  // finished.
   useEffect(() => {
-    if (loading) {
+    const hasPending = documents.some((document) => document.status === 'pending' || document.status === 'processing')
+
+    if (!hasPending) {
+      if (pollTimeoutRef.current) clearTimeout(pollTimeoutRef.current)
+      pollTimeoutRef.current = null
+      pollStartedAtRef.current = null
       return
     }
 
-    const seen =
-      localStorage.getItem(
-        onboardingKey,
-      ) === '1'
+    if (pollStartedAtRef.current === null) pollStartedAtRef.current = Date.now()
+    let cancelled = false
+    let attempt = 0
 
-    const isNewWorkspace =
-      window.location.search.includes(
-        'new=1',
-      )
-
-    if (
-      !seen &&
-      isNewWorkspace
-    ) {
-      setSourceModalOpen(
-        true,
-      )
-    }
-  }, [
-    loading,
-    onboardingKey,
-  ])
-
-  const finishOnboarding =
-    () => {
-      localStorage.setItem(
-        onboardingKey,
-        '1',
-      )
-
-      setSourceModalOpen(
-        false,
-      )
-    }
-
-  const createChat =
-    () => {
-      const draftPath =
-        `/workspaces/${workspaceId}/chat`
-
-      // Already sitting on the draft route — re-navigating to the exact
-      // same URL is a no-op as far as Next.js routing is concerned (same
-      // page, same params), so it wouldn't reset any state on its own.
-      // Tell the current draft to reset itself instead. ChatView's
-      // "querypilot:new-chat-requested" handler now does a full state
-      // reset (see querypilot.tsx), not just clearing the composer.
-      if (pathname === draftPath) {
-        window.dispatchEvent(
-          new CustomEvent(
-            'querypilot:new-chat-requested',
-          ),
-        )
-
-        setMobileOpen(false)
+    const scheduleNext = () => {
+      if (cancelled) return
+      const elapsed = Date.now() - (pollStartedAtRef.current ?? Date.now())
+      if (elapsed > POLL_MAX_DURATION_MS) {
+        setError('Document processing is taking longer than expected. Refresh the page to check the latest status.')
         return
       }
-
-      router.push(draftPath)
-
-      setMobileOpen(false)
+      const interval = POLL_INTERVALS_MS[Math.min(attempt, POLL_INTERVALS_MS.length - 1)]
+      pollTimeoutRef.current = setTimeout(runPoll, interval)
     }
 
-  const filteredConversations =
-    useMemo(() => {
-      const normalized =
-        search
-          .trim()
-          .toLowerCase()
-
-      if (!normalized) {
-        return conversations
+    const runPoll = async () => {
+      if (cancelled || pollInFlightRef.current) {
+        scheduleNext()
+        return
       }
-
-      return conversations.filter(
-        (item) =>
-          item.title
-            .toLowerCase()
-            .includes(
-              normalized,
-            ),
-      )
-    }, [
-      conversations,
-      search,
-    ])
-
-  const grouped =
-    groupConversations(
-      filteredConversations,
-    )
-
-  const deleteDocument =
-    async (
-      id: number,
-    ) => {
+      pollInFlightRef.current = true
       try {
-        await documentApi.remove(
-          id,
-        )
-
-        setDocuments(
-          (current) =>
-            current.filter(
-              (item) =>
-                item.id !== id,
-            ),
-        )
+        const latest = await documentApi.list(workspaceId)
+        if (!cancelled) setDocuments(latest)
       } catch (err) {
-        setError(
-          message(err),
-        )
-      }
-    }
-
-  const logout =
-    async () => {
-      setLoggingOut(true)
-
-      try {
-        await authApi.logout()
-      } catch {
+        if (!cancelled) setError(message(err))
       } finally {
-        router.replace(
-          '/login',
-        )
+        pollInFlightRef.current = false
+        attempt += 1
+        if (!cancelled) scheduleNext()
       }
     }
 
-  if (loading) {
-    return (
-      <div className="grid min-h-screen place-items-center bg-background text-sm text-muted-foreground">
-        Loading workspace…
-      </div>
-    )
+    scheduleNext()
+
+    return () => {
+      cancelled = true
+      if (pollTimeoutRef.current) clearTimeout(pollTimeoutRef.current)
+      pollTimeoutRef.current = null
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }
+  }, [documents, workspaceId])
+
+  // App Router: window.location.search doesn't update reactively across
+  // client-side navigations. useSearchParams() is the supported way to
+  // read the query string here.
+  useEffect(() => {
+    if (loading) return
+    const seen = localStorage.getItem(onboardingKey) === '1'
+    if (!seen && searchParams.get('new') === '1') setSourceModalOpen(true)
+  }, [loading, onboardingKey, searchParams])
+
+  const finishOnboarding = () => {
+    localStorage.setItem(onboardingKey, '1')
+    setSourceModalOpen(false)
   }
 
-  if (loggingOut) {
-    // Blank the protected UI the instant logout starts, rather than only
-    // disabling the sign-out button while the sidebar/workspace stay fully
-    // rendered during the redirect to /login (the "logout flash").
-    return (
-      <div className="grid min-h-screen place-items-center bg-background text-sm text-muted-foreground">
-        Signing out…
-      </div>
-    )
+  const createChat = () => {
+    const draftPath = `/workspaces/${workspaceId}/chat`
+    if (pathname === draftPath) {
+      window.dispatchEvent(new CustomEvent('querypilot:new-chat-requested'))
+      setMobileOpen(false)
+      return
+    }
+    router.push(draftPath)
+    setMobileOpen(false)
   }
+
+  const filteredConversations = useMemo(() => {
+    const normalized = search.trim().toLowerCase()
+    if (!normalized) return conversations
+    return conversations.filter((item) => item.title.toLowerCase().includes(normalized))
+  }, [conversations, search])
+
+  const grouped = groupConversations(filteredConversations)
+
+  const logout = async () => {
+    setLoggingOut(true)
+    try {
+      await authApi.logout()
+    } catch (err) {
+      // Token revocation on the server failed, but we still clear local
+      // state and redirect below — the user's session on this device
+      // ends either way. Surface it so a real backend outage isn't silent.
+      setError(message(err))
+    } finally {
+      router.replace('/login')
+    }
+  }
+
+  if (loading) return <div className="grid min-h-screen place-items-center bg-[#070707] text-sm text-muted-foreground">Loading workspace</div>
+  if (loggingOut) return <div className="grid min-h-screen place-items-center bg-[#070707] text-sm text-muted-foreground">Signing out</div>
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <header className="sticky top-0 z-40 flex h-14 items-center gap-3 border-b border-border bg-background/95 px-4 backdrop-blur lg:px-6">
-        <button
-          type="button"
-          className="grid size-9 place-items-center rounded-lg hover:bg-muted lg:hidden"
-          onClick={() =>
-            setMobileOpen(true)
-          }
-          aria-label="Open workspace navigation"
-        >
-          <Menu size={18} />
-        </button>
-
-        <button
-          type="button"
-          onClick={() =>
-            router.push(
-              '/workspaces',
-            )
-          }
-          className="flex items-center gap-2.5"
-        >
-          <span className="grid size-7 place-items-center rounded-[8px] bg-emerald-500 text-white">
-            <BookOpen size={15} />
-          </span>
-
-          <span className="text-[15px] font-semibold tracking-[-0.02em]">
-            QueryPilot
-          </span>
-        </button>
-
-        <div className="ml-auto flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() =>
-              setSourceModalOpen(
-                true,
-              )
-            }
-            className="hidden items-center gap-2 rounded-lg border border-border px-3 py-2 text-xs font-medium hover:bg-muted sm:flex"
-          >
-            <Plus size={14} />
-            Add source
-          </button>
-
-          <div className="hidden items-center gap-2 rounded-lg px-2 py-1.5 text-xs text-muted-foreground md:flex">
-            <span className="size-2 rounded-full bg-emerald-500" />
-
-            {workspace?.title}
-          </div>
-        </div>
-      </header>
-
-      {error && (
-        <div className="mx-4 mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-xs text-red-700 lg:mx-6">
-          {error}
-        </div>
+    <div className="min-h-screen bg-[#070707] text-foreground">
+      {!sidebarCollapsed && (
+        <aside className="fixed inset-y-0 left-0 z-40 hidden w-[340px] border-r border-white/[0.07] lg:block">
+          <WorkspaceSidebar pathname={pathname} workspace={workspace} user={user} conversations={grouped} search={search} setSearch={setSearch} onCreateChat={createChat} onBack={() => router.push('/workspaces')} onOpenSource={() => setSourceModalOpen(true)} onLogout={() => void logout()} loggingOut={loggingOut} onToggleSidebar={() => setSidebarCollapsed(true)} />
+        </aside>
       )}
-
-      <aside className="fixed inset-y-14 left-0 z-30 hidden w-[290px] border-r border-border bg-background lg:flex lg:flex-col">
-        <WorkspaceSidebar
-          activeConversationId={activeConversationId}
-          workspace={
-            workspace
-          }
-          user={user}
-          conversations={
-            grouped
-          }
-          documents={
-            documents
-          }
-          search={
-            search
-          }
-          setSearch={
-            setSearch
-          }
-          onCreateChat={() =>
-            void createChat()
-          }
-          onBack={() =>
-            router.push(
-              '/workspaces',
-            )
-          }
-          onOpenSource={() =>
-            setSourceModalOpen(
-              true,
-            )
-          }
-          onDeleteDocument={(
-            id,
-          ) =>
-            void deleteDocument(
-              id,
-            )
-          }
-          onLogout={() =>
-            void logout()
-          }
-          loggingOut={
-            loggingOut
-          }
-        />
-      </aside>
 
       {mobileOpen && (
         <div className="fixed inset-0 z-50 lg:hidden">
-          <button
-            type="button"
-            aria-label="Close workspace navigation"
-            onClick={() =>
-              setMobileOpen(false)
-            }
-            className="absolute inset-0 bg-black/30"
-          />
-
-          <aside className="relative z-10 h-full w-[min(88vw,340px)] border-r border-border bg-background shadow-2xl">
-            <div className="absolute right-3 top-3 z-10">
-              <button
-                type="button"
-                onClick={() =>
-                  setMobileOpen(
-                    false,
-                  )
-                }
-                className="grid size-8 place-items-center rounded-lg hover:bg-muted"
-              >
-                <X size={17} />
-              </button>
-            </div>
-
-            <WorkspaceSidebar
-              activeConversationId={activeConversationId}
-              workspace={
-                workspace
-              }
-              user={user}
-              conversations={
-                grouped
-              }
-              documents={
-                documents
-              }
-              search={
-                search
-              }
-              setSearch={
-                setSearch
-              }
-              onCreateChat={() =>
-                void createChat()
-              }
-              onBack={() =>
-                router.push(
-                  '/workspaces',
-                )
-              }
-              onOpenSource={() =>
-                setSourceModalOpen(
-                  true,
-                )
-              }
-              onDeleteDocument={(
-                id,
-              ) =>
-                void deleteDocument(
-                  id,
-                )
-              }
-              onLogout={() =>
-                void logout()
-              }
-              loggingOut={
-                loggingOut
-              }
-              onNavigate={() =>
-                setMobileOpen(
-                  false,
-                )
-              }
-            />
+          <button type="button" aria-label="Close navigation" onClick={() => setMobileOpen(false)} className="absolute inset-0 bg-black/60" />
+          <aside className="relative z-10 h-full w-[min(90vw,380px)] border-r border-white/[0.07] bg-[#070707] shadow-2xl">
+            <button type="button" onClick={() => setMobileOpen(false)} className="absolute right-3 top-3 z-10 grid size-8 place-items-center rounded-lg text-muted-foreground hover:bg-white/[0.04]"><X size={17} /></button>
+            <WorkspaceSidebar pathname={pathname} workspace={workspace} user={user} conversations={grouped} search={search} setSearch={setSearch} onCreateChat={createChat} onBack={() => router.push('/workspaces')} onOpenSource={() => setSourceModalOpen(true)} onLogout={() => void logout()} loggingOut={loggingOut} onNavigate={() => setMobileOpen(false)} />
           </aside>
         </div>
       )}
 
-      <main className="lg:pl-[290px]">
+      <main className={`min-h-screen transition-[padding] duration-200 ${sidebarCollapsed ? "lg:pl-0" : "lg:pl-[340px]"}`}>
+        <header className="sticky top-0 z-30 flex h-16 items-center border-b border-white/[0.06] bg-[#070707]/82 px-4 backdrop-blur-xl lg:px-7">
+          <div className="flex items-center gap-1">
+            {sidebarCollapsed ? (
+              <button type="button" onClick={() => setSidebarCollapsed(false)} aria-label="Show sidebar" title="Show sidebar" className="hidden size-10 place-items-center rounded-xl text-muted-foreground transition-all duration-200 hover:bg-white/[0.045] hover:text-foreground lg:grid">
+                <PanelLeftOpen size={17} />
+              </button>
+            ) : (
+              <button type="button" onClick={() => setSidebarCollapsed(true)} aria-label="Hide sidebar" title="Hide sidebar" className="hidden size-10 place-items-center rounded-xl text-muted-foreground transition-all duration-200 hover:bg-white/[0.045] hover:text-foreground lg:grid">
+                <PanelLeftClose size={17} />
+              </button>
+            )}
+            <button type="button" className="grid size-10 place-items-center rounded-xl text-muted-foreground transition-all duration-200 hover:bg-white/[0.045] hover:text-foreground lg:hidden" onClick={() => setMobileOpen(true)} aria-label="Open navigation">
+              <Menu size={17} />
+            </button>
+          </div>
+          <div className="ml-auto">
+            <PixelDissolveButton label="ADD SOURCE" color="#f1f3f4" dissolveColor="#8b9295" onClick={() => setSourceModalOpen(true)} className="!min-w-0 !min-h-11 !rounded-xl !px-4 !py-0 !text-[10px] !font-medium !tracking-[0.1em] !text-[#08100f]" />
+          </div>
+        </header>
+
+        {error && <div className="mx-4 mt-3 rounded-lg border border-red-400/20 bg-red-400/[0.05] px-3 py-2.5 text-xs text-red-300 lg:mx-6">{error}</div>}
         {children}
       </main>
 
-      <SourceModal
-        workspaceId={
-          workspaceId
-        }
-        open={
-          sourceModalOpen
-        }
-        onClose={
-          finishOnboarding
-        }
-        onUploaded={async () => {
-          await load()
-
-          window.dispatchEvent(
-            new CustomEvent(
-              'querypilot:workspace-documents-changed',
-            ),
-          )
-        }}
-      />
-    </div>
-  )
-}
-
-function WorkspaceSidebar({
-  activeConversationId,
-  workspace,
-  user,
-  conversations,
-  documents,
-  search,
-  setSearch,
-  onCreateChat,
-  onBack,
-  onOpenSource,
-  onDeleteDocument,
-  onLogout,
-  loggingOut,
-  onNavigate,
-}: {
-  activeConversationId: number | null
-  workspace:
-    | Workspace
-    | null
-  user:
-    | User
-    | null
-  conversations: {
-    label: string
-    items: Conversation[]
-  }[]
-  documents: Document[]
-  search: string
-  setSearch: (
-    value: string,
-  ) => void
-  onCreateChat: () => void
-  onBack: () => void
-  onOpenSource: () => void
-  onDeleteDocument: (
-    id: number,
-  ) => void
-  onLogout: () => void
-  loggingOut: boolean
-  onNavigate?: () => void
-}) {
-  return (
-    <div className="flex h-full min-h-0 flex-col">
-      <div className="border-b border-border px-4 pb-4 pt-5">
-        <button
-          type="button"
-          onClick={
-            onBack
-          }
-          className="flex max-w-full items-center gap-2 text-left text-xs text-muted-foreground hover:text-foreground"
-        >
-          <ChevronDown
-            size={14}
-            className="rotate-90"
-          />
-
-          My notebooks
-        </button>
-
-        <div className="mt-4 flex items-center gap-2 rounded-xl border border-border bg-muted/20 px-3 py-2.5">
-          <span className="grid size-8 place-items-center rounded-lg bg-emerald-50 text-emerald-700">
-            <BookOpen size={15} />
-          </span>
-
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-xs font-semibold">
-              {workspace?.title}
-            </p>
-
-            <p className="mt-0.5 text-[10px] text-muted-foreground">
-              Notebook
-            </p>
-          </div>
-        </div>
-
-        <button
-          type="button"
-          onClick={
-            onCreateChat
-          }
-          className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 px-3 py-2.5 text-xs font-semibold text-white shadow-sm hover:bg-emerald-700"
-        >
-          <Plus
-            size={15}
-          />
-
-          New chat
-        </button>
-      </div>
-
-      <div className="min-h-0 flex-1 overflow-y-auto px-3 py-4">
-        <label className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-xs text-muted-foreground focus-within:border-foreground/20">
-          <Search size={14} />
-
-          <input
-            value={
-              search
-            }
-            onChange={(
-              event,
-            ) =>
-              setSearch(
-                event.target.value,
-              )
-            }
-            placeholder="Search chats"
-            className="min-w-0 flex-1 bg-transparent outline-none placeholder:text-muted-foreground"
-          />
-        </label>
-
-        <section className="mt-6">
-          <div className="flex items-center justify-between px-2">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-              Conversations
-            </p>
-
-            <button
-              type="button"
-              onClick={
-                onCreateChat
-              }
-              className="text-[10px] font-medium text-emerald-700 hover:underline"
-            >
-              New
-            </button>
-          </div>
-
-          <div className="mt-3 space-y-5">
-            {conversations.length ===
-            0 ? (
-              <p className="px-2 text-xs leading-5 text-muted-foreground">
-                No conversations yet.
-              </p>
-            ) : (
-              conversations.map(
-                (
-                  group,
-                ) => (
-                  <div
-                    key={
-                      group.label
-                    }
-                  >
-                    <p className="px-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                      {
-                        group.label
-                      }
-                    </p>
-
-                    <div className="mt-1.5 space-y-0.5">
-                      {group.items.map(
-                        (
-                          conversation,
-                        ) => {
-                          const href =
-                            `/workspaces/${workspace?.id}/chat/${conversation.id}`
-
-                          const active =
-                            activeConversationId === conversation.id
-
-                          return (
-                            <Link
-                              key={
-                                conversation.id
-                              }
-                              href={
-                                href
-                              }
-                              prefetch={false}
-                              onClick={
-                                onNavigate
-                              }
-                              className={`relative block rounded-lg px-2.5 py-2.5 pl-3.5 transition ${
-                                active
-                                  ? 'bg-emerald-50 text-emerald-900'
-                                  : 'hover:bg-muted'
-                              }`}
-                            >
-                              {active && (
-                                <span className="absolute inset-y-1.5 left-0 w-[3px] rounded-full bg-emerald-600" />
-                              )}
-
-                              <p className="truncate text-xs font-medium">
-                                {
-                                  conversation.title
-                                }
-                              </p>
-
-                              <p
-                                className={`mt-1 text-[10px] ${
-                                  active
-                                    ? 'text-emerald-700/70'
-                                    : 'text-muted-foreground'
-                                }`}
-                              >
-                                {new Date(
-                                  conversation.updated_at,
-                                ).toLocaleDateString(
-                                  'en-IN',
-                                  {
-                                    day: 'numeric',
-                                    month: 'short',
-                                  },
-                                )}
-                              </p>
-                            </Link>
-                          )
-                        },
-                      )}
-                    </div>
-                  </div>
-                ),
-              )
-            )}
-          </div>
-        </section>
-
-        <section className="mt-7 border-t border-border pt-5">
-          <div className="flex items-center justify-between px-2">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-              Sources
-            </p>
-
-            <button
-              type="button"
-              onClick={
-                onOpenSource
-              }
-              className="text-emerald-700 hover:text-emerald-800"
-              aria-label="Add source"
-            >
-              <Plus size={14} />
-            </button>
-          </div>
-
-          <div className="mt-2 space-y-1">
-            {documents.length ===
-            0 ? (
-              <button
-                type="button"
-                onClick={
-                  onOpenSource
-                }
-                className="w-full rounded-xl border border-dashed border-border px-3 py-5 text-left text-xs text-muted-foreground hover:bg-muted/30"
-              >
-                <p className="font-medium text-foreground">
-                  No sources yet
-                </p>
-
-                <p className="mt-1 leading-5">
-                  Add a file and every chat in this notebook can use it.
-                </p>
-              </button>
-            ) : (
-              documents.map(
-                (
-                  document,
-                ) => (
-                  <div
-                    key={
-                      document.id
-                    }
-                    className="group flex items-center gap-2 rounded-lg px-2.5 py-2 hover:bg-muted"
-                  >
-                    <span className="grid size-7 shrink-0 place-items-center rounded-md bg-muted text-muted-foreground">
-                      <FileText
-                        size={13}
-                      />
-                    </span>
-
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-xs font-medium">
-                        {
-                          document.title
-                        }
-                      </p>
-
-                      <p className="mt-0.5 text-[10px] text-muted-foreground">
-                        {sourceTypeLabel(
-                          document.source_type,
-                        )}{' '}
-                        ·{' '}
-                        {statusLabel(
-                          document.status,
-                        )}
-                      </p>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() =>
-                        onDeleteDocument(
-                          document.id,
-                        )
-                      }
-                      className="grid size-7 place-items-center rounded-md text-muted-foreground opacity-0 hover:bg-muted hover:text-red-600 group-hover:opacity-100"
-                      aria-label={`Delete ${document.title}`}
-                    >
-                      <Trash2
-                        size={13}
-                      />
-                    </button>
-                  </div>
-                ),
-              )
-            )}
-          </div>
-        </section>
-      </div>
-
-      <div className="border-t border-border p-3">
-        <Link
-          href="/settings"
-          onClick={
-            onNavigate
-          }
-          className="flex items-center gap-2 rounded-lg px-2.5 py-2.5 text-xs hover:bg-muted"
-        >
-          <Settings
-            size={14}
-            className="text-muted-foreground"
-          />
-
-          <span className="min-w-0 flex-1 truncate">
-            {
-              user?.username ||
-              'Account'
-            }
-          </span>
-
-          <span className="text-muted-foreground">
-            Settings
-          </span>
-        </Link>
-
-        <button
-          type="button"
-          onClick={
-            onLogout
-          }
-          disabled={
-            loggingOut
-          }
-          className="mt-1 flex w-full items-center gap-2 rounded-lg px-2.5 py-2.5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-40"
-        >
-          <LogOut
-            size={14}
-          />
-
-          {loggingOut
-            ? 'Signing out…'
-            : 'Sign out'}
-        </button>
-      </div>
+      <SourceModal workspaceId={workspaceId} open={sourceModalOpen} onClose={finishOnboarding} onUploaded={async () => {
+        await load()
+        window.dispatchEvent(new CustomEvent('querypilot:workspace-documents-changed'))
+      }} />
     </div>
   )
 }

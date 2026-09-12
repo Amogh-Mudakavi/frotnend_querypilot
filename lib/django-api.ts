@@ -45,10 +45,31 @@ export type Conversation = {
   updated_at: string
 }
 
+export type ThoughtRecord = {
+  event: string
+  message: string
+  status?: 'started' | 'completed' | 'failed' | 'info' | string
+  data?: Record<string, unknown>
+}
+
+export type Citation = {
+  index: number
+  source_index: number
+}
+
+export type MessageMetadata = {
+  sources?: ChatSource[]
+  citations?: Citation[]
+  thoughts?: ThoughtRecord[]
+  grounding_passed?: boolean | null
+  route?: string | null
+}
+
 export type Message = {
   id: number
   role: 'USER' | 'ASSISTANT' | 'SYSTEM' | string
   content: string
+  metadata?: MessageMetadata
   created_at: string
 }
 
@@ -83,6 +104,7 @@ export type DocumentUploadResponse = {
 }
 
 export type ChatSource = {
+  index: number
   document_id: number
   document_name: string
   source_type: string
@@ -98,6 +120,8 @@ export type ChatCompleteData = {
   route?: string
   grounding_passed?: boolean | null
   sources?: ChatSource[]
+  citations?: Citation[]
+  thoughts?: ThoughtRecord[]
   conversation_title?: string
   status?: string
   retry_after_seconds?: number

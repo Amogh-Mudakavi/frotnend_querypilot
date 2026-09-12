@@ -11,8 +11,16 @@ export default async function WorkspaceLayout({
   const id = Number(workspaceId)
 
   if (!Number.isInteger(id) || id <= 0) {
-    return <div className="p-8 text-sm text-red-600">Invalid workspace.</div>
+    return (
+      <div className="p-8 text-sm text-red-300">
+        Invalid workspace.
+      </div>
+    )
   }
 
-  return <WorkspaceShell workspaceId={id}>{children}</WorkspaceShell>
+  return (
+    <WorkspaceShell workspaceId={id}>
+      {children}
+    </WorkspaceShell>
+  )
 }
