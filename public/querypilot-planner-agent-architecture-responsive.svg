@@ -1,0 +1,635 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1140 590" width="100%" height="100%" preserveAspectRatio="xMidYMid meet" style="display: block; width: 100%; height: auto; background-color: #07090e; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;" xmlns:c2pa="http://c2pa.org/manifest"><metadata><c2pa:manifest>AAAWgmp1bWIAAAAeanVtZGMycGEAEQAQgAAAqgA4m3EDYzJwYQAAABZcanVtYgAAAEdqdW1kYzJtYQARABCAAACqADibcQN1cm46YzJwYTplZWYyYjlmYi1iMDZmLTQ1OGYtODEzYy0yNDMyZGJmNGEyYjMAAAADl2p1bWIAAAApanVtZGMyYXMAEQAQgAAAqgA4m3EDYzJwYS5hc3NlcnRpb25zAAAAALxqdW1iAAAARGp1bWRjYm9yABEAEIAAAKoAOJtxE2MycGEuaW5ncmVkaWVudC52MwAAAAAYYzJzaF7isWsJYeGjLa8V1UKYERMAAABwY2JvcqNpZGM6Zm9ybWF0bWltYWdlL3N2Zyt4bWxqaW5zdGFuY2VJRHgseG1wOmlpZDowMjA3NTFiZi01ODMwLTRjMmMtOTg1OC05NTZhYTFhNDkxZGVscmVsYXRpb25zaGlwaHBhcmVudE9mAAAB4mp1bWIAAABBanVtZGNib3IAEQAQgAAAqgA4m3ETYzJwYS5hY3Rpb25zLnYyAAAAABhjMnNoIEPwkGXH+XPjF/R2g0hw5wAAAZljYm9yomdhY3Rpb25zgqJmYWN0aW9ua2MycGEub3BlbmVkanBhcmFtZXRlcnOha2luZ3JlZGllbnRzgaJjdXJseC1zZWxmI2p1bWJmPWMycGEuYXNzZXJ0aW9ucy9jMnBhLmluZ3JlZGllbnQudjNkaGFzaFggAskwTn2N2wqFfsiPKu7z9OAoSLF0QgLfJFZ03vGTMxWkZmFjdGlvbngdY29tLmFudGhyb3BpYy5jbGF1ZGUucHJvdmlkZWRqcGFyYW1ldGVyc6F4H2NvbS5hbnRocm9waWMub3JpZ2luLWNvbmZpZGVuY2VndW5rbm93bmtkZXNjcmlwdGlvbnhmQ2xhdWRlIHByb3ZpZGVkIHRoaXMgZmlsZSBhdCB0aGUgcmVxdWVzdCBvZiBhIHVzZXIgYW5kIG1heSBoYXZlIGNyZWF0ZWQgb3IgbW9kaWZpZWQgdGhlIGZpbGUgY29udGVudHMubXNvZnR3YXJlQWdlbnShZG5hbWVmQ2xhdWRlcmFsbEFjdGlvbnNJbmNsdWRlZPUAAADIanVtYgAAAEBqdW1kY2JvcgARABCAAACqADibcRNjMnBhLmhhc2guZGF0YQAAAAAYYzJzaADIOklKCZthwGQTlNtMfOgAAACAY2JvcqVjYWxnZnNoYTI1NmNwYWRMAAAAAAAAAAAAAAAAZGhhc2hYIIrp5VA01hXnfAkuKemqCIOpLUL8lgWh/SiPHQgTQKZnZG5hbWVuanVtYmYgbWFuaWZlc3RqZXhjbHVzaW9uc4GiZXN0YXJ0GQGOZmxlbmd0aBkeBAAAAj5qdW1iAAAAJ2p1bWRjMmNsABEAEIAAAKoAOJtxA2MycGEuY2xhaW0udjIAAAACD2Nib3KlY2FsZ2ZzaGEyNTZpc2lnbmF0dXJleE1zZWxmI2p1bWJmPS9jMnBhL3VybjpjMnBhOmVlZjJiOWZiLWIwNmYtNDU4Zi04MTNjLTI0MzJkYmY0YTJiMy9jMnBhLnNpZ25hdHVyZWppbnN0YW5jZUlEeCx4bXA6aWlkOmQ2MzRhNDc5LWY0MGEtNDY0NC05ZmYyLWI0MWI1MTJhZjhhY3JjcmVhdGVkX2Fzc2VydGlvbnODomN1cmx4LXNlbGYjanVtYmY9YzJwYS5hc3NlcnRpb25zL2MycGEuaW5ncmVkaWVudC52M2RoYXNoWCACyTBOfY3bCoV+yI8q7vP04ChIsXRCAt8kVnTe8ZMzFaJjdXJseCpzZWxmI2p1bWJmPWMycGEuYXNzZXJ0aW9ucy9jMnBhLmFjdGlvbnMudjJkaGFzaFggV49QUxFng3FMrEL+Qruue2Je8XH0aZa5LBBRJZl8GT+iY3VybHgpc2VsZiNqdW1iZj1jMnBhLmFzc2VydGlvbnMvYzJwYS5oYXNoLmRhdGFkaGFzaFgg9P72KqQtsBbodR8GKxix7IeOqj04I4HQ1M14rKSBesp0Y2xhaW1fZ2VuZXJhdG9yX2luZm+jZG5hbWVvQW50aHJvcGljIEZpbGVzZ3ZlcnNpb25lMS4wLjBrc3BlY1ZlcnNpb25lMi40LjAAABA4anVtYgAAAChqdW1kYzJjcwARABCAAACqADibcQNjMnBhLnNpZ25hdHVyZQAAABAIY2JvctKEWQISogEmGCFZAgowggIGMIIBjaADAgECAhRA5aAK7sI50L64g/oGQgU9Z1UTADAKBggqhkjOPQQDAzBJMRcwFQYDVQQKEw5BbnRocm9waWMsIFBCQzEuMCwGA1UEAxMlQW50aHJvcGljIENvbnRlbnQgQ3JlZGVudGlhbHMgUm9vdCBDQTAeFw0yNjA4MDcxODQzNTZaFw0yODA4MDYxOTQzNTZaMEQxFzAVBgNVBAoTDkFudGhyb3BpYywgUEJDMSkwJwYDVQQDEyBBbnRocm9waWMgQ2xhdWRlIENvbnRlbnQgU2lnbmluZzBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABJh6CmvLUBgFFNU0vUKlOVtE6djd17L5SuwX0LemFisBM3dkd/3cyjxFA3Qo5S46fX0/ihY0VZ7mfb9KF703t5OjWDBWMA4GA1UdDwEB/wQEAwIHgDAVBgNVHSUEDjAMBgorBgEEAYPoXgIBMAwGA1UdEwEB/wQCMAAwHwYDVR0jBBgwFoAUzlHiBIFOZFsj+OPEz5o+nMHXXMIwCgYIKoZIzj0EAwMDZwAwZAIwMXMdFJ4BetLLVY7ORuE9noqbbAZOZn/aArXyTwFAZfKrPzxF2vPoJNf1+UCdg1XGAjBwX1zd9WGqYkqmL5SFqw1QySjr1zJfpJM9+1rdDwSPLMOPOjKuiXjoU/pUUeG9RwmhY3BhZFkNngAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPZYQGTNuS6XoI14HhXcyimnVrjABPJhC9V3AEXgmNspJ8megBMkoWpm7tWTrUHLl4qdM5fN2x035maLssn5oZulJMI=</c2pa:manifest></metadata>
+  <defs>
+    <!-- Background Grid Pattern -->
+    <pattern id="grid" width="24" height="24" patternUnits="userSpaceOnUse">
+      <path d="M 24 0 L 0 0 0 24" fill="none" stroke="#141824" stroke-width="0.8" opacity="0.6"/>
+    </pattern>
+
+    <!-- White Current Glow Filter -->
+    <filter id="current-glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="3.4" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+
+    <filter id="box-glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+
+    <!-- Subtle Card Shadow -->
+    <filter id="card-shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.6"/>
+    </filter>
+
+    <!-- 3D Cylinder Gradients for SQLite DB -->
+    <linearGradient id="cylinder-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#141824" />
+      <stop offset="25%" stop-color="#192030" />
+      <stop offset="70%" stop-color="#10141d" />
+      <stop offset="100%" stop-color="#0d1017" />
+    </linearGradient>
+
+    <linearGradient id="rim-top-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#2a3449" />
+      <stop offset="100%" stop-color="#121622" />
+    </linearGradient>
+
+    <style>
+      /* ============================================================= */
+      /* SYNCHRONIZED PIPELINE TIMELINE — one 8s loop, 8 equal stages.   */
+      /* Data enters at User Query (0%) and travels stage by stage to   */
+      /* Response (87.5%), lighting each box the instant it arrives.    */
+      /* ============================================================= */
+
+      .pipe-bg {
+        stroke: #1b202d;
+        fill: none;
+        stroke-linecap: round;
+      }
+
+      .pipe-inner {
+        stroke: #090b10;
+        fill: none;
+        stroke-linecap: round;
+      }
+
+      .current-stream {
+        stroke: #ffffff;
+        fill: none;
+        stroke-linecap: round;
+        stroke-dasharray: 80 600;
+        opacity: 0;
+        filter: url(#current-glow);
+      }
+
+      .current-stream-vertical {
+        stroke: #ffffff;
+        fill: none;
+        stroke-linecap: round;
+        stroke-dasharray: 14 300;
+        opacity: 0;
+        filter: url(#current-glow);
+      }
+
+      /* --- Conduit flow windows (each spans one 12.5% stage).            */
+      /* Gap >> path length so only ONE streak ever exists on the pipe;    */
+      /* dashoffset sweeps it fully from one end to the other, then it's   */
+      /* hidden (opacity 0) until its stage comes around again.           */
+      @keyframes flow-c1 {
+        0%     { opacity: 0; stroke-dashoffset: 40; }
+        0.4%   { opacity: 1; }
+        12.1%  { opacity: 1; stroke-dashoffset: -14; }
+        12.5%  { opacity: 0; }
+        100%   { opacity: 0; }
+      }
+      @keyframes flow-c2 {
+        0%     { opacity: 0; }
+        12.5%  { opacity: 0; stroke-dashoffset: 40; }
+        12.9%  { opacity: 1; }
+        24.6%  { opacity: 1; stroke-dashoffset: -14; }
+        25%    { opacity: 0; }
+        100%   { opacity: 0; }
+      }
+      @keyframes flow-c3 {
+        0%     { opacity: 0; }
+        25%    { opacity: 0; stroke-dashoffset: 426; }
+        25.4%  { opacity: 1; }
+        37.1%  { opacity: 1; stroke-dashoffset: -80; }
+        37.5%  { opacity: 0; }
+        100%   { opacity: 0; }
+      }
+      @keyframes flow-c4 {
+        0%     { opacity: 0; }
+        37.5%  { opacity: 0; stroke-dashoffset: 38; }
+        37.9%  { opacity: 1; }
+        49.6%  { opacity: 1; stroke-dashoffset: -14; }
+        50%    { opacity: 0; }
+        100%   { opacity: 0; }
+      }
+      @keyframes flow-c5 {
+        0%     { opacity: 0; }
+        50%    { opacity: 0; stroke-dashoffset: 313; }
+        50.4%  { opacity: 1; }
+        62.1%  { opacity: 1; stroke-dashoffset: -80; }
+        62.5%  { opacity: 0; }
+        100%   { opacity: 0; }
+      }
+      @keyframes flow-c6 {
+        0%     { opacity: 0; }
+        62.5%  { opacity: 0; stroke-dashoffset: 40; }
+        62.9%  { opacity: 1; }
+        74.6%  { opacity: 1; stroke-dashoffset: -14; }
+        75%    { opacity: 0; }
+        100%   { opacity: 0; }
+      }
+      @keyframes flow-c7 {
+        0%     { opacity: 0; }
+        75%    { opacity: 0; stroke-dashoffset: 32; }
+        75.4%  { opacity: 1; }
+        87.1%  { opacity: 1; stroke-dashoffset: -12; }
+        87.5%  { opacity: 0; }
+        100%   { opacity: 0; }
+      }
+
+      /* --- Box "arrival glow": instant spike the moment the streak lands, */
+      /* then a quick decay. Distinct nearby percentages (not a shared      */
+      /* duplicate keyframe) are used so the spike is a true jump, not a    */
+      /* long gradual fade-in from 0%.                                     */
+      @keyframes glow-b1 {
+        0%    { stroke: #ffffff; stroke-width: 2.6; filter: url(#box-glow); }
+        8%    { stroke: #1e2433; stroke-width: 1.2; filter: none; }
+        99.9% { stroke: #1e2433; stroke-width: 1.2; filter: none; }
+        100%  { stroke: #ffffff; stroke-width: 2.6; filter: url(#box-glow); }
+      }
+      @keyframes glow-b2 {
+        0%     { stroke: #1e2433; stroke-width: 1.2; filter: none; }
+        12.4%  { stroke: #1e2433; stroke-width: 1.2; filter: none; }
+        12.5%  { stroke: #ffffff; stroke-width: 2.6; filter: url(#box-glow); }
+        20.5%  { stroke: #1e2433; stroke-width: 1.2; filter: none; }
+        100%   { stroke: #1e2433; stroke-width: 1.2; filter: none; }
+      }
+      @keyframes glow-b3 {
+        0%     { stroke: #1e2433; stroke-width: 1.2; filter: none; }
+        24.9%  { stroke: #1e2433; stroke-width: 1.2; filter: none; }
+        25%    { stroke: #ffffff; stroke-width: 2.6; filter: url(#box-glow); }
+        33%    { stroke: #1e2433; stroke-width: 1.2; filter: none; }
+        100%   { stroke: #1e2433; stroke-width: 1.2; filter: none; }
+      }
+      @keyframes glow-b4 {
+        0%     { stroke: #1e2433; stroke-width: 1.2; filter: none; }
+        37.4%  { stroke: #1e2433; stroke-width: 1.2; filter: none; }
+        37.5%  { stroke: #ffffff; stroke-width: 2.6; filter: url(#box-glow); }
+        45.5%  { stroke: #1e2433; stroke-width: 1.2; filter: none; }
+        100%   { stroke: #1e2433; stroke-width: 1.2; filter: none; }
+      }
+      @keyframes glow-b5 {
+        0%     { stroke: #1e2433; stroke-width: 1.2; filter: none; }
+        49.9%  { stroke: #1e2433; stroke-width: 1.2; filter: none; }
+        50%    { stroke: #ffffff; stroke-width: 2.6; filter: url(#box-glow); }
+        58%    { stroke: #1e2433; stroke-width: 1.2; filter: none; }
+        100%   { stroke: #1e2433; stroke-width: 1.2; filter: none; }
+      }
+      @keyframes glow-b6 {
+        0%     { stroke: #1e2433; stroke-width: 1.2; filter: none; }
+        62.4%  { stroke: #1e2433; stroke-width: 1.2; filter: none; }
+        62.5%  { stroke: #ffffff; stroke-width: 2.6; filter: url(#box-glow); }
+        70.5%  { stroke: #1e2433; stroke-width: 1.2; filter: none; }
+        100%   { stroke: #1e2433; stroke-width: 1.2; filter: none; }
+      }
+      @keyframes glow-b7 {
+        0%     { stroke: #1e2433; stroke-width: 1.2; filter: none; }
+        74.9%  { stroke: #1e2433; stroke-width: 1.2; filter: none; }
+        75%    { stroke: #ffffff; stroke-width: 2.6; filter: url(#box-glow); }
+        83%    { stroke: #1e2433; stroke-width: 1.2; filter: none; }
+        100%   { stroke: #1e2433; stroke-width: 1.2; filter: none; }
+      }
+      @keyframes glow-b8 {
+        0%     { stroke: #1e2433; stroke-width: 1.2; filter: none; }
+        87.4%  { stroke: #1e2433; stroke-width: 1.2; filter: none; }
+        87.5%  { stroke: #ffffff; stroke-width: 2.6; filter: url(#box-glow); }
+        95.5%  { stroke: #1e2433; stroke-width: 1.2; filter: none; }
+        100%   { stroke: #1e2433; stroke-width: 1.2; filter: none; }
+      }
+
+      #card-user-query > rect.card-box          { animation: glow-b1 12s linear infinite; }
+      #card-understanding > rect.card-box       { animation: glow-b2 12s linear infinite; }
+      #card-resolution > rect.card-box          { animation: glow-b3 12s linear infinite; }
+      #card-planning > rect.card-box            { animation: glow-b4 12s linear infinite; }
+      #card-tool-execution > rect.card-box      { animation: glow-b5 12s linear infinite; }
+      #card-evidence-validation > rect.card-box { animation: glow-b6 12s linear infinite; }
+      #card-final-answer > rect.card-box        { animation: glow-b7 12s linear infinite; }
+      #card-response-return > rect              { animation: glow-b8 12s linear infinite; }
+
+      .card-box {
+        fill: #0e1117;
+        stroke: #1e2433;
+        stroke-width: 1.2;
+        rx: 12px;
+      }
+
+      .header-text {
+        fill: #ffffff;
+        font-weight: 700;
+        font-size: 11.5px;
+        letter-spacing: 0.3px;
+      }
+
+      .sub-text {
+        fill: #94a3b8;
+        font-size: 9.5px;
+      }
+
+      .mono-text {
+        font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+        font-size: 9px;
+      }
+
+      .tag-llm {
+        fill: #141824;
+        stroke: #475569;
+        stroke-width: 0.8;
+      }
+
+      .tag-deterministic {
+        fill: #121722;
+        stroke: #334155;
+        stroke-width: 0.8;
+      }
+
+      .tag-success {
+        fill: #141824;
+        stroke: #64748b;
+        stroke-width: 0.8;
+      }
+
+      .tag-standby {
+        fill: #1e293b;
+        stroke: #475569;
+        stroke-width: 0.8;
+      }
+    </style>
+  </defs>
+
+  <!-- Container Surface with Grid -->
+  <rect x="8" y="8" width="1124" height="574" rx="16" fill="#090b10" stroke="#1e2433" stroke-width="1.5" />
+  <rect x="8" y="8" width="1124" height="574" rx="16" fill="url(#grid)" />
+
+  <!-- Diagram Title / Watermark Header -->
+  <g transform="translate(26, 32)">
+    <text x="0" y="0" fill="#ffffff" font-size="13.5" font-weight="800" letter-spacing="0.5">PLANNER AGENT ARCHITECTURE</text>
+    <text x="240" y="0" fill="#64748b" font-size="10.5" font-weight="500">Autonomous Reasoning Pipeline • Query Understanding → Resource Resolution → Planning → Tool Execution → Validation</text>
+    <g transform="translate(940, -11)">
+      <rect width="146" height="20" rx="4" fill="#141824" stroke="#1e2433" stroke-width="1" />
+      <circle cx="10" cy="10" r="3" fill="#e2e8f0" />
+      <text x="20" y="13" fill="#94a3b8" class="mono-text">PIPELINE ACTIVE: 342ms</text>
+    </g>
+  </g>
+
+  <!-- ========================================================================= -->
+  <!-- CONDUITS & SIGNAL PIPES                                                  -->
+  <!-- ========================================================================= -->
+
+  <!-- Conduit 1: User Query -> Query Understanding (163, 120 -> 163, 146) -->
+  <g id="conduit-1">
+    <path d="M 163,120 L 163,146" class="pipe-bg" stroke-width="4" />
+    <path d="M 163,120 L 163,146" class="pipe-inner" stroke-width="2" />
+    <path d="M 163,120 L 163,146" class="current-stream-vertical" stroke-width="2.6" style="animation: flow-c1 12s linear infinite;" />
+    <circle cx="163" cy="120" r="3" fill="#ffffff" stroke="#1e2433" stroke-width="1" />
+    <circle cx="163" cy="146" r="3" fill="#ffffff" stroke="#1e2433" stroke-width="1" />
+  </g>
+
+  <!-- Conduit 2: Query Understanding -> Entity Resolution (163, 324 -> 163, 350) -->
+  <g id="conduit-2">
+    <path d="M 163,324 L 163,350" class="pipe-bg" stroke-width="4" />
+    <path d="M 163,324 L 163,350" class="pipe-inner" stroke-width="2" />
+    <path d="M 163,324 L 163,350" class="current-stream-vertical" stroke-width="2.6" style="animation: flow-c2 12s linear infinite;" />
+    <circle cx="163" cy="324" r="3" fill="#ffffff" stroke="#1e2433" stroke-width="1" />
+    <circle cx="163" cy="350" r="3" fill="#ffffff" stroke="#1e2433" stroke-width="1" />
+  </g>
+
+  <!-- Conduit 3: Entity Resolution -> Execution Planning (301, 445 -> 348, 108) -->
+  <g id="conduit-3">
+    <path d="M 301,445 C 330,445 320,108 348,108" class="pipe-bg" stroke-width="4.5" />
+    <path d="M 301,445 C 330,445 320,108 348,108" class="pipe-inner" stroke-width="2.2" />
+    <path d="M 301,445 C 330,445 320,108 348,108" class="current-stream" stroke-width="2.8" style="animation: flow-c3 12s linear infinite;" />
+    <circle cx="301" cy="445" r="3.5" fill="#ffffff" stroke="#1e2433" stroke-width="1" />
+    <circle cx="348" cy="108" r="3.5" fill="#ffffff" stroke="#1e2433" stroke-width="1" />
+  </g>
+
+  <!-- Conduit 4: Execution Planning -> Tool Execution (543, 164 -> 543, 188) -->
+  <g id="conduit-4">
+    <path d="M 543,164 L 543,188" class="pipe-bg" stroke-width="4" />
+    <path d="M 543,164 L 543,188" class="pipe-inner" stroke-width="2" />
+    <path d="M 543,164 L 543,188" class="current-stream-vertical" stroke-width="2.6" style="animation: flow-c4 12s linear infinite;" />
+    <circle cx="543" cy="164" r="3" fill="#ffffff" stroke="#1e2433" stroke-width="1" />
+    <circle cx="543" cy="188" r="3" fill="#ffffff" stroke="#1e2433" stroke-width="1" />
+  </g>
+
+  <!-- Conduit 5: Tool Execution -> Evidence Validation (738, 360 -> 780, 136) -->
+  <g id="conduit-5">
+    <path d="M 738,360 C 762,360 754,136 780,136" class="pipe-bg" stroke-width="4.5" />
+    <path d="M 738,360 C 762,360 754,136 780,136" class="pipe-inner" stroke-width="2.2" />
+    <path d="M 738,360 C 762,360 754,136 780,136" class="current-stream" stroke-width="2.8" style="animation: flow-c5 12s linear infinite;" />
+    <circle cx="738" cy="360" r="3.5" fill="#ffffff" stroke="#1e2433" stroke-width="1" />
+    <circle cx="780" cy="136" r="3.5" fill="#ffffff" stroke="#1e2433" stroke-width="1" />
+  </g>
+
+  <!-- Conduit 6: Evidence Validation -> Final Answer (947, 230 -> 947, 256) -->
+  <g id="conduit-6">
+    <path d="M 947,230 L 947,256" class="pipe-bg" stroke-width="4" />
+    <path d="M 947,230 L 947,256" class="pipe-inner" stroke-width="2" />
+    <path d="M 947,230 L 947,256" class="current-stream-vertical" stroke-width="2.6" style="animation: flow-c6 12s linear infinite;" />
+    <circle cx="947" cy="230" r="3" fill="#ffffff" stroke="#1e2433" stroke-width="1" />
+    <circle cx="947" cy="256" r="3" fill="#ffffff" stroke="#1e2433" stroke-width="1" />
+  </g>
+
+  <!-- Conduit 7: Final Answer -> Response (947, 446 -> 947, 466) -->
+  <g id="conduit-7">
+    <path d="M 947,446 L 947,466" class="pipe-bg" stroke-width="4" />
+    <path d="M 947,446 L 947,466" class="pipe-inner" stroke-width="2" />
+    <path d="M 947,446 L 947,466" class="current-stream-vertical" stroke-width="2.6" style="animation: flow-c7 12s linear infinite;" />
+    <circle cx="947" cy="446" r="3" fill="#ffffff" stroke="#1e2433" stroke-width="1" />
+    <circle cx="947" cy="466" r="3" fill="#ffffff" stroke="#1e2433" stroke-width="1" />
+  </g>
+
+  <!-- ========================================================================= -->
+  <!-- COLUMN 1: INGRESS & RESOLUTION                                           -->
+  <!-- ========================================================================= -->
+
+  <!-- Card 1: User Query -->
+  <g id="card-user-query" transform="translate(26, 46)" filter="url(#card-shadow)">
+    <rect width="275" height="74" class="card-box" />
+    <g transform="translate(14, 12)">
+      <rect width="24" height="24" rx="6" fill="#1e2433" stroke="#334155" stroke-width="1" />
+      <path d="M 6 7 L 18 7 A 2 2 0 0 1 20 9 L 20 15 A 2 2 0 0 1 18 17 L 11 17 L 7 20 L 7 17 L 6 17 A 2 2 0 0 1 4 15 L 4 9 A 2 2 0 0 1 6 7 Z" fill="none" stroke="#cbd5e1" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
+      <text x="32" y="11" class="header-text">USER QUERY</text>
+      <text x="32" y="22" class="sub-text">Natural language ingress port</text>
+    </g>
+    <g transform="translate(14, 40)">
+      <rect width="247" height="30" rx="6" fill="#141824" stroke="#1e2433" stroke-width="1" />
+      <text x="10" y="13" fill="#f1f5f9" font-size="9.5" font-style="italic" font-weight="500">“How much salary should Rahul Sharma</text>
+      <text x="10" y="25" fill="#f1f5f9" font-size="9.5" font-style="italic" font-weight="500">be deducted for unpaid leave?”</text>
+    </g>
+  </g>
+
+  <!-- Card 2: Query Understanding (LLM) -->
+  <g id="card-understanding" transform="translate(26, 146)" filter="url(#card-shadow)">
+    <rect width="275" height="178" class="card-box" />
+    <g transform="translate(14, 12)">
+      <rect width="24" height="24" rx="6" fill="#1e2433" stroke="#334155" stroke-width="1" />
+      <g transform="translate(6, 6)" stroke="#cbd5e1" stroke-width="1.3" fill="none" stroke-linecap="round">
+        <circle cx="3" cy="3" r="1.7" />
+        <circle cx="9" cy="3" r="1.7" />
+        <circle cx="6" cy="9" r="1.7" />
+        <line x1="4.2" y1="4.2" x2="4.8" y2="7.8" />
+        <line x1="7.8" y1="4.2" x2="7.2" y2="7.8" />
+      </g>
+      <text x="32" y="11" class="header-text">Query Understanding</text>
+      <text x="32" y="21" class="sub-text">intent + references</text>
+      <rect x="186" y="1" width="60" height="18" rx="4" class="tag-llm" />
+      <text x="194" y="13" fill="#cbd5e1" class="mono-text" font-weight="bold">← LLM</text>
+    </g>
+    <g transform="translate(14, 42)">
+      <rect width="247" height="124" rx="8" fill="#090b10" stroke="#1e2433" stroke-width="1" />
+      <text x="8" y="15" class="mono-text" fill="#94a3b8">{</text>
+      <text x="8" y="28" class="mono-text">
+        <tspan fill="#94a3b8">  "</tspan><tspan fill="#38bdf8">category_hint</tspan><tspan fill="#94a3b8">": "</tspan><tspan fill="#34d399">hybrid_calculation</tspan><tspan fill="#94a3b8">",</tspan>
+      </text>
+      <text x="8" y="42" class="mono-text">
+        <tspan fill="#94a3b8">  "</tspan><tspan fill="#38bdf8">operation</tspan><tspan fill="#94a3b8">": "</tspan><tspan fill="#34d399">deduction_calc</tspan><tspan fill="#94a3b8">",</tspan>
+      </text>
+      <text x="8" y="56" class="mono-text">
+        <tspan fill="#94a3b8">  "</tspan><tspan fill="#38bdf8">references</tspan><tspan fill="#94a3b8">": [{ "</tspan><tspan fill="#f59e0b">type</tspan><tspan fill="#94a3b8">": "</tspan><tspan fill="#34d399">person</tspan><tspan fill="#94a3b8">",</tspan>
+      </text>
+      <text x="8" y="70" class="mono-text">
+        <tspan fill="#94a3b8">      "</tspan><tspan fill="#f59e0b">value</tspan><tspan fill="#94a3b8">": "</tspan><tspan fill="#fb7185">Rahul Sharma</tspan><tspan fill="#94a3b8">" }],</tspan>
+      </text>
+      <text x="8" y="84" class="mono-text">
+        <tspan fill="#94a3b8">  "</tspan><tspan fill="#38bdf8">requested_fields</tspan><tspan fill="#94a3b8">": ["</tspan><tspan fill="#34d399">daily_rate</tspan><tspan fill="#94a3b8">"],</tspan>
+      </text>
+      <text x="8" y="98" class="mono-text">
+        <tspan fill="#94a3b8">  "</tspan><tspan fill="#38bdf8">reason</tspan><tspan fill="#94a3b8">": "</tspan><tspan fill="#94a3b8">Calculate deduction comb...</tspan><tspan fill="#94a3b8">"</tspan>
+      </text>
+      <text x="8" y="112" class="mono-text" fill="#94a3b8">}</text>
+    </g>
+  </g>
+
+  <!-- Card 3: Entity Resolution (Deterministic) -->
+  <g id="card-resolution" transform="translate(26, 350)" filter="url(#card-shadow)">
+    <rect width="275" height="195" class="card-box" />
+    <g transform="translate(14, 12)">
+      <rect width="24" height="24" rx="6" fill="#1e2433" stroke="#334155" stroke-width="1" />
+      <path d="M 6 12 L 18 12 M 12 6 L 12 18" stroke="#38bdf8" stroke-width="1.5" stroke-linecap="round" />
+      <text x="32" y="11" class="header-text">Entity / Resource</text>
+      <text x="32" y="21" class="sub-text">Resolution (workspace data)</text>
+      <rect x="156" y="1" width="90" height="18" rx="4" class="tag-deterministic" />
+      <text x="162" y="13" fill="#94a3b8" class="mono-text" font-weight="bold">← Deterministic</text>
+    </g>
+    <g transform="translate(14, 42)">
+      <rect width="247" height="140" rx="8" fill="#090b10" stroke="#1e2433" stroke-width="1" />
+      <text x="8" y="16" class="mono-text">
+        <tspan fill="#94a3b8">"status": "</tspan><tspan fill="#10b981" font-weight="bold">RESOLVED</tspan><tspan fill="#94a3b8">",</tspan>
+      </text>
+      <text x="8" y="30" class="mono-text"><tspan fill="#94a3b8">"entities": {</tspan></text>
+      <text x="8" y="44" class="mono-text"><tspan fill="#94a3b8">  "person": {</tspan></text>
+      <text x="8" y="58" class="mono-text">
+        <tspan fill="#94a3b8">    "value": "</tspan><tspan fill="#fb7185">Rahul Sharma</tspan><tspan fill="#94a3b8">",</tspan>
+      </text>
+      <text x="8" y="72" class="mono-text">
+        <tspan fill="#94a3b8">    "resolved_value": "</tspan><tspan fill="#34d399">EMP-8841</tspan><tspan fill="#94a3b8">"</tspan>
+      </text>
+      <text x="8" y="86" class="mono-text"><tspan fill="#94a3b8">  }</tspan></text>
+      <text x="8" y="100" class="mono-text"><tspan fill="#94a3b8">}</tspan></text>
+      <line x1="8" y1="108" x2="239" y2="108" stroke="#1e2433" stroke-width="1" />
+      <text x="8" y="122" class="mono-text" fill="#cbd5e1">✓ Matched to Workspace SQLite Catalog</text>
+      <text x="8" y="133" class="mono-text" fill="#64748b">Target Table: employees (id, name, salary)</text>
+    </g>
+  </g>
+
+  <!-- ========================================================================= -->
+  <!-- COLUMN 2: EXECUTION PLANNING & TOOLS                                     -->
+  <!-- ========================================================================= -->
+
+  <!-- Card 4: Execution Planning (Deterministic) -->
+  <g id="card-planning" transform="translate(348, 46)" filter="url(#card-shadow)">
+    <rect width="390" height="118" class="card-box" />
+    <g transform="translate(14, 12)">
+      <rect width="24" height="24" rx="6" fill="#1e2433" stroke="#334155" stroke-width="1" />
+      <g transform="translate(6, 6)" stroke="#cbd5e1" stroke-width="1.3" fill="none" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="6" cy="6" r="2.3" />
+        <path d="M6 1.2v1.6M6 9.2v1.6M1.2 6h1.6M9.2 6h1.6M2.8 2.8l1.1 1.1M8.1 8.1l1.1 1.1M2.8 9.2l1.1-1.1M8.1 3.9l1.1-1.1" />
+      </g>
+      <text x="32" y="11" class="header-text">Execution Planning</text>
+      <text x="32" y="21" class="sub-text">capability + tools</text>
+      <rect x="270" y="1" width="90" height="18" rx="4" class="tag-deterministic" />
+      <text x="276" y="13" fill="#94a3b8" class="mono-text" font-weight="bold">← Deterministic</text>
+    </g>
+    <g transform="translate(14, 40)">
+      <rect width="362" height="66" rx="8" fill="#090b10" stroke="#1e2433" stroke-width="1" />
+      <text x="10" y="17" class="mono-text">
+        <tspan fill="#94a3b8">{ "</tspan><tspan fill="#38bdf8">capability</tspan><tspan fill="#94a3b8">": "</tspan><tspan fill="#10b981" font-weight="bold">HYBRID_TABLE_AND_DOCS</tspan><tspan fill="#94a3b8">",</tspan>
+      </text>
+      <text x="10" y="32" class="mono-text">
+        <tspan fill="#94a3b8">  "</tspan><tspan fill="#38bdf8">tool</tspan><tspan fill="#94a3b8">": "</tspan><tspan fill="#f59e0b" font-weight="bold">query_tables + search_docs</tspan><tspan fill="#94a3b8">" }</tspan>
+      </text>
+      <text x="10" y="47" class="mono-text" fill="#64748b">Decision: Direct tabular query routing</text>
+      <text x="10" y="59" class="mono-text" fill="#64748b">on Workspace SQLite DB</text>
+    </g>
+  </g>
+
+  <!-- Card 5: Tool Execution -->
+  <g id="card-tool-execution" transform="translate(348, 188)" filter="url(#card-shadow)">
+    <rect width="390" height="357" class="card-box" />
+    <g transform="translate(14, 12)">
+      <rect width="24" height="24" rx="6" fill="#1e2433" stroke="#334155" stroke-width="1" />
+      <text x="6" y="16" fill="#38bdf8" font-size="11" font-family="monospace">&gt;_</text>
+      <text x="32" y="11" class="header-text">Tool Execution</text>
+      <text x="32" y="21" class="sub-text">docs / SQL / memory / metadata / product</text>
+      <rect x="264" y="1" width="96" height="18" rx="4" class="tag-success" />
+      <text x="272" y="13" fill="#e2e8f0" class="mono-text" font-weight="bold">● ACTIVE TOOL</text>
+    </g>
+
+    <!-- Active Route Command -->
+    <g transform="translate(14, 40)">
+      <rect width="362" height="48" rx="8" fill="#090b10" stroke="#1e2433" stroke-width="1" />
+      <text x="10" y="16" class="mono-text" fill="#94a3b8">
+        ACTIVE ROUTE: <tspan fill="#38bdf8" font-weight="bold">TABLE_QUERY</tspan> (tool: <tspan fill="#f59e0b">query_tables</tspan>)
+      </text>
+      <text x="10" y="32" class="mono-text" fill="#cbd5e1">
+        <tspan fill="#c084fc" font-weight="bold">SELECT</tspan> name, salary <tspan fill="#c084fc" font-weight="bold">FROM</tspan> <tspan fill="#34d399">employees</tspan> <tspan fill="#c084fc" font-weight="bold">WHERE</tspan> name = <tspan fill="#fb7185">'Rahul Sharma'</tspan>;
+      </text>
+    </g>
+
+    <!-- Left: 3D Workspace SQLite Cylinder -->
+    <g transform="translate(14, 98)">
+      <rect width="186" height="245" rx="14" fill="url(#cylinder-grad)" stroke="#1e2433" stroke-width="1.5" />
+      <ellipse cx="93" cy="12" rx="78" ry="11" fill="url(#rim-top-grad)" stroke="#334155" stroke-width="1" />
+      <ellipse cx="93" cy="12" rx="60" ry="6" fill="#090b10" stroke="#1e2433" stroke-width="0.8" />
+      <circle cx="93" cy="12" r="2.5" fill="#ffffff" style="filter: drop-shadow(0 0 4px #ffffff);" />
+      <g transform="translate(0, 30)" text-anchor="middle">
+        <text x="93" y="12" fill="#ffffff" font-size="11" font-weight="bold">Workspace SQLite</text>
+        <text x="93" y="24" fill="#64748b" class="mono-text">(Structured Catalog)</text>
+      </g>
+      <g transform="translate(10, 68)">
+        <rect width="166" height="60" rx="8" fill="#121622" stroke="#94a3b8" stroke-width="1" />
+        <rect x="6" y="6" width="20" height="20" rx="4" fill="#1e2433" />
+        <text x="11" y="20" fill="#cbd5e1" font-size="10">⊞</text>
+        <text x="32" y="18" fill="#f8fafc" font-size="10" font-weight="bold">employees</text>
+        <text x="32" y="30" fill="#64748b" class="mono-text">id, name, dept, salary</text>
+        <line x1="6" y1="36" x2="160" y2="36" stroke="#1e2433" stroke-width="1" />
+        <text x="8" y="50" fill="#e2e8f0" class="mono-text">➔ MATCH: Rahul Sharma</text>
+      </g>
+      <g transform="translate(10, 136)">
+        <rect width="166" height="34" rx="6" fill="#0f1420" stroke="#1e2433" stroke-width="1" opacity="0.7" />
+        <text x="8" y="16" fill="#94a3b8" font-size="9.5" font-weight="bold">attendance</text>
+        <text x="8" y="27" fill="#64748b" class="mono-text">emp_id, date, status</text>
+      </g>
+      <g transform="translate(10, 178)">
+        <rect width="166" height="34" rx="6" fill="#0f1420" stroke="#1e2433" stroke-width="1" opacity="0.7" />
+        <text x="8" y="16" fill="#94a3b8" font-size="9.5" font-weight="bold">payroll_ledger</text>
+        <text x="8" y="27" fill="#64748b" class="mono-text">month, gross, deductions</text>
+      </g>
+      <path d="M 0,234 C 40,246 146,246 186,234" fill="none" stroke="#2a3449" stroke-width="1.2" />
+    </g>
+
+    <!-- Right: Standby Tools -->
+    <g transform="translate(208, 98)">
+      <rect width="168" height="245" rx="10" fill="#090b10" stroke="#1e2433" stroke-width="1" />
+      <text x="12" y="18" fill="#94a3b8" font-size="9.5" font-weight="bold" letter-spacing="0.3">STANDBY TOOLS</text>
+      <line x1="12" y1="26" x2="156" y2="26" stroke="#1e2433" stroke-width="1" />
+      <g transform="translate(10, 36)">
+        <rect width="148" height="42" rx="6" fill="#141824" stroke="#1e2433" stroke-width="1" />
+        <text x="8" y="16" fill="#94a3b8" font-size="9" font-weight="bold">Doc Search (Vector)</text>
+        <text x="8" y="27" fill="#64748b" class="mono-text">HR policies &amp; PDFs</text>
+        <rect x="94" y="6" width="48" height="14" rx="3" class="tag-standby" />
+        <text x="100" y="16" fill="#94a3b8" class="mono-text">STANDBY</text>
+      </g>
+      <g transform="translate(10, 86)">
+        <rect width="148" height="42" rx="6" fill="#141824" stroke="#1e2433" stroke-width="1" />
+        <text x="8" y="16" fill="#94a3b8" font-size="9" font-weight="bold">Conversation Memory</text>
+        <text x="8" y="27" fill="#64748b" class="mono-text">Multi-turn session state</text>
+        <rect x="94" y="6" width="48" height="14" rx="3" class="tag-standby" />
+        <text x="100" y="16" fill="#94a3b8" class="mono-text">STANDBY</text>
+      </g>
+      <g transform="translate(10, 136)">
+        <rect width="148" height="42" rx="6" fill="#141824" stroke="#1e2433" stroke-width="1" />
+        <text x="8" y="16" fill="#94a3b8" font-size="9" font-weight="bold">Source Metadata</text>
+        <text x="8" y="27" fill="#64748b" class="mono-text">Catalog schemas &amp; logs</text>
+        <rect x="94" y="6" width="48" height="14" rx="3" class="tag-standby" />
+        <text x="100" y="16" fill="#94a3b8" class="mono-text">STANDBY</text>
+      </g>
+      <g transform="translate(10, 186)">
+        <rect width="148" height="42" rx="6" fill="#141824" stroke="#1e2433" stroke-width="1" />
+        <text x="8" y="16" fill="#94a3b8" font-size="9" font-weight="bold">Product APIs</text>
+        <text x="8" y="27" fill="#64748b" class="mono-text">External workspace API</text>
+        <rect x="94" y="6" width="48" height="14" rx="3" class="tag-standby" />
+        <text x="100" y="16" fill="#94a3b8" class="mono-text">STANDBY</text>
+      </g>
+    </g>
+  </g>
+
+  <!-- ========================================================================= -->
+  <!-- COLUMN 3: VALIDATION & FINAL ANSWER                                      -->
+  <!-- ========================================================================= -->
+
+  <!-- Card 6: Evidence Validation -->
+  <g id="card-evidence-validation" transform="translate(780, 46)" filter="url(#card-shadow)">
+    <rect width="334" height="184" class="card-box" />
+    <g transform="translate(14, 12)">
+      <rect width="24" height="24" rx="6" fill="#1e2433" stroke="#334155" stroke-width="1" />
+      <path d="M 7 12 L 11 16 L 17 8" fill="none" stroke="#10b981" stroke-width="1.8" stroke-linecap="round" />
+      <text x="32" y="11" class="header-text">Evidence Validation</text>
+      <text x="32" y="21" class="sub-text">grounded? sufficient</text>
+      <rect x="214" y="1" width="96" height="18" rx="4" class="tag-success" />
+      <text x="222" y="13" fill="#e2e8f0" class="mono-text" font-weight="bold">✓ SUCCESS</text>
+    </g>
+    <g transform="translate(14, 42)">
+      <rect width="306" height="84" rx="8" fill="#090b10" stroke="#1e2433" stroke-width="1" />
+      <text x="8" y="16" class="mono-text">
+        <tspan fill="#94a3b8">"evidence": { "</tspan><tspan fill="#38bdf8">rows</tspan><tspan fill="#94a3b8">": [</tspan>
+      </text>
+      <text x="8" y="32" class="mono-text">
+        <tspan fill="#94a3b8">    { "</tspan><tspan fill="#38bdf8">name</tspan><tspan fill="#94a3b8">": "</tspan><tspan fill="#34d399">Rahul Sharma</tspan><tspan fill="#94a3b8">",</tspan>
+        <tspan fill="#94a3b8"> "</tspan><tspan fill="#38bdf8">salary</tspan><tspan fill="#94a3b8">": </tspan><tspan fill="#fb7185" font-weight="bold">60000</tspan><tspan fill="#94a3b8"> }</tspan>
+      </text>
+      <text x="8" y="48" class="mono-text"><tspan fill="#94a3b8">  ] },</tspan></text>
+      <text x="8" y="64" class="mono-text">
+        <tspan fill="#94a3b8">"validation": { "</tspan><tspan fill="#38bdf8">grounding_passed</tspan><tspan fill="#94a3b8">": </tspan><tspan fill="#10b981" font-weight="bold">true</tspan><tspan fill="#94a3b8"> }</tspan>
+      </text>
+    </g>
+    <g transform="translate(14, 134)">
+      <rect width="306" height="38" rx="6" fill="#141824" stroke="#1e2433" stroke-width="1" />
+      <text x="8" y="15" fill="#cbd5e1" class="mono-text">✓ Grounded in Workspace Data (employees.salary)</text>
+      <text x="8" y="28" fill="#94a3b8" class="mono-text">✓ Sufficient: 1 exact record found · 0 ambiguity</text>
+    </g>
+  </g>
+
+  <!-- Card 7: Final Answer (LLM) -->
+  <g id="card-final-answer" transform="translate(780, 256)" filter="url(#card-shadow)">
+    <rect width="334" height="190" class="card-box" />
+    <g transform="translate(14, 12)">
+      <rect width="24" height="24" rx="6" fill="#1e2433" stroke="#334155" stroke-width="1" />
+      <path d="M 6 1 L 7 5 L 11 6 L 7 7 L 6 11 L 5 7 L 1 6 L 5 5 Z" fill="#cbd5e1" transform="translate(6,6)" />
+      <text x="32" y="11" class="header-text">Final Answer</text>
+      <text x="32" y="21" class="sub-text">grounded in evidence</text>
+      <rect x="245" y="1" width="60" height="18" rx="4" class="tag-llm" />
+      <text x="253" y="13" fill="#cbd5e1" class="mono-text" font-weight="bold">← LLM</text>
+    </g>
+    <g transform="translate(14, 42)">
+      <rect width="306" height="24" rx="6" fill="#141824" stroke="#334155" stroke-width="1" />
+      <text x="10" y="16" fill="#e2e8f0" class="mono-text" font-weight="bold">HYBRID EVIDENCE VERIFIED • 99.4% CONFIDENCE</text>
+    </g>
+    <g transform="translate(14, 74)">
+      <rect width="306" height="100" rx="8" fill="#090b10" stroke="#1e2433" stroke-width="1" />
+      <text x="10" y="18" fill="#64748b" class="mono-text">"answer":</text>
+      <text x="10" y="34" fill="#ffffff" font-size="11.5" font-weight="600" letter-spacing="0.1">
+        <tspan x="10" dy="0">“Deduct ₹6,000 from Rahul Sharma for</tspan>
+        <tspan x="10" dy="16">3 days of unpaid leave per Policy §4.2.”</tspan>
+      </text>
+      <line x1="10" y1="62" x2="296" y2="62" stroke="#1e2433" stroke-width="1" />
+      <text x="10" y="76" class="mono-text" fill="#94a3b8">CITED: employees (name="Rahul Sharma", salary=60000)</text>
+      <text x="10" y="88" class="mono-text" fill="#64748b">Synthesis verified by LLM reasoning core</text>
+    </g>
+  </g>
+
+  <!-- Card 8: Response -->
+  <g id="card-response-return" transform="translate(780, 466)">
+    <rect width="334" height="79" rx="10" fill="#0e1117" stroke="#1e2433" stroke-width="1.2" />
+    <g transform="translate(14, 14)">
+      <rect width="22" height="22" rx="5" fill="#141824" stroke="#1e2433" stroke-width="1" />
+      <text x="6" y="15" fill="#e2e8f0" font-size="11">✓</text>
+      <text x="30" y="11" fill="#ffffff" font-size="11" font-weight="700">RESPONSE TRANSMITTED</text>
+      <text x="30" y="22" fill="#64748b" font-size="9">Delivered to client via API // 248ms total latency</text>
+    </g>
+    <g transform="translate(14, 44)">
+      <rect width="306" height="24" rx="4" fill="#141824" stroke="#1e2433" stroke-width="1" />
+      <text x="10" y="16" fill="#94a3b8" class="mono-text">STATUS: <tspan fill="#e2e8f0" font-weight="bold">200 OK</tspan> • GROUNDING: <tspan fill="#e2e8f0" font-weight="bold">PASSED</tspan> • HALLUCINATION: <tspan fill="#e2e8f0" font-weight="bold">0%</tspan></text>
+    </g>
+  </g>
+</svg>

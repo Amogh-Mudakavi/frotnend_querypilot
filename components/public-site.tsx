@@ -8,7 +8,17 @@ import {
   useState,
 } from "react";
 import type { ComponentType, CSSProperties } from "react";
-import { ArrowRight, Sparkles, UserSearch } from "lucide-react";
+import {
+  ArrowRight,
+  Sparkles,
+  UserSearch,
+  Route,
+  UploadCloud,
+  MessagesSquare,
+  Radio,
+  Database,
+  ShieldCheck,
+} from "lucide-react";
 import gsap from "gsap";
 import { PixelDissolveButton } from "@/components/pixel-dissolve-button";
 import { QueryPilotApp } from "@/components/hero/query-pilot-app"
@@ -409,7 +419,18 @@ export function PublicNav() {
   };
 
   useEffect(() => {
+    let ticking = false;
+
     const detectTheme = () => {
+      ticking = false;
+
+      // Cheap check first — most scroll positions resolve right here and
+      // never touch elementFromPoint/getComputedStyle at all.
+      if (window.scrollY < window.innerHeight * 0.92) {
+        setDarkTheme(false);
+        return;
+      }
+
       const nav = document.querySelector(
         "[data-querypilot-nav]"
       ) as HTMLElement | null;
@@ -419,53 +440,36 @@ export function PublicNav() {
       }
 
       const navRect = nav.getBoundingClientRect();
-      const sampleX =
-        navRect.left + navRect.width / 2;
-      const sampleY =
-        navRect.bottom + 8;
+      const sampleX = navRect.left + navRect.width / 2;
+      const sampleY = navRect.bottom + 8;
 
       const element = document.elementFromPoint(
         sampleX,
         sampleY,
       ) as HTMLElement | null;
 
-      if (window.scrollY < window.innerHeight * 0.92) {
-        setDarkTheme(false);
-        return;
-      }
-
       if (!element) {
         return;
       }
 
-      let current: HTMLElement | null =
-        element;
+      let current: HTMLElement | null = element;
 
       while (current) {
-        const background =
-          window.getComputedStyle(
-            current,
-          ).backgroundColor;
+        const background = window.getComputedStyle(current).backgroundColor;
 
         if (
-          background ===
-            "rgb(0, 0, 0)" ||
-          background ===
-            "rgb(10, 10, 10)" ||
-          background ===
-            "rgb(17, 17, 17)"
+          background === "rgb(0, 0, 0)" ||
+          background === "rgb(10, 10, 10)" ||
+          background === "rgb(17, 17, 17)"
         ) {
           setDarkTheme(true);
           return;
         }
 
         if (
-          background ===
-            "rgb(255, 255, 255)" ||
-          background ===
-            "rgb(250, 250, 250)" ||
-          background ===
-            "rgb(247, 247, 247)"
+          background === "rgb(255, 255, 255)" ||
+          background === "rgb(250, 250, 250)" ||
+          background === "rgb(247, 247, 247)"
         ) {
           setDarkTheme(false);
           return;
@@ -477,29 +481,28 @@ export function PublicNav() {
       setDarkTheme(false);
     };
 
+    // BUGFIX (perf): this previously ran detectTheme synchronously on every
+    // native "scroll" event. detectTheme calls getBoundingClientRect,
+    // elementFromPoint, and walks the ancestor tree calling
+    // getComputedStyle — all layout-forcing work. Trackpad/momentum
+    // scrolling fires many scroll events per animation frame, so this was
+    // forcing a full layout+style pass that often. That's invisible on a
+    // fast machine and a visible hang on a slower one. It's now coalesced
+    // to at most once per animation frame.
+    const onScrollOrResize = () => {
+      if (ticking) return;
+      ticking = true;
+      window.requestAnimationFrame(detectTheme);
+    };
+
     detectTheme();
 
-    window.addEventListener(
-      "scroll",
-      detectTheme,
-      { passive: true },
-    );
-
-    window.addEventListener(
-      "resize",
-      detectTheme,
-    );
+    window.addEventListener("scroll", onScrollOrResize, { passive: true });
+    window.addEventListener("resize", onScrollOrResize);
 
     return () => {
-      window.removeEventListener(
-        "scroll",
-        detectTheme,
-      );
-
-      window.removeEventListener(
-        "resize",
-        detectTheme,
-      );
+      window.removeEventListener("scroll", onScrollOrResize);
+      window.removeEventListener("resize", onScrollOrResize);
     };
   }, []);
 
@@ -1177,53 +1180,63 @@ function ProductPreview() {
       setDemoStarted(false);
     };
 
+    // BUGFIX (perf): getProgress() calls getBoundingClientRect(), which
+    // forces layout. That used to run on every native "scroll" event
+    // (unthrottled) — only the render() call further down was gated behind
+    // requestAnimationFrame. On a fast machine that's invisible; on a
+    // slower laptop, forcing layout dozens of times per frame across the
+    // whole 220vh hero section is enough to visibly stutter/hang. The fix
+    // coalesces the whole handler — geometry read included — to run at
+    // most once per animation frame. The branching logic itself is
+    // unchanged, just moved inside the rAF callback.
     const onScroll = () => {
-      const p = getProgress();
-      const previous = smoothProgressRef.current;
-      const delta = p - previous;
-      const isMovingUp = delta < -0.0015;
-      const isMovingDown = delta > 0.0015;
-
-      if (
-        isMovingDown &&
-        p >= DEMO_OPEN_START &&
-        demoPhaseRef.current === "resting" &&
-        userScrollIntentRef.current
-      ) {
-        beginDemo();
-      }
-
-      if (
-        isMovingDown &&
-        demoPlayedRef.current &&
-        demoPhaseRef.current === "returning" &&
-        p > DEMO_RETURN_COMPLETE
-      ) {
-        demoPhaseRef.current = "complete";
-        tweenVisual(1, 0.7);
-      }
-
-      if (
-        isMovingUp &&
-        demoPlayedRef.current &&
-        p < DEMO_RETURN_START
-      ) {
-        beginReturnToRest();
-        const reverseProgress = smoothstep(
-          clamp01(
-            (p - DEMO_RETURN_COMPLETE) /
-              (DEMO_RETURN_START - DEMO_RETURN_COMPLETE),
-          ),
-        );
-        visualProgressRef.current = reverseProgress;
-      }
-
-      smoothProgressRef.current = p;
-
       if (rafRef.current !== null) return;
+
       rafRef.current = window.requestAnimationFrame(() => {
         rafRef.current = null;
-        render(smoothProgressRef.current);
+
+        const p = getProgress();
+        const previous = smoothProgressRef.current;
+        const delta = p - previous;
+        const isMovingUp = delta < -0.0015;
+        const isMovingDown = delta > 0.0015;
+
+        if (
+          isMovingDown &&
+          p >= DEMO_OPEN_START &&
+          demoPhaseRef.current === "resting" &&
+          userScrollIntentRef.current
+        ) {
+          beginDemo();
+        }
+
+        if (
+          isMovingDown &&
+          demoPlayedRef.current &&
+          demoPhaseRef.current === "returning" &&
+          p > DEMO_RETURN_COMPLETE
+        ) {
+          demoPhaseRef.current = "complete";
+          tweenVisual(1, 0.7);
+        }
+
+        if (
+          isMovingUp &&
+          demoPlayedRef.current &&
+          p < DEMO_RETURN_START
+        ) {
+          beginReturnToRest();
+          const reverseProgress = smoothstep(
+            clamp01(
+              (p - DEMO_RETURN_COMPLETE) /
+                (DEMO_RETURN_START - DEMO_RETURN_COMPLETE),
+            ),
+          );
+          visualProgressRef.current = reverseProgress;
+        }
+
+        smoothProgressRef.current = p;
+        render(p);
       });
     };
 
@@ -1385,10 +1398,30 @@ function ProductPreview() {
               ref={mainWindowRef}
               className="invisible absolute left-1/2 top-[42vh] z-[50] aspect-[16/10] w-[min(calc(100% - 48px),1600px)] -translate-x-1/2 will-change-[width,height,top,opacity]"
             >
-              <div className="querypilot-resting-entry h-full w-full">
-                <div className="relative h-full w-full overflow-visible rounded-[18px] border border-[#23262c] bg-[#0D0F12] shadow-[0_30px_100px_rgba(0,0,0,0.24)]">
+              <div className="querypilot-resting-entry relative h-full w-full">
+                {/*
+                  Soft sky-toned halo behind the window. Without this the
+                  dark demo window sits as a flat rectangle on top of the
+                  cloud backdrop; the halo lets it read as floating in the
+                  scene instead.
+                */}
+                <div
+                  aria-hidden="true"
+                  className="pointer-events-none absolute -inset-x-8 -inset-y-10 -z-10 rounded-[48px] bg-[radial-gradient(closest-side,rgba(255,255,255,0.6),rgba(158,197,255,0.32)_45%,rgba(158,197,255,0)_75%)] blur-2xl"
+                />
+
+                <div className="relative h-full w-full overflow-visible rounded-[18px] border border-white/[0.14] bg-[#0D0F12] shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_24px_60px_-12px_rgba(24,52,110,0.35),0_60px_140px_-20px_rgba(15,30,70,0.35)]">
                   <QueryPilotApp elapsed={demoElapsed} />
                 </div>
+
+                {/*
+                  Grounded reflection so the window feels seated in the
+                  scene rather than pasted over the clouds.
+                */}
+                <div
+                  aria-hidden="true"
+                  className="pointer-events-none absolute -bottom-7 left-1/2 h-14 w-[72%] -translate-x-1/2 rounded-full bg-[radial-gradient(closest-side,rgba(30,58,110,0.22),rgba(30,58,110,0)_72%)] blur-xl"
+                />
 
                 <div
                   aria-hidden="true"
@@ -1449,20 +1482,23 @@ function HeroMobile() {
 
     const started = performance.now();
     const duration = 30000;
+    let raf = 0;
 
-    const timer = window.setInterval(() => {
-      const elapsed = Math.min(
-        performance.now() - started,
-        duration,
-      );
+    // BUGFIX (perf): setInterval fires on its own clock regardless of
+    // whether the browser is ready to paint, which can pile up work on
+    // slower devices. requestAnimationFrame ties the update to the
+    // browser's own paint cadence instead, so it never over-schedules.
+    const tick = () => {
+      const elapsed = Math.min(performance.now() - started, duration);
       setDemoElapsed(elapsed);
 
-      if (elapsed >= duration) {
-        window.clearInterval(timer);
+      if (elapsed < duration) {
+        raf = window.requestAnimationFrame(tick);
       }
-    }, 50);
+    };
 
-    return () => window.clearInterval(timer);
+    raf = window.requestAnimationFrame(tick);
+    return () => window.cancelAnimationFrame(raf);
   }, [demoStarted]);
 
   return (
@@ -1489,8 +1525,15 @@ function HeroMobile() {
           QueryPilot is the AI retrieval system built to understand, query, and ground knowledge across your data.
         </p>
 
-        <div className="relative mt-10 aspect-[4/3] w-full overflow-hidden rounded-[16px] border border-[#dfe2e8] bg-[#f3f4f6] shadow-[0_24px_70px_rgba(84,92,140,0.12)] sm:aspect-video">
-          <QueryPilotApp elapsed={demoElapsed} />
+        <div className="relative mt-10">
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute -inset-x-4 -inset-y-6 -z-10 rounded-[32px] bg-[radial-gradient(closest-side,rgba(255,255,255,0.65),rgba(158,197,255,0.3)_50%,rgba(158,197,255,0)_75%)] blur-2xl"
+          />
+
+          <div className="relative aspect-[4/3] w-full overflow-hidden rounded-[16px] border border-[#dfe2e8] bg-[#f3f4f6] shadow-[0_24px_70px_rgba(84,92,140,0.16)] sm:aspect-video">
+            <QueryPilotApp elapsed={demoElapsed} />
+          </div>
         </div>
       </div>
     </section>
@@ -1498,736 +1541,140 @@ function HeroMobile() {
 }
 
 /* ============================================================
-   TECHNICAL FEATURES
+   FEATURES
    ============================================================ */
 
 type TechnicalFeature = {
   title: string;
   description: string;
   image: string;
+  icon: ComponentType<{ className?: string; style?: CSSProperties }>;
 };
 
-const technicalFeatures: TechnicalFeature[] =
-  [
-    {
-      title:
-        "Adaptive Query Planning",
-
-      description:
-        "QueryPilot interprets a question and dynamically decides whether to search documents, query structured data, use conversation context, or combine multiple paths before producing an answer.",
-
-      image:
-        "/adaptive.png",
-    },
-
-    {
-      title:
-        "Persistent Conversation Infrastructure",
-
-      description:
-        "QueryPilot persists conversations and messages at the workspace level, maintaining bounded context so follow-up questions can reliably build on earlier interactions.",
-
-      image:
-        "/conversation.png",
-    },
-
-    {
-      title:
-        "Secure Structured Querying",
-
-      description:
-        "Natural-language questions are converted into SQL while execution remains read-only, workspace-scoped, parameterized, and protected by table restrictions, timeouts, and row limits.",
-
-      image:
-        "/sql_generation.png",
-    },
-
-    {
-      title:
-        "Real-Time Answer Streaming",
-
-      description:
-        "Responses stream progressively as QueryPilot works, exposing useful answer content immediately instead of making you wait for the entire generation to finish.",
-
-      image:
-        "/streaming.png",
-    },
-
-    {
-      title:
-        "Asynchronous Document Processing",
-
-      description:
-        "Uploaded Document moves through background processing, extraction, indexing, and preparation so long-running work stays separate from the user-facing request path.",
-
-      image:
-        "/document_processing.png",
-    },
-
-    {
-      title:
-        "Workspace-Isolated Data Architecture",
-
-      description:
-        "Documents, conversations, retrieval, structured tables, and query execution remain isolated to their workspace, preventing data from crossing workspace boundaries.",
-
-      image:
-        "/workspace_isolation.png",
-    },
-  ];
-
-/* ============================================================
-   TechnicalFeaturePanel
-   ============================================================ */
+const technicalFeatures: TechnicalFeature[] = [
+  {
+    title: "Planner Agent",
+    description:
+      "Agent which interprets the user's request, resolves referenced resources and entities, and constructs the execution plan required to answer it. It can coordinate document search, structured queries, metadata lookup, memory, and multi-source execution before evidence is validated.",
+    image: "/querypilot-planner-agent-architecture-responsive.svg",
+    icon: Route,
+  },
+  {
+    title: "Async Ingestion Pipeline",
+    description:
+      "Handles document ingestion asynchronously through background workers so parsing and indexing do not block the request lifecycle. Uploaded files are validated, parsed, chunked, embedded, indexed, and persisted before their ingestion status is updated and the content becomes searchable.",
+    image: "/querypilot-document-processing-pipeline.svg",
+    icon: UploadCloud,
+  },
+  {
+    title: "Conversation Memory",
+    description:
+      "Maintains workspace-scoped conversation context so previous questions, answers, and referenced entities remain available across turns. This enables follow-up queries, pronoun resolution, and contextual references without requiring users to repeat earlier information.",
+    image: "/conversation_memory.svg",
+    icon: MessagesSquare,
+  },
+  {
+    title: "Real-Time SSE Streaming",
+    description:
+      "Streams assistant responses from the Django backend to the frontend over Server-Sent Events as execution progresses. Incremental answer_delta events update a single response in real time, followed by a complete event containing the final answer, sources, and execution state.",
+    image: "/2-sse-streaming.svg",
+    icon: Radio,
+  },
+  {
+    title: "Structured Data Pipeline",
+    description:
+      "Processes XLSX and CSV sources into workspace-scoped SQLite tables with inferred schemas and registered metadata. Natural-language requests are translated into safe, read-only SQL to return structured rows, aggregates, and evidence for the final answer.",
+    image: "/querypilot-structured-data-pipeline.svg",
+    icon: Database,
+  },
+  {
+    title: "Workspace Isolation",
+    description:
+      "Enforces workspace boundaries across documents, tables, retrieval, conversations, and execution so data cannot leak across workspaces. Authorization and workspace-scoped resource access ensure every query operates only against resources the current user is permitted to access.",
+    image: "/querypilot-workspace-isolation(2).svg",
+    icon: ShieldCheck,
+  },
+];
 
 function TechnicalFeaturePanel({
   feature,
+  index,
+  active,
+  panelRef,
+  onActivate,
 }: {
   feature: TechnicalFeature;
+  index: number;
+  active: boolean;
+  panelRef: (element: HTMLElement | null) => void;
+  onActivate: (index: number) => void;
 }) {
-  const sectionRef =
-    useRef<HTMLElement | null>(
-      null,
-    );
-
-  const backgroundRef =
-    useRef<HTMLDivElement | null>(
-      null,
-    );
-
-  const gridRef =
-    useRef<HTMLDivElement | null>(
-      null,
-    );
-
-  const greenGlowRef =
-    useRef<HTMLDivElement | null>(
-      null,
-    );
-
-  const titleRef =
-    useRef<HTMLHeadingElement | null>(
-      null,
-    );
-
-  const descriptionRef =
-    useRef<HTMLParagraphElement | null>(
-      null,
-    );
-
-  const imageShellRef =
-    useRef<HTMLDivElement | null>(
-      null,
-    );
-
-  const imageRef =
-    useRef<HTMLImageElement | null>(
-      null,
-    );
-
-  const hasAnimated =
-    useRef(false);
-
-  useEffect(() => {
-    const section =
-      sectionRef.current;
-
-    if (!section) {
-      return;
-    }
-
-    const reduceMotion =
-      window.matchMedia(
-        "(prefers-reduced-motion: reduce)",
-      ).matches;
-
-    if (reduceMotion) {
-      gsap.set(
-        titleRef.current,
-        {
-          clearProps: "all",
-        },
-      );
-
-      gsap.set(
-        descriptionRef.current,
-        {
-          clearProps: "all",
-        },
-      );
-
-      gsap.set(
-        imageShellRef.current,
-        {
-          clearProps: "all",
-        },
-      );
-
-      gsap.set(
-        imageRef.current,
-        {
-          clearProps: "all",
-        },
-      );
-
-      gsap.set(
-        backgroundRef.current,
-        {
-          clearProps: "all",
-        },
-      );
-
-      gsap.set(
-        gridRef.current,
-        {
-          clearProps: "all",
-        },
-      );
-
-      gsap.set(
-        greenGlowRef.current,
-        {
-          clearProps: "all",
-        },
-      );
-
-      return;
-    }
-
-    const ctx = gsap.context(
-      () => {
-        gsap.set(
-          titleRef.current,
-          {
-            opacity: 0,
-            y: 36,
-            filter: "blur(9px)",
-          },
-        );
-
-        gsap.set(
-          descriptionRef.current,
-          {
-            opacity: 0,
-            y: 30,
-            filter: "blur(8px)",
-          },
-        );
-
-        gsap.set(
-          imageShellRef.current,
-          {
-            opacity: 0,
-            y: 60,
-            scale: 0.95,
-            filter: "blur(9px)",
-          },
-        );
-
-        gsap.set(
-          imageRef.current,
-          {
-            scale: 1.04,
-          },
-        );
-
-        gsap.set(
-          backgroundRef.current,
-          {
-            scale: 1.05,
-          },
-        );
-
-        gsap.set(
-          gridRef.current,
-          {
-            opacity: 0,
-          },
-        );
-
-        gsap.set(
-          greenGlowRef.current,
-          {
-            opacity: 0,
-            scale: 0.82,
-            x: 24,
-            y: 16,
-          },
-        );
-      },
-      section,
-    );
-
-    const observer =
-      new IntersectionObserver(
-        (entries) => {
-          const entry =
-            entries[0];
-
-          if (
-            !entry?.isIntersecting ||
-            hasAnimated.current
-          ) {
-            return;
-          }
-
-          hasAnimated.current =
-            true;
-
-          const timeline =
-            gsap.timeline();
-
-          timeline.to(
-            backgroundRef.current,
-            {
-              scale: 1,
-              opacity: 1,
-              duration: 1.45,
-              ease: "power2.out",
-            },
-            0,
-          );
-
-          timeline.to(
-            gridRef.current,
-            {
-              opacity: 1,
-              duration: 1.0,
-              ease: "power2.out",
-            },
-            0,
-          );
-
-          timeline.to(
-            greenGlowRef.current,
-            {
-              opacity: 0.95,
-              scale: 1,
-              x: 0,
-              y: 0,
-              duration: 1.25,
-              ease: "power3.out",
-            },
-            0.02,
-          );
-
-          timeline.to(
-            titleRef.current,
-            {
-              opacity: 1,
-              y: 0,
-              filter: "blur(0px)",
-              duration: 0.95,
-              ease: "power4.out",
-            },
-            0.10,
-          );
-
-          timeline.to(
-            descriptionRef.current,
-            {
-              opacity: 1,
-              y: 0,
-              filter: "blur(0px)",
-              duration: 0.8,
-              ease: "power3.out",
-            },
-            0.24,
-          );
-
-          timeline.to(
-            imageShellRef.current,
-            {
-              opacity: 1,
-              y: 0,
-              scale: 1,
-              filter: "blur(0px)",
-              duration: 1.05,
-              ease: "power4.out",
-            },
-            0.36,
-          );
-
-          timeline.to(
-            imageRef.current,
-            {
-              scale: 1,
-              duration: 1.2,
-              ease: "power3.out",
-            },
-            0.36,
-          );
-
-          observer.disconnect();
-        },
-        {
-          threshold: 0.12,
-          rootMargin:
-            "0px 0px -5% 0px",
-        },
-      );
-
-    observer.observe(
-      section,
-    );
-
-    return () => {
-      observer.disconnect();
-      ctx.revert();
-    };
-  }, []);
-
   return (
     <article
-      ref={sectionRef}
-      className="technical-feature-panel relative isolate flex flex-col overflow-hidden border-b border-black/10 last:border-b-0"
-      style={{
-        minHeight:
-          FEATURE_TUNING.featurePanelHeight,
-      }}
+      id={`technical-feature-${index}`}
+      ref={panelRef}
+      className="relative flex min-h-[78vh] scroll-mt-8 flex-col justify-center border-t border-white/10 px-4 py-20 sm:px-6 min-[901px]:min-h-[88vh] min-[901px]:px-6 min-[901px]:py-20"
+      data-feature-index={index}
     >
-      <div
-        ref={backgroundRef}
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 -z-30 bg-cover bg-center"
-        style={{
-          backgroundImage:
-            'url("/hh.avif")',
-          opacity: 0.82,
-        }}
-      />
-
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 -z-20 bg-white/54"
-      />
-
-      <div
-        ref={gridRef}
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 -z-10"
-        style={{
-          backgroundImage: `
-            linear-gradient(
-              to right,
-              rgba(0,0,0,0.034) 1px,
-              transparent 1px
-            ),
-            linear-gradient(
-              to bottom,
-              rgba(0,0,0,0.034) 1px,
-              transparent 1px
-            ),
-            radial-gradient(
-              circle at 74% 62%,
-              rgba(0,125,81,0.17),
-              transparent 27%
-            ),
-            radial-gradient(
-              circle at 30% 18%,
-              rgba(255,255,255,0.82),
-              transparent 31%
-            )
-          `,
-          backgroundSize:
-            "44px 44px, 44px 44px, auto, auto",
-          mixBlendMode:
-            "multiply",
-        }}
-      />
-
-      <div
-        ref={greenGlowRef}
-        aria-hidden="true"
-        className="technical-green-glow pointer-events-none absolute -z-10"
-      />
-
-      <div
-        aria-hidden="true"
-        className="technical-green-orbit pointer-events-none absolute -z-10"
-      />
-
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 -z-10 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.72)_0%,rgba(255,255,255,0.16)_42%,rgba(255,255,255,0.06)_70%,rgba(255,255,255,0.58)_100%)]"
-      />
-
-      <div className="relative z-10 mx-auto flex w-full max-w-[1500px] flex-1 flex-col px-6 pb-5 pt-9 min-[901px]:px-12 min-[901px]:pb-6 min-[901px]:pt-10">
-        <div className="shrink-0 max-w-[850px]">
+      <div className="mx-auto flex w-full max-w-[1240px] flex-col">
+        <div className="max-w-[820px]">
           <h3
-            ref={titleRef}
-            className="max-w-[780px] font-light tracking-[-0.058em] text-black"
+            className="text-balance text-[clamp(38px,5.2vw,70px)] font-light leading-[0.94] tracking-[-0.055em] text-white transition-[opacity,transform,filter] duration-700 ease-out"
             style={{
-              fontSize:
-                FEATURE_TUNING.featureTitleSize,
-              lineHeight: 0.94,
+              opacity: active ? 1 : 0.42,
+              transform: active ? "translateY(0)" : "translateY(10px)",
+              filter: active ? "blur(0px)" : "blur(3px)",
             }}
           >
             {feature.title}
           </h3>
 
           <p
-            ref={descriptionRef}
-            className="mt-4 max-w-[650px] text-black/62 min-[901px]:mt-5"
+            className="mt-6 max-w-[730px] text-[clamp(16px,1.35vw,19px)] leading-[1.55] tracking-[-0.01em] text-white/58 transition-[opacity,transform,filter] duration-700 ease-out"
             style={{
-              fontSize:
-                FEATURE_TUNING.featureDescriptionSize,
-              lineHeight:
-                FEATURE_TUNING.featureDescriptionLineHeight,
+              opacity: active ? 1 : 0.32,
+              transform: active ? "translateY(0)" : "translateY(8px)",
+              filter: active ? "blur(0px)" : "blur(2px)",
+              transitionDelay: active ? "70ms" : "0ms",
             }}
           >
             {feature.description}
           </p>
         </div>
 
-        <div className="relative mt-6 flex flex-1 items-start justify-center min-[901px]:mt-7">
-          <div
-            ref={imageShellRef}
-            className="technical-feature-image relative flex w-full max-w-[900px] items-center justify-center overflow-hidden rounded-[24px] border border-black/[0.07] bg-white/[0.12] shadow-[0_24px_65px_rgba(0,0,0,0.07)] backdrop-blur-[2px]"
-            style={{
-              height:
-                FEATURE_TUNING.featureImageHeight,
-            }}
-          >
-            <div
-              aria-hidden="true"
-              className="pointer-events-none absolute left-1/2 top-1/2 h-[62%] w-[68%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#007D51]/[0.075] blur-[70px]"
-            />
-
-            <div
-              aria-hidden="true"
-              className="pointer-events-none absolute left-5 right-5 top-4 h-px bg-black/[0.08]"
-            />
-
-            <div
-              aria-hidden="true"
-              className="pointer-events-none absolute bottom-[-20px] left-1/2 h-28 w-[72%] -translate-x-1/2 rounded-full bg-[#007D51]/[0.035] blur-3xl"
-            />
-
-            <img
-              ref={imageRef}
-              src={feature.image}
-              alt={feature.title}
-              loading={
-                feature.image ===
-                "/adaptive.png"
-                  ? "eager"
-                  : "lazy"
-              }
-              decoding="async"
-              draggable={false}
-              className="relative z-10 block h-auto w-[94%] max-w-[860px] object-contain object-center mix-blend-multiply"
-            />
-          </div>
+        <div
+          className={`
+            mt-10 overflow-hidden rounded-[22px] border border-white/10
+            bg-[#111214] shadow-[0_35px_100px_rgba(0,0,0,0.38)]
+            transition-[border-color,box-shadow] duration-500 sm:mt-12
+            ${active ? "border-white/16 shadow-[0_40px_110px_rgba(0,0,0,0.48)]" : ""}
+          `}
+        >
+          <div className="relative flex min-h-[600px] items-center justify-center overflow-visible p-6 sm:min-h-[680px] sm:p-10">
+  <div
+    aria-hidden="true"
+    className="pointer-events-none absolute inset-0 z-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.035)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.035)_1px,transparent_1px)] bg-[size:44px_44px]"
+  />
+  <img
+    src={feature.image}
+    alt={`${feature.title} architecture`}
+    loading={index === 0 ? "eager" : "lazy"}
+    decoding="async"
+    draggable={false}
+    className="relative z-10 block h-full w-full object-contain object-center max-h-[520px] sm:max-h-[600px]"
+  />
+</div>
         </div>
       </div>
 
-      <style jsx>{`
-        .technical-feature-image {
-          transition:
-            border-color 400ms ease,
-            box-shadow 500ms ease,
-            background 500ms ease;
-        }
-
-        .technical-feature-panel:hover
-          .technical-feature-image {
-          border-color: rgba(
-            0,
-            125,
-            81,
-            0.14
-          );
-
-          box-shadow:
-            0 30px 78px rgba(
-              0,
-              0,
-              0,
-              0.09
-            ),
-            0 0 0 1px rgba(
-              0,
-              125,
-              81,
-              0.04
-            );
-        }
-
-        .technical-green-glow {
-          left: 58%;
-          top: 34%;
-          width: 420px;
-          height: 420px;
-
-          border-radius: 999px;
-
-          background:
-            radial-gradient(
-              circle,
-              rgba(
-                0,
-                125,
-                81,
-                0.20
-              )
-              0%,
-              rgba(
-                0,
-                125,
-                81,
-                0.11
-              )
-              26%,
-              rgba(
-                0,
-                125,
-                81,
-                0.04
-              )
-              48%,
-              transparent
-              72%
-            );
-
-          filter: blur(32px);
-
-          transform: translate3d(
-            -50%,
-            -50%,
-            0
-          );
-
-          animation:
-            technical-green-breathe
-            6s
-            ease-in-out
-            infinite;
-        }
-
-        .technical-green-orbit {
-          left: 18%;
-          bottom: 4%;
-          width: 300px;
-          height: 180px;
-
-          border-radius: 999px;
-
-          background:
-            radial-gradient(
-              ellipse,
-              rgba(
-                0,
-                125,
-                81,
-                0.085
-              )
-              0%,
-              rgba(
-                0,
-                125,
-                81,
-                0.035
-              )
-              44%,
-              transparent
-              74%
-            );
-
-          filter: blur(42px);
-
-          animation:
-            technical-green-drift
-            9s
-            ease-in-out
-            infinite;
-        }
-
-        @keyframes technical-green-breathe {
-          0%,
-          100% {
-            opacity: 0.55;
-            transform:
-              translate3d(
-                -50%,
-                -50%,
-                0
-              )
-              scale(0.92);
-          }
-
-          50% {
-            opacity: 1;
-            transform:
-              translate3d(
-                -46%,
-                -52%,
-                0
-              )
-              scale(1.08);
-          }
-        }
-
-        @keyframes technical-green-drift {
-          0%,
-          100% {
-            opacity: 0.45;
-            transform:
-              translate3d(
-                0,
-                0,
-                0
-              )
-              scale(0.94);
-          }
-
-          50% {
-            opacity: 0.82;
-            transform:
-              translate3d(
-                38px,
-                -18px,
-                0
-              )
-              scale(1.08);
-          }
-        }
-
-        @media (max-width: 900px) {
-          .technical-feature-panel {
-            min-height: auto !important;
-          }
-
-          .technical-feature-image {
-            height: 280px !important;
-          }
-
-          .technical-green-glow {
-            left: 54%;
-            top: 44%;
-            width: 280px;
-            height: 280px;
-          }
-
-          .technical-green-orbit {
-            left: 5%;
-            bottom: 2%;
-            width: 210px;
-            height: 140px;
-          }
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-          .technical-green-glow,
-          .technical-green-orbit {
-            animation: none;
-          }
-
-          .technical-feature-image {
-            transition: none;
-          }
-        }
-      `}</style>
+      <button
+        type="button"
+        className="sr-only"
+        onClick={() => onActivate(index)}
+        aria-label={`Activate ${feature.title}`}
+      >
+        {feature.title}
+      </button>
     </article>
   );
 }
@@ -2237,63 +1684,201 @@ function TechnicalFeaturePanel({
    ============================================================ */
 
 function TechnicalSplitSection() {
+  const sectionRef = useRef<HTMLElement | null>(null);
+  const panelRefs = useRef<(HTMLElement | null)[]>([]);
+  const tickingRef = useRef(false);
+  const [activeFeature, setActiveFeature] = useState(0);
+
+  useEffect(() => {
+    const updateActiveFeature = () => {
+      tickingRef.current = false;
+
+      const targetY = window.innerHeight * 0.46;
+      let closestIndex = 0;
+      let closestDistance = Number.POSITIVE_INFINITY;
+      const distanceByIndex: number[] = [];
+
+      panelRefs.current.forEach((panel, index) => {
+        if (!panel) {
+          distanceByIndex[index] = Number.POSITIVE_INFINITY;
+          return;
+        }
+
+        const rect = panel.getBoundingClientRect();
+        const centerY = rect.top + rect.height / 2;
+        const distance = Math.abs(centerY - targetY);
+        distanceByIndex[index] = distance;
+
+        if (distance < closestDistance) {
+          closestDistance = distance;
+          closestIndex = index;
+        }
+      });
+
+      // Hysteresis: only switch away from the current panel once the new
+      // candidate is meaningfully closer, not just marginally closer. Without
+      // this, two adjacent panels that are briefly equidistant from the
+      // target line cause the active index (and every highlight it drives)
+      // to flicker back and forth on tiny scroll deltas.
+      setActiveFeature((current) => {
+        const currentDistance = distanceByIndex[current] ?? Number.POSITIVE_INFINITY;
+        if (closestIndex === current) return current;
+        const improvement = currentDistance - closestDistance;
+        const SWITCH_THRESHOLD_PX = 24;
+        return improvement > SWITCH_THRESHOLD_PX ? closestIndex : current;
+      });
+    };
+
+    const onScroll = () => {
+      if (tickingRef.current) return;
+
+      tickingRef.current = true;
+      window.requestAnimationFrame(updateActiveFeature);
+    };
+
+    updateActiveFeature();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+    };
+  }, []);
+
+  const scrollToFeature = (index: number) => {
+    const panel = panelRefs.current[index];
+    if (!panel) return;
+
+    const offset = Math.max(28, window.innerHeight * 0.08);
+    const top =
+      window.scrollY + panel.getBoundingClientRect().top - offset;
+
+    window.scrollTo({
+      top,
+      behavior: "smooth",
+    });
+  };
+
   return (
-    <section id="technical-features" className="w-full bg-black">
-      <div className="mx-auto grid w-[calc(100%-40px)] max-w-[1600px] max-[768px]:w-[calc(100%-28px)] min-[901px]:grid-cols-[42%_58%]">
-        <aside className="bg-black min-[901px]:sticky min-[901px]:top-0 min-[901px]:h-screen">
-          <div className="flex h-full flex-col justify-center px-6 py-16 min-[901px]:py-0 min-[901px]:pl-2 min-[901px]:pr-12">
-            <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#007D51]">
-              Why QueryPilot
+    <section
+      id="technical-features"
+      ref={sectionRef}
+      className="w-full bg-[#070707] text-white"
+    >
+      <div className="mx-auto w-[calc(100%-40px)] max-w-[1600px] max-[768px]:w-[calc(100%-28px)]">
+        {/* Features intro */}
+        <div className="border-b border-white/10 px-6 pb-20 pt-28 sm:px-9 min-[901px]:px-12 min-[901px]:pb-24 min-[901px]:pt-36">
+          <div className="max-w-[1180px]">
+            <span className="inline-flex rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[11px] font-medium tracking-[0.08em] text-white/75">
+              Features
             </span>
 
-            <h2 className="mt-6 text-[clamp(32px,4.2vw,58px)] font-light leading-[0.96] tracking-[-0.05em] text-white">
-              Not
-              <br />
-              another
-              <br />
-              document
-              <br />
-              chatbot.
+            <h2 className="mt-7 max-w-[1050px] text-balance text-[clamp(38px,5.8vw,78px)] font-light leading-[0.96] tracking-[-0.06em] text-white">
+              The system that turns natural language into grounded answers.
             </h2>
 
-            <p
-              className="text-white"
-              style={{
-                marginTop:
-                  FEATURE_TUNING.whyCopyMarginTop,
-                maxWidth:
-                  FEATURE_TUNING.whyCopyMaxWidth,
-                fontSize:
-                  FEATURE_TUNING.whyCopyFontSize,
-                lineHeight:
-                  FEATURE_TUNING.whyCopyLineHeight,
-                color:
-                  FEATURE_TUNING.whyCopyColor,
-              }}
-            >
-              QueryPilot is built to work across
-              structured and unstructured data,
-              resolve entities the way a database
-              would, and keep every answer tied
-              to the evidence behind it.
+            <p className="mt-7 max-w-[820px] text-[clamp(17px,1.6vw,22px)] leading-[1.45] tracking-[-0.015em] text-white/48">
+              An enterprise workspace assistant that can reason across both
+              unstructured company documents and structured business data.
             </p>
           </div>
-        </aside>
+        </div>
 
-        <div className="overflow-hidden bg-white">
-          {technicalFeatures.map(
-            (feature) => (
+        {/* Sticky navigation + scrolling feature cards */}
+        <div className="grid min-[901px]:grid-cols-[25%_75%]">
+          <aside className="bg-[#070707] min-[901px]:sticky min-[901px]:top-0 min-[901px]:h-screen">
+            <div className="flex h-full flex-col justify-center px-6 py-16 sm:px-9 min-[901px]:px-12 min-[901px]:py-0">
+              <div className="mb-7 text-[10px] font-medium uppercase tracking-[0.2em] text-white/35">
+                Features
+              </div>
+
+              {/*
+                Fixed icon rail: every button keeps the same icon, the same
+                size, and the same position at all times. Nothing here ever
+                moves, resizes, or swaps content — the only thing that
+                changes as you scroll between features is the highlight
+                (background/border/icon color) on whichever one is active.
+              */}
+              <nav
+                aria-label="QueryPilot features"
+                className="flex flex-col gap-2.5"
+              >
+                {technicalFeatures.map((feature, index) => {
+                  const isActive = index === activeFeature;
+                  const Icon = feature.icon;
+
+                  return (
+                    <button
+                      key={feature.title}
+                      type="button"
+                      onClick={() => scrollToFeature(index)}
+                      aria-current={isActive ? "step" : undefined}
+                      aria-label={feature.title}
+                      title={feature.title}
+                      className="group relative flex items-center gap-3.5 text-left"
+                    >
+                      <span
+                        className="flex h-11 w-11 flex-none items-center justify-center rounded-xl border transition-[background-color,border-color] duration-300"
+                        style={{
+                          backgroundColor: isActive
+                            ? "rgba(255,255,255,0.08)"
+                            : "transparent",
+                          borderColor: isActive
+                            ? "rgba(255,255,255,0.22)"
+                            : "rgba(255,255,255,0.08)",
+                        }}
+                      >
+                        <Icon
+                          className="h-[18px] w-[18px] transition-colors duration-300"
+                          style={{
+                            color: isActive
+                              ? "#ffffff"
+                              : "rgba(255,255,255,0.32)",
+                          }}
+                        />
+                      </span>
+
+                      <span
+                        className="text-[13.5px] tracking-[-0.01em] transition-colors duration-300"
+                        style={{
+                          color: isActive
+                            ? "#ffffff"
+                            : "rgba(255,255,255,0.28)",
+                          fontWeight: isActive ? 500 : 400,
+                        }}
+                      >
+                        {feature.title}
+                      </span>
+                    </button>
+                  );
+                })}
+              </nav>
+
+              
+            </div>
+          </aside>
+
+          <div className="overflow-hidden bg-[#0b0b0b]">
+            {technicalFeatures.map((feature, index) => (
               <TechnicalFeaturePanel
                 key={feature.title}
                 feature={feature}
+                index={index}
+                active={index === activeFeature}
+                panelRef={(element) => {
+                  panelRefs.current[index] = element;
+                }}
+                onActivate={setActiveFeature}
               />
-            ),
-          )}
+            ))}
+          </div>
         </div>
       </div>
     </section>
   );
 }
+
 
 /* ============================================================
    BuilderClosingSection

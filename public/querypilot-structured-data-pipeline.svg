@@ -1,0 +1,576 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 580" width="100%" preserveAspectRatio="xMidYMid meet" style="display: block; width: 100%; height: auto; background-color:#07090e; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;" xmlns:c2pa="http://c2pa.org/manifest"><metadata><c2pa:manifest>AAAWgmp1bWIAAAAeanVtZGMycGEAEQAQgAAAqgA4m3EDYzJwYQAAABZcanVtYgAAAEdqdW1kYzJtYQARABCAAACqADibcQN1cm46YzJwYTo1OGI0ZGRmNy1jYTFjLTQzYzctYjliMi04NzNjNThiYzg1OGYAAAADl2p1bWIAAAApanVtZGMyYXMAEQAQgAAAqgA4m3EDYzJwYS5hc3NlcnRpb25zAAAAALxqdW1iAAAARGp1bWRjYm9yABEAEIAAAKoAOJtxE2MycGEuaW5ncmVkaWVudC52MwAAAAAYYzJzaDzkCh+0wpdTUClKAHupnMEAAABwY2JvcqNpZGM6Zm9ybWF0bWltYWdlL3N2Zyt4bWxqaW5zdGFuY2VJRHgseG1wOmlpZDoxZTNjOTAwYy0wZDJhLTQ4YmYtYWU4Yy1lZDc3M2VlNzFmODNscmVsYXRpb25zaGlwaHBhcmVudE9mAAAB4mp1bWIAAABBanVtZGNib3IAEQAQgAAAqgA4m3ETYzJwYS5hY3Rpb25zLnYyAAAAABhjMnNojjT4MkbCuF8cLurgwDokhQAAAZljYm9yomdhY3Rpb25zgqJmYWN0aW9ua2MycGEub3BlbmVkanBhcmFtZXRlcnOha2luZ3JlZGllbnRzgaJjdXJseC1zZWxmI2p1bWJmPWMycGEuYXNzZXJ0aW9ucy9jMnBhLmluZ3JlZGllbnQudjNkaGFzaFggW4KBg+V5056U+5L16lFh3LeqL+uypjmE9CGLQePdrIKkZmFjdGlvbngdY29tLmFudGhyb3BpYy5jbGF1ZGUucHJvdmlkZWRqcGFyYW1ldGVyc6F4H2NvbS5hbnRocm9waWMub3JpZ2luLWNvbmZpZGVuY2VndW5rbm93bmtkZXNjcmlwdGlvbnhmQ2xhdWRlIHByb3ZpZGVkIHRoaXMgZmlsZSBhdCB0aGUgcmVxdWVzdCBvZiBhIHVzZXIgYW5kIG1heSBoYXZlIGNyZWF0ZWQgb3IgbW9kaWZpZWQgdGhlIGZpbGUgY29udGVudHMubXNvZnR3YXJlQWdlbnShZG5hbWVmQ2xhdWRlcmFsbEFjdGlvbnNJbmNsdWRlZPUAAADIanVtYgAAAEBqdW1kY2JvcgARABCAAACqADibcRNjMnBhLmhhc2guZGF0YQAAAAAYYzJzaPX3txBQSyJ8x06Vr8kCfdcAAACAY2JvcqVjYWxnZnNoYTI1NmNwYWRMAAAAAAAAAAAAAAAAZGhhc2hYIGblbbd2BmRQSK+N+sUomWx3zCAweo8LaX3N9pJf/fTtZG5hbWVuanVtYmYgbWFuaWZlc3RqZXhjbHVzaW9uc4GiZXN0YXJ0GQF/Zmxlbmd0aBkeBAAAAj5qdW1iAAAAJ2p1bWRjMmNsABEAEIAAAKoAOJtxA2MycGEuY2xhaW0udjIAAAACD2Nib3KlY2FsZ2ZzaGEyNTZpc2lnbmF0dXJleE1zZWxmI2p1bWJmPS9jMnBhL3VybjpjMnBhOjU4YjRkZGY3LWNhMWMtNDNjNy1iOWIyLTg3M2M1OGJjODU4Zi9jMnBhLnNpZ25hdHVyZWppbnN0YW5jZUlEeCx4bXA6aWlkOjM1OGUyOTJmLTVjODAtNDFkZC1iYTAzLWU2YzU1NDg2NWFlOHJjcmVhdGVkX2Fzc2VydGlvbnODomN1cmx4LXNlbGYjanVtYmY9YzJwYS5hc3NlcnRpb25zL2MycGEuaW5ncmVkaWVudC52M2RoYXNoWCBbgoGD5XnTnpT7kvXqUWHct6ov67KmOYT0IYtB492sgqJjdXJseCpzZWxmI2p1bWJmPWMycGEuYXNzZXJ0aW9ucy9jMnBhLmFjdGlvbnMudjJkaGFzaFggIeo/uNibQNL9JjJWHRsjwCda/qnYNJmYivUxoNvr3D6iY3VybHgpc2VsZiNqdW1iZj1jMnBhLmFzc2VydGlvbnMvYzJwYS5oYXNoLmRhdGFkaGFzaFggm9aEZ+F+lPx0z2sdugLyZ54hPhOpl/2ex/FFG1tIpzh0Y2xhaW1fZ2VuZXJhdG9yX2luZm+jZG5hbWVvQW50aHJvcGljIEZpbGVzZ3ZlcnNpb25lMS4wLjBrc3BlY1ZlcnNpb25lMi40LjAAABA4anVtYgAAAChqdW1kYzJjcwARABCAAACqADibcQNjMnBhLnNpZ25hdHVyZQAAABAIY2JvctKEWQISogEmGCFZAgowggIGMIIBjaADAgECAhRA5aAK7sI50L64g/oGQgU9Z1UTADAKBggqhkjOPQQDAzBJMRcwFQYDVQQKEw5BbnRocm9waWMsIFBCQzEuMCwGA1UEAxMlQW50aHJvcGljIENvbnRlbnQgQ3JlZGVudGlhbHMgUm9vdCBDQTAeFw0yNjA4MDcxODQzNTZaFw0yODA4MDYxOTQzNTZaMEQxFzAVBgNVBAoTDkFudGhyb3BpYywgUEJDMSkwJwYDVQQDEyBBbnRocm9waWMgQ2xhdWRlIENvbnRlbnQgU2lnbmluZzBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABJh6CmvLUBgFFNU0vUKlOVtE6djd17L5SuwX0LemFisBM3dkd/3cyjxFA3Qo5S46fX0/ihY0VZ7mfb9KF703t5OjWDBWMA4GA1UdDwEB/wQEAwIHgDAVBgNVHSUEDjAMBgorBgEEAYPoXgIBMAwGA1UdEwEB/wQCMAAwHwYDVR0jBBgwFoAUzlHiBIFOZFsj+OPEz5o+nMHXXMIwCgYIKoZIzj0EAwMDZwAwZAIwMXMdFJ4BetLLVY7ORuE9noqbbAZOZn/aArXyTwFAZfKrPzxF2vPoJNf1+UCdg1XGAjBwX1zd9WGqYkqmL5SFqw1QySjr1zJfpJM9+1rdDwSPLMOPOjKuiXjoU/pUUeG9RwmhY3BhZFkNngAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPZYQACvfBJpxaEDZEDJ2cXLqsxkAh44S2JDMx+Z9xm8HYEF+EPo5HUzBqSfo5UGWVbjF1L/q0JRrROdxacsneWyiTM=</c2pa:manifest></metadata>
+  <defs>
+    <!-- Background Grid Pattern -->
+    <pattern id="grid" width="24" height="24" patternUnits="userSpaceOnUse">
+      <path d="M 24 0 L 0 0 0 24" fill="none" stroke="#141824" stroke-width="0.8" opacity="0.6"/>
+    </pattern>
+
+    <!-- White Current Glow Filter -->
+    <filter id="current-glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="2.5" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+
+    <!-- Subtle Card Shadow -->
+    <filter id="card-shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.6"/>
+    </filter>
+
+    <!-- 3D Cylinder Gradients -->
+    <linearGradient id="cylinder-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#141824" />
+      <stop offset="25%" stop-color="#192030" />
+      <stop offset="70%" stop-color="#10141d" />
+      <stop offset="100%" stop-color="#0d1017" />
+    </linearGradient>
+
+    <linearGradient id="rim-top-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#2a3449" />
+      <stop offset="100%" stop-color="#121622" />
+    </linearGradient>
+
+    <linearGradient id="glow-header-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.9" />
+      <stop offset="100%" stop-color="#94a3b8" stop-opacity="0.7" />
+    </linearGradient>
+
+    <style>
+      /* Standalone CSS Animations for pure SVG execution */
+      @keyframes currentPulse {
+        0% { stroke-dashoffset: 120; }
+        100% { stroke-dashoffset: 0; }
+      }
+
+      @keyframes currentPulseVertical {
+        0% { stroke-dashoffset: 60; }
+        100% { stroke-dashoffset: 0; }
+      }
+
+      @keyframes cardSheen {
+        0%, 100% { opacity: 0.2; }
+        50% { opacity: 0.6; }
+      }
+
+      @keyframes blockActivePulse {
+        0%, 100% { stroke: #2a3449; }
+        50% { stroke: #64748b; }
+      }
+
+      .pipe-bg {
+        stroke: #1b202d;
+        fill: none;
+        stroke-linecap: round;
+      }
+
+      .pipe-inner {
+        stroke: #090b10;
+        fill: none;
+        stroke-linecap: round;
+      }
+
+      .current-stream {
+        stroke: #ffffff;
+        fill: none;
+        stroke-linecap: round;
+        stroke-dasharray: 20 40;
+        animation: currentPulse 1.4s linear infinite;
+        filter: url(#current-glow);
+      }
+
+      .current-stream-vertical {
+        stroke: #ffffff;
+        fill: none;
+        stroke-linecap: round;
+        stroke-dasharray: 12 24;
+        animation: currentPulseVertical 1s linear infinite;
+        filter: url(#current-glow);
+      }
+
+      .dashed-wire {
+        stroke: #334155;
+        fill: none;
+        stroke-dasharray: 4 4;
+      }
+
+      .dashed-current {
+        stroke: #ffffff;
+        fill: none;
+        stroke-dasharray: 20 50;
+        animation: currentPulse 1.8s linear infinite;
+        filter: url(#current-glow);
+      }
+
+      .card-box {
+        fill: #0e1117;
+        stroke: #1e2433;
+        stroke-width: 1.2;
+        rx: 12px;
+        transition: all 0.3s ease;
+      }
+
+      .card-box:hover {
+        stroke: #475569;
+        fill: #121622;
+      }
+
+      .header-text {
+        fill: #ffffff;
+        font-weight: 700;
+        font-size: 11.5px;
+        letter-spacing: 0.3px;
+      }
+
+      .sub-text {
+        fill: #94a3b8;
+        font-size: 9.5px;
+      }
+
+      .mono-text {
+        font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+        font-size: 9px;
+      }
+
+      .tag-xlsx {
+        fill: #064e3b;
+        stroke: #10b981;
+        stroke-width: 0.8;
+      }
+
+      .tag-csv {
+        fill: #1e293b;
+        stroke: #64748b;
+        stroke-width: 0.8;
+      }
+    </style>
+  </defs>
+
+  <!-- Container Surface with Grid -->
+  <rect x="8" y="8" width="1064" height="564" rx="16" fill="#090b10" stroke="#1e2433" stroke-width="1.5" />
+  <rect x="8" y="8" width="1064" height="564" rx="16" fill="url(#grid)" />
+
+  <!-- Diagram Title / Watermark Header in canvas -->
+  <g transform="translate(30, 32)">
+    <text x="0" y="0" fill="#ffffff" font-size="14" font-weight="800" letter-spacing="0.5">STRUCTURED DATA PIPELINE</text>
+    <text x="215" y="0" fill="#64748b" font-size="11" font-weight="500">Spreadsheets → SQLite → Schema Registry &amp; Query</text>
+  </g>
+
+  <!-- ========================================================================= -->
+  <!-- 1. SPREADSHEET FILES CARD (Column 1)                                      -->
+  <!-- ========================================================================= -->
+  <g id="card-files" transform="translate(26, 52)" filter="url(#card-shadow)">
+    <rect width="190" height="230" rx="12" class="card-box" />
+    
+    <!-- Header -->
+    <g transform="translate(14, 14)">
+      <!-- Icon Box -->
+      <rect width="28" height="28" rx="8" fill="#1e2433" stroke="#334155" stroke-width="1" />
+      <path d="M 8 7 L 16 7 L 20 11 L 20 21 L 8 21 Z" fill="none" stroke="#94a3b8" stroke-width="1.5" />
+      <line x1="11" y1="12" x2="17" y2="12" stroke="#94a3b8" stroke-width="1.2" />
+      <line x1="11" y1="15" x2="17" y2="15" stroke="#94a3b8" stroke-width="1.2" />
+      <line x1="11" y1="18" x2="15" y2="18" stroke="#94a3b8" stroke-width="1.2" />
+
+      <!-- Title -->
+      <text x="36" y="12" class="header-text">Spreadsheet Files</text>
+      <text x="36" y="24" class="sub-text">Raw tabular inputs</text>
+    </g>
+
+    <line x1="14" y1="52" x2="176" y2="52" stroke="#1e2433" stroke-width="1" />
+
+    <!-- File 1: employees.xlsx -->
+    <g transform="translate(12, 62)">
+      <rect width="166" height="32" rx="8" fill="#141824" stroke="#1e2433" stroke-width="1" />
+      <rect x="6" y="6" width="20" height="20" rx="4" class="tag-xlsx" />
+      <text x="13" y="20" fill="#34d399" font-size="10" font-weight="bold">X</text>
+      <text x="34" y="20" fill="#e2e8f0" font-size="11" font-weight="500">employees.xlsx</text>
+      <circle cx="166" cy="16" r="3" fill="#1e2433" stroke="#475569" stroke-width="1" />
+    </g>
+
+    <!-- File 2: sales_data.xlsx -->
+    <g transform="translate(12, 100)">
+      <rect width="166" height="32" rx="8" fill="#141824" stroke="#1e2433" stroke-width="1" />
+      <rect x="6" y="6" width="20" height="20" rx="4" class="tag-xlsx" />
+      <text x="13" y="20" fill="#34d399" font-size="10" font-weight="bold">X</text>
+      <text x="34" y="20" fill="#e2e8f0" font-size="11" font-weight="500">sales_data.xlsx</text>
+      <circle cx="166" cy="16" r="3" fill="#1e2433" stroke="#475569" stroke-width="1" />
+    </g>
+
+    <!-- File 3: inventory.csv -->
+    <g transform="translate(12, 138)">
+      <rect width="166" height="32" rx="8" fill="#141824" stroke="#1e2433" stroke-width="1" />
+      <rect x="6" y="6" width="20" height="20" rx="4" class="tag-csv" />
+      <text x="10" y="20" fill="#94a3b8" font-size="8.5" font-weight="bold">CSV</text>
+      <text x="34" y="20" fill="#e2e8f0" font-size="11" font-weight="500">inventory.csv</text>
+      <circle cx="166" cy="16" r="3" fill="#1e2433" stroke="#475569" stroke-width="1" />
+    </g>
+
+    <!-- File 4: finance.csv -->
+    <g transform="translate(12, 176)">
+      <rect width="166" height="32" rx="8" fill="#141824" stroke="#1e2433" stroke-width="1" />
+      <rect x="6" y="6" width="20" height="20" rx="4" class="tag-csv" />
+      <text x="10" y="20" fill="#94a3b8" font-size="8.5" font-weight="bold">CSV</text>
+      <text x="34" y="20" fill="#e2e8f0" font-size="11" font-weight="500">finance.csv</text>
+      <circle cx="166" cy="16" r="3" fill="#1e2433" stroke="#475569" stroke-width="1" />
+    </g>
+
+    <!-- Footer label -->
+    <text x="14" y="220" fill="#64748b" font-size="9.5" font-weight="500">+ more files...</text>
+  </g>
+
+  <!-- ========================================================================= -->
+  <!-- CONVERGING CONDUITS: Files -> Extract & Parse                             -->
+  <!-- ========================================================================= -->
+  <g id="conduits-files-converge">
+    <!-- Outer Pipe Casings -->
+    <path d="M 204,130 C 228,130 224,82 244,82" class="pipe-bg" stroke-width="4" />
+    <path d="M 204,168 C 228,168 224,82 244,82" class="pipe-bg" stroke-width="4" />
+    <path d="M 204,206 C 228,206 224,82 244,82" class="pipe-bg" stroke-width="4" />
+    <path d="M 204,244 C 228,244 224,82 244,82" class="pipe-bg" stroke-width="4" />
+    <!-- Common trunk -->
+    <path d="M 244,82 L 278,82" class="pipe-bg" stroke-width="4.5" />
+
+    <!-- Inner Pipe Hollows -->
+    <path d="M 204,130 C 228,130 224,82 244,82" class="pipe-inner" stroke-width="2" />
+    <path d="M 204,168 C 228,168 224,82 244,82" class="pipe-inner" stroke-width="2" />
+    <path d="M 204,206 C 228,206 224,82 244,82" class="pipe-inner" stroke-width="2" />
+    <path d="M 204,244 C 228,244 224,82 244,82" class="pipe-inner" stroke-width="2" />
+    <path d="M 244,82 L 278,82" class="pipe-inner" stroke-width="2.2" />
+
+    <!-- Animated White Electric Current Streams -->
+    <path d="M 204,130 C 228,130 224,82 244,82" class="current-stream" stroke-width="2" style="animation-delay: 0s;" />
+    <path d="M 204,168 C 228,168 224,82 244,82" class="current-stream" stroke-width="2" style="animation-delay: -0.2s;" />
+    <path d="M 204,206 C 228,206 224,82 244,82" class="current-stream" stroke-width="2" style="animation-delay: -0.4s;" />
+    <path d="M 204,244 C 228,244 224,82 244,82" class="current-stream" stroke-width="2" style="animation-delay: -0.6s;" />
+    <path d="M 244,82 L 278,82" class="current-stream" stroke-width="2.4" style="animation-delay: -0.1s;" />
+
+    <!-- Manifold Collar at (244, 82) -->
+    <circle cx="244" cy="82" r="3.5" fill="#1e2433" stroke="#ffffff" stroke-width="0.8" />
+  </g>
+
+  <!-- ========================================================================= -->
+  <!-- 2. EXTRACTION & INGESTION PIPELINE (Column 2)                             -->
+  <!-- ========================================================================= -->
+
+  <!-- Step 1: Extract & Parse -->
+  <g id="step-extract" transform="translate(278, 52)" filter="url(#card-shadow)">
+    <rect width="200" height="58" rx="10" class="card-box" />
+    <circle cx="0" cy="30" r="3" fill="#ffffff" stroke="#1e2433" stroke-width="1" />
+    <g transform="translate(12, 14)">
+      <rect width="28" height="28" rx="7" fill="#1e2433" stroke="#334155" stroke-width="1" />
+      <path d="M 9 8 L 15 8 L 19 12 L 19 20 L 9 20 Z" fill="none" stroke="#ffffff" stroke-width="1.3" />
+      <text x="36" y="13" class="header-text">Extract &amp; Parse</text>
+      <text x="36" y="25" class="sub-text">Read sheets &amp; parse tabular cells</text>
+    </g>
+  </g>
+
+  <!-- Conduit 1 -> 2: Extract to Infer -->
+  <g id="conduit-step1-2">
+    <path d="M 378,110 L 378,138" class="pipe-bg" stroke-width="4" />
+    <path d="M 378,110 L 378,138" class="pipe-inner" stroke-width="2" />
+    <path d="M 378,110 L 378,138" class="current-stream-vertical" stroke-width="2" />
+    <text x="374" y="142" fill="#ffffff" font-size="9" font-weight="bold">↓</text>
+  </g>
+
+  <!-- Step 2: Infer Schema -->
+  <g id="step-infer" transform="translate(278, 144)" filter="url(#card-shadow)">
+    <rect width="200" height="58" rx="10" class="card-box" />
+    <g transform="translate(12, 14)">
+      <rect width="28" height="28" rx="7" fill="#1e2433" stroke="#334155" stroke-width="1" />
+      <circle cx="13" cy="13" r="4.5" fill="none" stroke="#ffffff" stroke-width="1.3" />
+      <line x1="16.5" y1="16.5" x2="20" y2="20" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" />
+      <text x="36" y="13" class="header-text">Infer Schema</text>
+      <text x="36" y="25" class="sub-text">Detect types, headers, relations</text>
+    </g>
+  </g>
+
+  <!-- Conduit 2 -> 3: Infer to Create -->
+  <g id="conduit-step2-3">
+    <path d="M 378,202 L 378,230" class="pipe-bg" stroke-width="4" />
+    <path d="M 378,202 L 378,230" class="pipe-inner" stroke-width="2" />
+    <path d="M 378,202 L 378,230" class="current-stream-vertical" stroke-width="2" />
+    <text x="374" y="234" fill="#ffffff" font-size="9" font-weight="bold">↓</text>
+  </g>
+
+  <!-- Step 3: Create Tables -->
+  <g id="step-create" transform="translate(278, 236)" filter="url(#card-shadow)">
+    <rect width="200" height="58" rx="10" class="card-box" />
+    <g transform="translate(12, 14)">
+      <rect width="28" height="28" rx="7" fill="#1e2433" stroke="#334155" stroke-width="1" />
+      <rect x="7" y="8" width="14" height="12" rx="2" fill="none" stroke="#ffffff" stroke-width="1.3" />
+      <line x1="7" y1="12" x2="21" y2="12" stroke="#ffffff" stroke-width="1" />
+      <line x1="12" y1="12" x2="12" y2="20" stroke="#ffffff" stroke-width="1" />
+      <text x="36" y="13" class="header-text">Create Tables</text>
+      <text x="36" y="25" class="sub-text">Generate DDL &amp; insert records</text>
+    </g>
+  </g>
+
+  <!-- Conduit 3 -> 4: Create to Register -->
+  <g id="conduit-step3-4">
+    <path d="M 378,294 L 378,322" class="pipe-bg" stroke-width="4" />
+    <path d="M 378,294 L 378,322" class="pipe-inner" stroke-width="2" />
+    <path d="M 378,294 L 378,322" class="current-stream-vertical" stroke-width="2" />
+    <text x="374" y="326" fill="#ffffff" font-size="9" font-weight="bold">↓</text>
+  </g>
+
+  <!-- Step 4: Register Schema -->
+  <g id="step-register" transform="translate(278, 328)" filter="url(#card-shadow)">
+    <rect width="200" height="58" rx="10" class="card-box" />
+    <circle cx="200" cy="30" r="3" fill="#ffffff" stroke="#1e2433" stroke-width="1" />
+    <g transform="translate(12, 14)">
+      <rect width="28" height="28" rx="7" fill="#1e2433" stroke="#334155" stroke-width="1" />
+      <path d="M 8 18 L 11 9 L 17 9 L 20 18 Z" fill="none" stroke="#ffffff" stroke-width="1.3" />
+      <circle cx="14" cy="14" r="2" fill="#ffffff" />
+      <text x="36" y="13" class="header-text">Register Schema</text>
+      <text x="36" y="25" class="sub-text">Publish catalog for LLM &amp; query</text>
+    </g>
+  </g>
+
+  <!-- ========================================================================= -->
+  <!-- CONDUIT: Register Schema -> Workspace SQLite                             -->
+  <!-- ========================================================================= -->
+  <g id="conduit-register-sqlite">
+    <path d="M 478,358 L 526,358" class="pipe-bg" stroke-width="4.5" />
+    <path d="M 478,358 L 526,358" class="pipe-inner" stroke-width="2.2" />
+    <path d="M 478,358 L 526,358" class="current-stream" stroke-width="2.2" />
+    <circle cx="478" cy="358" r="3" fill="#ffffff" />
+    <circle cx="526" cy="358" r="3" fill="#ffffff" />
+  </g>
+
+  <!-- ========================================================================= -->
+  <!-- 3. WORKSPACE SQLITE DATABASE CYLINDER (Column 3)                          -->
+  <!-- ========================================================================= -->
+  <g id="card-sqlite" transform="translate(526, 44)" filter="url(#card-shadow)">
+    <!-- Main Cylinder Body with 3D gradient -->
+    <rect width="210" height="350" rx="20" fill="url(#cylinder-grad)" stroke="#1e2433" stroke-width="1.5" />
+
+    <!-- 3D Elliptical Rim at Top -->
+    <ellipse cx="105" cy="12" rx="90" ry="14" fill="url(#rim-top-grad)" stroke="#334155" stroke-width="1.2" />
+    <ellipse cx="105" cy="12" rx="70" ry="8" fill="#090b10" stroke="#1e2433" stroke-width="0.8" />
+    <circle cx="105" cy="12" r="2.5" fill="#ffffff" style="filter: drop-shadow(0 0 4px #ffffff);" />
+
+    <!-- Cylinder Ports -->
+    <!-- Left Inflow Socket -->
+    <circle cx="0" cy="314" r="3.5" fill="#ffffff" stroke="#1e2433" stroke-width="1" />
+    <!-- Right Outflow Top Socket -->
+    <circle cx="210" cy="66" r="3.5" fill="#ffffff" stroke="#1e2433" stroke-width="1" />
+    <!-- Right Outflow Mid Socket -->
+    <circle cx="210" cy="276" r="3.5" fill="#ffffff" stroke="#1e2433" stroke-width="1" />
+
+    <!-- Header Section -->
+    <g transform="translate(0, 36)" text-anchor="middle">
+      <rect x="68" y="0" width="74" height="18" rx="9" fill="#141824" stroke="#1e2433" stroke-width="1" />
+      <text x="105" y="12" fill="#94a3b8" class="mono-text">SQLite v3.45</text>
+
+      <text x="105" y="34" fill="#ffffff" font-size="13" font-weight="bold" letter-spacing="0.3">Workspace SQLite</text>
+      <text x="105" y="47" fill="#64748b" font-size="10.5" font-weight="500">(Structured Data)</text>
+    </g>
+
+    <!-- Table List Items -->
+    <g transform="translate(12, 102)">
+      <!-- Table 1: employees -->
+      <g transform="translate(0, 0)">
+        <rect width="186" height="38" rx="8" fill="#121622" stroke="#1e2433" stroke-width="1" />
+        <rect x="8" y="8" width="22" height="22" rx="5" fill="#1e2433" />
+        <text x="13" y="22" fill="#94a3b8" font-size="11">⊞</text>
+        <text x="36" y="19" fill="#f1f5f9" font-size="11" font-weight="bold">employees</text>
+        <text x="36" y="30" fill="#64748b" class="mono-text">8 cols • 1,240 rows</text>
+      </g>
+
+      <!-- Table 2: sales_data -->
+      <g transform="translate(0, 46)">
+        <rect width="186" height="38" rx="8" fill="#121622" stroke="#1e2433" stroke-width="1" />
+        <rect x="8" y="8" width="22" height="22" rx="5" fill="#1e2433" />
+        <text x="13" y="22" fill="#94a3b8" font-size="11">⊞</text>
+        <text x="36" y="19" fill="#f1f5f9" font-size="11" font-weight="bold">sales_data</text>
+        <text x="36" y="30" fill="#64748b" class="mono-text">12 cols • 45,890 rows</text>
+      </g>
+
+      <!-- Table 3: inventory -->
+      <g transform="translate(0, 92)">
+        <rect width="186" height="38" rx="8" fill="#121622" stroke="#1e2433" stroke-width="1" />
+        <rect x="8" y="8" width="22" height="22" rx="5" fill="#1e2433" />
+        <text x="13" y="22" fill="#94a3b8" font-size="11">⊞</text>
+        <text x="36" y="19" fill="#f1f5f9" font-size="11" font-weight="bold">inventory</text>
+        <text x="36" y="30" fill="#64748b" class="mono-text">6 cols • 3,120 rows</text>
+      </g>
+
+      <!-- Table 4: finance -->
+      <g transform="translate(0, 138)">
+        <rect width="186" height="38" rx="8" fill="#121622" stroke="#1e2433" stroke-width="1" />
+        <rect x="8" y="8" width="22" height="22" rx="5" fill="#1e2433" />
+        <text x="13" y="22" fill="#94a3b8" font-size="11">⊞</text>
+        <text x="36" y="19" fill="#f1f5f9" font-size="11" font-weight="bold">finance</text>
+        <text x="36" y="30" fill="#64748b" class="mono-text">9 cols • 8,450 rows</text>
+      </g>
+
+      <text x="93" y="200" fill="#64748b" font-size="9.5" text-anchor="middle">+ more tables...</text>
+    </g>
+
+    <!-- Bottom Curved Rim 3D Illusion -->
+    <path d="M 0,336 C 50,352 160,352 210,336" fill="none" stroke="#2a3449" stroke-width="1.5" />
+  </g>
+
+  <!-- ========================================================================= -->
+  <!-- DASHED ELECTRICAL WIRES: SQLite -> Schema Registry & SQL Exec             -->
+  <!-- ========================================================================= -->
+  <g id="dashed-wires-sqlite-out">
+    <!-- Wire 1: to Schema Registry (736, 110) -> (780, 52) -->
+    <path d="M 736,110 C 760,110 754,52 780,52" class="dashed-wire" stroke-width="2" />
+    <path d="M 736,110 C 760,110 754,52 780,52" class="dashed-current" stroke-width="2" />
+
+    <!-- Wire 2: to SQL Exec (736, 320) -> (780, 320) -->
+    <path d="M 736,320 L 780,320" class="dashed-wire" stroke-width="2" />
+    <path d="M 736,320 L 780,320" class="dashed-current" stroke-width="2" />
+  </g>
+
+  <!-- ========================================================================= -->
+  <!-- 4. RIGHT STACK: Schema Registry, Query, SQL Exec, Results                -->
+  <!-- ========================================================================= -->
+
+  <!-- Card 4A: Schema Registry -->
+  <g id="card-schema-registry" transform="translate(780, 24)" filter="url(#card-shadow)">
+    <rect width="265" height="135" rx="12" class="card-box" />
+    <circle cx="0" cy="28" r="3" fill="#ffffff" />
+
+    <!-- Header -->
+    <g transform="translate(12, 12)">
+      <rect width="24" height="24" rx="6" fill="#1e2433" />
+      <circle cx="7" cy="8" r="2.5" fill="#38bdf8" />
+      <circle cx="17" cy="8" r="2.5" fill="#38bdf8" />
+      <circle cx="12" cy="17" r="2.5" fill="#38bdf8" />
+      <line x1="7" y1="8" x2="12" y2="17" stroke="#38bdf8" stroke-width="0.8" />
+      <line x1="17" y1="8" x2="12" y2="17" stroke="#38bdf8" stroke-width="0.8" />
+      
+      <text x="32" y="11" class="header-text">Schema Registry</text>
+      <text x="32" y="21" class="sub-text">Table schemas, column types, relations</text>
+    </g>
+
+    <!-- Syntax-highlighted JSON Code Box -->
+    <g transform="translate(12, 42)">
+      <rect width="241" height="80" rx="8" fill="#090b10" stroke="#1e2433" stroke-width="1" />
+      <text x="10" y="16" class="mono-text" fill="#94a3b8">{</text>
+      <text x="10" y="29" class="mono-text">
+        <tspan fill="#94a3b8">  "</tspan><tspan fill="#38bdf8">tables</tspan><tspan fill="#94a3b8">": {</tspan>
+      </text>
+      <text x="10" y="42" class="mono-text">
+        <tspan fill="#94a3b8">    "</tspan><tspan fill="#f59e0b">sales_data</tspan><tspan fill="#94a3b8">": {</tspan>
+      </text>
+      <text x="10" y="55" class="mono-text">
+        <tspan fill="#94a3b8">      "</tspan><tspan fill="#34d399">dept</tspan><tspan fill="#94a3b8">": "</tspan><tspan fill="#fb7185">TEXT</tspan><tspan fill="#94a3b8">",</tspan>
+        <tspan fill="#94a3b8"> "</tspan><tspan fill="#34d399">amount</tspan><tspan fill="#94a3b8">": "</tspan><tspan fill="#fb7185">REAL</tspan><tspan fill="#94a3b8">"</tspan>
+      </text>
+      <text x="10" y="68" class="mono-text" fill="#94a3b8">  }}</text>
+    </g>
+  </g>
+
+  <!-- Card 4B: Query with Natural Language -->
+  <g id="card-nl-query" transform="translate(780, 172)" filter="url(#card-shadow)">
+    <rect width="265" height="52" rx="12" class="card-box" />
+    <g transform="translate(12, 12)">
+      <rect width="26" height="26" rx="6" fill="#1e2433" />
+      <text x="8" y="18" fill="#ffffff" font-size="12">💬</text>
+      <text x="34" y="11" class="header-text">Query with Natural Language</text>
+      <text x="34" y="23" fill="#cbd5e1" font-size="10" font-style="italic">“Show me total sales by department”</text>
+    </g>
+  </g>
+
+  <!-- Conduit: NL Query -> SQL Exec -->
+  <g id="conduit-query-sql">
+    <path d="M 912,224 L 912,242" class="pipe-bg" stroke-width="4" />
+    <path d="M 912,224 L 912,242" class="pipe-inner" stroke-width="2" />
+    <path d="M 912,224 L 912,242" class="current-stream-vertical" stroke-width="2" />
+    <circle cx="912" cy="224" r="2.5" fill="#ffffff" />
+    <circle cx="912" cy="242" r="2.5" fill="#ffffff" />
+  </g>
+
+  <!-- Card 4C: SQL Execution -->
+  <g id="card-sql-exec" transform="translate(780, 242)" filter="url(#card-shadow)">
+    <rect width="265" height="116" rx="12" class="card-box" />
+    <circle cx="0" cy="78" r="3" fill="#ffffff" />
+
+    <!-- Header -->
+    <g transform="translate(12, 10)">
+      <rect width="24" height="24" rx="6" fill="#1e2433" />
+      <text x="6" y="16" fill="#38bdf8" font-size="11" font-family="monospace">&gt;_</text>
+      <text x="32" y="11" class="header-text">SQL Execution</text>
+      <text x="32" y="21" class="sub-text">Convert to SQL and run on SQLite</text>
+    </g>
+
+    <!-- Syntax-colored SQL Snippet -->
+    <g transform="translate(12, 38)">
+      <rect width="241" height="66" rx="8" fill="#090b10" stroke="#1e2433" stroke-width="1" />
+      <text x="10" y="17" class="mono-text">
+        <tspan fill="#c084fc" font-weight="bold">SELECT</tspan> <tspan fill="#38bdf8">department</tspan>, <tspan fill="#fbbf24">SUM</tspan><tspan fill="#94a3b8">(</tspan><tspan fill="#38bdf8">amount</tspan><tspan fill="#94a3b8">)</tspan>
+      </text>
+      <text x="10" y="32" class="mono-text">
+        <tspan fill="#c084fc" font-weight="bold">FROM</tspan> <tspan fill="#34d399">sales_data</tspan>
+      </text>
+      <text x="10" y="47" class="mono-text">
+        <tspan fill="#c084fc" font-weight="bold">GROUP BY</tspan> <tspan fill="#38bdf8">department</tspan>
+      </text>
+      <text x="10" y="60" class="mono-text">
+        <tspan fill="#c084fc" font-weight="bold">ORDER BY</tspan> <tspan fill="#f43f5e">2</tspan> <tspan fill="#c084fc" font-weight="bold">DESC</tspan><tspan fill="#94a3b8">;</tspan>
+      </text>
+    </g>
+  </g>
+
+  <!-- Conduit: SQL Exec -> Results -->
+  <g id="conduit-sql-results">
+    <path d="M 912,358 L 912,376" class="pipe-bg" stroke-width="4" />
+    <path d="M 912,358 L 912,376" class="pipe-inner" stroke-width="2" />
+    <path d="M 912,358 L 912,376" class="current-stream-vertical" stroke-width="2" />
+    <circle cx="912" cy="358" r="2.5" fill="#ffffff" />
+    <circle cx="912" cy="376" r="2.5" fill="#ffffff" />
+  </g>
+
+  <!-- Card 4D: Structured Results -->
+  <g id="card-results" transform="translate(780, 376)" filter="url(#card-shadow)">
+    <rect width="265" height="166" rx="12" class="card-box" />
+    <circle cx="132" cy="0" r="3" fill="#ffffff" />
+
+    <!-- Header -->
+    <g transform="translate(12, 10)">
+      <rect width="24" height="24" rx="6" fill="#1e2433" />
+      <path d="M 6 18 L 10 13 L 14 15 L 18 8" fill="none" stroke="#34d399" stroke-width="1.5" stroke-linecap="round" />
+      <text x="32" y="11" class="header-text">Structured Results</text>
+      <text x="32" y="21" class="sub-text">Accurate answers from your data</text>
+      
+      <!-- 4 rows badge -->
+      <rect x="180" y="2" width="48" height="16" rx="4" fill="#064e3b" stroke="#10b981" stroke-width="0.8" />
+      <text x="186" y="13" fill="#34d399" class="mono-text">4 rows</text>
+    </g>
+
+    <!-- Table Output -->
+    <g transform="translate(12, 38)">
+      <rect width="241" height="116" rx="8" fill="#090b10" stroke="#1e2433" stroke-width="1" />
+      
+      <!-- Table Header -->
+      <rect x="0" y="0" width="241" height="22" rx="6" fill="#141824" />
+      <text x="10" y="15" fill="#94a3b8" font-size="9.5" font-weight="600">Department</text>
+      <text x="230" y="15" fill="#94a3b8" font-size="9.5" font-weight="600" text-anchor="end">Total Sales</text>
+      <line x1="0" y1="22" x2="241" y2="22" stroke="#1e2433" stroke-width="1" />
+
+      <!-- Row 1 -->
+      <text x="10" y="40" fill="#e2e8f0" font-size="10" font-weight="500">Engineering</text>
+      <text x="230" y="40" fill="#f8fafc" class="mono-text" text-anchor="end">$482,000</text>
+      <line x1="6" y1="47" x2="235" y2="47" stroke="#161b26" stroke-width="1" />
+
+      <!-- Row 2 -->
+      <text x="10" y="63" fill="#e2e8f0" font-size="10" font-weight="500">Sales</text>
+      <text x="230" y="63" fill="#f8fafc" class="mono-text" text-anchor="end">$1,290,450</text>
+      <line x1="6" y1="70" x2="235" y2="70" stroke="#161b26" stroke-width="1" />
+
+      <!-- Row 3 -->
+      <text x="10" y="86" fill="#e2e8f0" font-size="10" font-weight="500">Marketing</text>
+      <text x="230" y="86" fill="#f8fafc" class="mono-text" text-anchor="end">$310,200</text>
+      <line x1="6" y1="93" x2="235" y2="93" stroke="#161b26" stroke-width="1" />
+
+      <!-- Row 4 -->
+      <text x="10" y="108" fill="#e2e8f0" font-size="10" font-weight="500">Operations</text>
+      <text x="230" y="108" fill="#f8fafc" class="mono-text" text-anchor="end">$195,800</text>
+    </g>
+  </g>
+
+</svg>
