@@ -1,46 +1,27 @@
 "use client";
 
 import Link from "next/link";
-import {
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "react";
-import type { ComponentType, CSSProperties } from "react";
-import {
-  ArrowRight,
-  Sparkles,
-  UserSearch,
-  Route,
-  UploadCloud,
-  MessagesSquare,
-  Radio,
-  Database,
-  ShieldCheck,
-} from "lucide-react";
+
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+
+import type { PointerEvent } from "react";
+
+import { ArrowRight } from "lucide-react";
+
 import gsap from "gsap";
+
 import { PixelDissolveButton } from "@/components/pixel-dissolve-button";
-import { QueryPilotApp } from "@/components/hero/query-pilot-app"
-import {
-  ProcessCard,
-  CardHeader,
-  RevealRow,
-  CheckRow,
-  SourceChip,
-  useStepSequence,
-  resolveStatus,
-  STAGE_ACCENTS,
-  QueryUnderstandingCard,
-  ExecutionPlanningCard,
-  SQLGenerationCard,
-  DocumentRetrievalCard,
-  QueryPilotProcessCardStyles,
-} from "@/components/hero/cards"
-import type { ProcessCardStateProps } from "@/components/hero/cards"
+
+import { QueryPilotApp } from "@/components/hero/query-pilot-app";
+
+import { DemoWindowChrome } from "@/components/hero/demo-window-chrome";
+
+import { QueryPilotProcessCards } from "@/components/hero/process-cards";
 
 // Prevent the browser from painting a previous scroll position during a hard reload.
+
 // This runs as soon as the client module evaluates, before the first React layout pass.
+
 if (typeof window !== "undefined") {
   const navigation = performance.getEntriesByType("navigation")[0] as
     | PerformanceNavigationTiming
@@ -57,422 +38,163 @@ if (typeof window !== "undefined") {
   }
 }
 
-
-
 /* ---------------------------------------------------------------------------
- * Local hero process-card implementation.
+
+ * Shared palette
+
  *
- * This intentionally lives in public-site.tsx instead of importing the
- * process timeline from cards-2.tsx. The hero is the only consumer of this
- * choreography, so keeping the small orchestration layer here removes a
- * module-boundary failure mode where an outdated/stale cards-2 module could
- * make QueryPilotProcessCards resolve to undefined at runtime.
+
+ * Single source of truth for the warm beige used across the public site
+
+ * (hero, mobile hero, page background, builder-section card grid, and now
+
+ * the features section). Kept as a plain constant rather than a Tailwind
+
+ * theme token so it can be dropped straight into arbitrary-value classes
+
+ * and inline gradients without a config change.
+
  * --------------------------------------------------------------------------- */
 
-function HeroEmployeeEvidenceCard({
-  visible = true,
-  active = false,
-  completed = false,
-  className,
-  index,
-}: ProcessCardStateProps) {
-  const accent = STAGE_ACCENTS.employeeEvidence;
-  // BUGFIX: useStepSequence must be called unconditionally on every render of
-  // this component instance. It was previously called only in the `!completed`
-  // branch of a ternary — since every card in this sequence transitions from
-  // active -> completed while mounted (same instance, same key), that
-  // conditionally skipped the hook call and violated React's Rules of Hooks
-  // ("Rendered fewer hooks than expected"). The hook is now always called; the
-  // ternary only picks which *value* to show.
-  const sequenceStep = useStepSequence(active, 4, 420);
-  const step = completed ? 4 : sequenceStep;
+const PAGE_BEIGE = "#F4EFE4";
 
-  return (
-    <ProcessCard visible={visible} className={className} accent={accent}>
-      <CardHeader
-        icon={<UserSearch className="h-3.5 w-3.5" />}
-        title="EMPLOYEE & EVIDENCE"
-        kicker="DETERMINISTIC"
-        status={resolveStatus(active, completed)}
-        index={index}
-        accent={accent}
-      />
+/* ------------------------------------------------------------------------
 
-      <div className="mt-2.5 space-y-2.5">
-        <p className="text-[11px] text-[#687184]">
-          Resolving employee, gathering evidence...
-        </p>
+ * Navbar theme detection
 
-        <RevealRow show={step >= 1}>
-          <div className="flex items-center justify-between rounded-lg border border-[#EEF0F3] bg-[#FBFBFC] px-3 py-2">
-            <div>
-              <p className="text-[11.5px] text-[#111318]">Rahul Sharma</p>
-              <p className="mt-0.5 font-mono text-[9.5px] text-[#9AA1AF]">
-                Employee ID: E001
-              </p>
-            </div>
-            <span className="text-[9.5px] text-[#9AA1AF]">employee.xlsx</span>
-          </div>
-        </RevealRow>
+ *
 
-        <RevealRow show={step >= 2}>
-          <div className="grid grid-cols-3 gap-2">
-            <div className="rounded-lg border border-[#EEF0F3] bg-[#FBFBFC] px-2.5 py-2">
-              <p className="text-[8.5px] text-[#9AA1AF]">Salary</p>
-              <p className="mt-1 text-[10.5px] font-medium text-[#3B404B]">₹60,000</p>
-            </div>
-            <div className="rounded-lg border border-[#EEF0F3] bg-[#FBFBFC] px-2.5 py-2">
-              <p className="text-[8.5px] text-[#9AA1AF]">Entitlement</p>
-              <p className="mt-1 text-[10.5px] font-medium text-[#3B404B]">20 days</p>
-            </div>
-            <div className="rounded-lg border border-[#EEF0F3] bg-[#FBFBFC] px-2.5 py-2">
-              <p className="text-[8.5px] text-[#9AA1AF]">Taken</p>
-              <p className="mt-1 text-[10.5px] font-medium text-[#3B404B]">12 days</p>
-            </div>
-          </div>
-        </RevealRow>
+ * The nav needs to flip between a light look (glass background, dark text)
 
-        <RevealRow show={step >= 3}>
-          <div className="rounded-lg border border-[#EEF0F3] bg-[#FBFBFC] px-3 py-2.5">
-            <p className="text-[10.5px] text-[#3B404B]">
-              Leave within entitlement → no deduction
-            </p>
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              <SourceChip show label="employee.xlsx" />
-              <SourceChip show label="salary.pdf" />
-            </div>
-          </div>
-        </RevealRow>
+ * and a dark look (near-black background, white text) depending on whatever
 
-        <CheckRow show={step >= 4} label="Evidence assembled" />
-      </div>
-    </ProcessCard>
+ * section is currently sitting underneath it. Rather than matching a
+
+ * hardcoded whitelist of background colors (which silently breaks the
+
+ * moment a section's background shade changes, e.g. #070707 vs #000000),
+
+ * this reads the actual computed background color of whatever is under the
+
+ * nav and classifies it as light/dark using relative luminance. The
+
+ * classification logic is unchanged.
+
+ *
+
+ * PERF: elementFromPoint() and getComputedStyle() each force the browser to
+
+ * flush pending style/layout work. Running that pair on every scroll frame —
+
+ * which is what happened for every scroll position past ~0.92 viewports, i.e.
+
+ * the entire Features section — steals frame budget from the pinned feature
+
+ * scene. A frame that misses its budget gets presented with a stale pinned
+
+ * scene, which is exactly what reads as "the section behind flashed through".
+
+ * The sample is now taken on a scroll-distance interval. The theme only
+
+ * changes at two section boundaries, so a 32px window is visually identical
+
+ * and costs roughly a tenth as much.
+
+ * ------------------------------------------------------------------------ */
+
+const NAV_SAMPLE_EPSILON_PX = 32;
+
+function parseRgbColor(color: string): [number, number, number, number] | null {
+  const match = color.match(
+    /rgba?\s*\(?\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*(?:,\s*([\d.]+)\s*)?\)?/,
   );
-}
 
-function HeroAnswerGenerationCard({
-  visible = true,
-  active = false,
-  completed = false,
-  className,
-  index,
-}: ProcessCardStateProps) {
-  const accent = STAGE_ACCENTS.answerGeneration;
-  const values = [
-    ["Monthly Salary", "₹60,000"],
-    ["Leave Taken", "12 days"],
-    ["Unpaid Leave", "0 days"],
-    ["Salary Deduction", "₹0"],
+  if (!match) return null;
+
+  return [
+    Number(match[1]),
+    Number(match[2]),
+    Number(match[3]),
+    match[4] !== undefined ? Number(match[4]) : 1,
   ];
-
-  // BUGFIX: see HeroEmployeeEvidenceCard above — hook now called unconditionally.
-  const sequenceStep = useStepSequence(active, values.length, 360);
-  const step = completed ? values.length : sequenceStep;
-
-  return (
-    <ProcessCard visible={visible} className={className} accent={accent}>
-      <CardHeader
-        icon={<Sparkles className="h-3.5 w-3.5" />}
-        title="ANSWER GENERATION"
-        kicker="LLM"
-        status={resolveStatus(active, completed)}
-        index={index}
-        accent={accent}
-      />
-
-      <div className="mt-2.5 space-y-2">
-        <p className="text-[11px] text-[#687184]">
-          Reasoning over verified evidence...
-        </p>
-
-        {values.map(([label, value], i) => (
-          <div
-            key={label}
-            className="flex items-center justify-between rounded-lg border border-[#EEF0F3] bg-[#FBFBFC] px-3 py-2 transition-all duration-300"
-            style={{
-              opacity: step >= i + 1 ? 1 : 0,
-              transform: step >= i + 1 ? "translateY(0)" : "translateY(6px)",
-            }}
-          >
-            <span className="text-[10px] text-[#9AA1AF]">{label}</span>
-            <span
-              className={
-                `text-[10.5px] font-semibold ${
-                  label === "Salary Deduction" ? "text-[#3FB984]" : "text-[#3B404B]"
-                }`
-              }
-            >
-              {value}
-            </span>
-          </div>
-        ))}
-
-        <CheckRow show={completed} label="Grounded answer ready" />
-      </div>
-    </ProcessCard>
-  );
 }
 
-const HERO_STAGE_START_MS = 9000;
-const HERO_STAGE_END_MS = 23000;
+function relativeLuminance(r: number, g: number, b: number) {
+  const channel = (value: number) => {
+    const c = value / 255;
 
-const HERO_CARD_SEQUENCE: ComponentType<ProcessCardStateProps>[] = [
-  QueryUnderstandingCard,
-  HeroEmployeeEvidenceCard,
-  ExecutionPlanningCard,
-  DocumentRetrievalCard,
-  SQLGenerationCard,
-  HeroAnswerGenerationCard,
-];
+    return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  };
 
-const HERO_CARD_ACCENTS: string[] = [
-  STAGE_ACCENTS.queryUnderstanding,
-  STAGE_ACCENTS.employeeEvidence,
-  STAGE_ACCENTS.executionPlanning,
-  STAGE_ACCENTS.documentSearch,
-  STAGE_ACCENTS.sqlGeneration,
-  STAGE_ACCENTS.answerGeneration,
-];
-
-const HERO_CARD_OUT_PX = 18;
-const HERO_CARD_LABEL_WIDTH = "clamp(190px, 16vw, 250px)";
-const HERO_CARD_COLUMN_TOP = "-72px";
-const HERO_CARD_GAP = 28;
-
-function HeroProcessColumn({
-  side,
-  cards,
-}: {
-  side: "left" | "right";
-  cards: {
-    Card: ComponentType<ProcessCardStateProps>;
-    index: number;
-    active: boolean;
-    accent: string;
-  }[];
-}) {
-  const isRight = side === "right";
-  const orderedCards = isRight ? [...cards].reverse() : cards;
-
-  return (
-    <div
-      className="pointer-events-none absolute grid"
-      style={{
-        [isRight ? "left" : "right"]: `calc(100% + ${HERO_CARD_OUT_PX}px)`,
-        top: HERO_CARD_COLUMN_TOP,
-        width: HERO_CARD_LABEL_WIDTH,
-        height: "calc(100% + 144px)",
-        gridTemplateRows: "repeat(3, minmax(0, 1fr))",
-        gap: HERO_CARD_GAP,
-      }}
-    >
-      {orderedCards.map(({ Card, index, active, accent }, slot) => {
-        const dotColor = active ? accent : "#3FB984";
-        return (
-          <div
-            key={index}
-            className="relative flex min-h-0 w-full items-center"
-            style={{ gridRow: slot + 1 }}
-          >
-            <span
-              aria-hidden="true"
-              className="absolute h-[1.5px] transition-[background] duration-300"
-              style={{
-                [isRight ? "left" : "right"]: "100%",
-                top: "50%",
-                transform: "translateY(-50%)",
-                width: `${HERO_CARD_OUT_PX}px`,
-                background: isRight
-                  ? `linear-gradient(to left, ${dotColor}66, transparent)`
-                  : `linear-gradient(to right, ${dotColor}66, transparent)`,
-              }}
-            />
-
-            <span
-              aria-hidden="true"
-              className="absolute h-[8px] w-[8px] rounded-full ring-2 ring-white transition-colors duration-300"
-              style={
-                {
-                  [isRight ? "left" : "right"]: -4,
-                  top: "50%",
-                  transform: `translate(${isRight ? "-50%" : "50%"}, -50%)`,
-                  background: dotColor,
-                  animation: active
-                    ? "querypilot-dot-pulse 1.4s ease-in-out infinite"
-                    : "none",
-                  ["--qp-dot-halo" as any]: `${accent}29`,
-                  ["--qp-dot-halo-soft" as any]: `${accent}0f`,
-                } as CSSProperties
-              }
-            />
-
-            <Card
-              visible
-              active={active}
-              completed={!active}
-              index={index + 1}
-              className="querypilot-card-settle w-full"
-            />
-          </div>
-        );
-      })}
-    </div>
-  );
+  return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
 }
-
-function QueryPilotProcessCards({
-  elapsed = 0,
-  show = true,
-}: {
-  elapsed?: number;
-  show?: boolean;
-}) {
-  if (!show || elapsed < HERO_STAGE_START_MS) return null;
-
-  const stageIndex = Math.min(
-    HERO_CARD_SEQUENCE.length - 1,
-    Math.floor((elapsed - HERO_STAGE_START_MS) / ((HERO_STAGE_END_MS - HERO_STAGE_START_MS) / HERO_CARD_SEQUENCE.length)),
-  );
-  const isDemoFinished = elapsed >= HERO_STAGE_END_MS;
-
-  const leftCards: {
-    Card: ComponentType<ProcessCardStateProps>;
-    index: number;
-    active: boolean;
-    accent: string;
-  }[] = [];
-  const rightCards: {
-    Card: ComponentType<ProcessCardStateProps>;
-    index: number;
-    active: boolean;
-    accent: string;
-  }[] = [];
-
-  HERO_CARD_SEQUENCE.slice(0, stageIndex + 1).forEach((Card, i) => {
-    const active = !isDemoFinished && i === stageIndex;
-    const entry = { Card, index: i, active, accent: HERO_CARD_ACCENTS[i] };
-    if (i < 3) leftCards.push(entry);
-    else rightCards.push(entry);
-  });
-
-  return (
-    <>
-      <QueryPilotProcessCardStyles />
-      <div className="pointer-events-none absolute inset-0 z-[75] hidden overflow-visible min-[901px]:block">
-        <HeroProcessColumn side="left" cards={leftCards} />
-        <HeroProcessColumn side="right" cards={rightCards} />
-      </div>
-    </>
-  );
-}
-
-const BUILDER_EMAIL = "amoghmudakavi@gmail.com";
-const GITHUB_URL = "https://github.com/Amogh-Mudakavi/query-pilot";
-
-
-const FEATURE_TUNING = {
-  // LEFT BLACK COLUMN
-  whyCopyFontSize: "15px",
-  whyCopyLineHeight: "1.5",
-  whyCopyMaxWidth: "390px",
-  whyCopyMarginTop: "32px",
-  whyCopyColor: "#ffffff",
-
-  // RIGHT FEATURE PANELS
-  featureTitleSize:
-    "clamp(36px, 4.4vw, 62px)",
-
-  featureDescriptionSize:
-    "clamp(15px, 1.25vw, 18px)",
-
-  featureDescriptionLineHeight:
-    "1.55",
-
-  featurePanelHeight:
-    "clamp(560px, 70vh, 820px)",
-
-  featureImageHeight:
-    "clamp(265px, 38vh, 460px)",
-};
 
 export function PublicNav() {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [darkTheme, setDarkTheme] = useState(false);
-
-  const primaryLinks = [
-    {
-      href: "/engineering",
-      label: "Engineering",
-    },
-    {
-      href: "/technical-challenges",
-      label: "Technical Challenges",
-    },
-    {
-      href: "/how-it-works",
-      label: "How It Works",
-    },
-  ];
-
-  const closeMenu = () => {
-    setMenuOpen(false);
-  };
+  const [darkTheme, setDarkTheme] = useState(true);
 
   useEffect(() => {
     let ticking = false;
 
-    const detectTheme = () => {
+    let lastSampleY = Number.NEGATIVE_INFINITY;
+
+    const detectTheme = (force = false) => {
       ticking = false;
 
-      // Cheap check first — most scroll positions resolve right here and
-      // never touch elementFromPoint/getComputedStyle at all.
-      if (window.scrollY < window.innerHeight * 0.92) {
-        setDarkTheme(false);
+      const scrollY = window.scrollY;
+
+      if (scrollY < window.innerHeight * 0.92) {
+        lastSampleY = scrollY;
+
+        setDarkTheme(true);
+
         return;
       }
+
+      if (!force && Math.abs(scrollY - lastSampleY) < NAV_SAMPLE_EPSILON_PX) {
+        return;
+      }
+
+      lastSampleY = scrollY;
 
       const nav = document.querySelector(
-        "[data-querypilot-nav]"
+        "[data-querypilot-nav]",
       ) as HTMLElement | null;
 
-      if (!nav) {
-        return;
-      }
+      if (!nav) return;
 
       const navRect = nav.getBoundingClientRect();
+
       const sampleX = navRect.left + navRect.width / 2;
+
       const sampleY = navRect.bottom + 8;
 
       const element = document.elementFromPoint(
+
         sampleX,
+
         sampleY,
+
       ) as HTMLElement | null;
 
-      if (!element) {
-        return;
-      }
+      if (!element) return;
 
       let current: HTMLElement | null = element;
 
       while (current) {
         const background = window.getComputedStyle(current).backgroundColor;
 
-        if (
-          background === "rgb(0, 0, 0)" ||
-          background === "rgb(10, 10, 10)" ||
-          background === "rgb(17, 17, 17)"
-        ) {
-          setDarkTheme(true);
-          return;
-        }
+        const parsed = parseRgbColor(background);
 
-        if (
-          background === "rgb(255, 255, 255)" ||
-          background === "rgb(250, 250, 250)" ||
-          background === "rgb(247, 247, 247)"
-        ) {
-          setDarkTheme(false);
-          return;
+        if (parsed) {
+          const [r, g, b, a] = parsed;
+
+          if (a > 0.35) {
+            const luminance = relativeLuminance(r, g, b);
+
+            setDarkTheme(luminance < 0.5);
+
+            return;
+          }
         }
 
         current = current.parentElement;
@@ -481,371 +203,259 @@ export function PublicNav() {
       setDarkTheme(false);
     };
 
-    // BUGFIX (perf): this previously ran detectTheme synchronously on every
-    // native "scroll" event. detectTheme calls getBoundingClientRect,
-    // elementFromPoint, and walks the ancestor tree calling
-    // getComputedStyle — all layout-forcing work. Trackpad/momentum
-    // scrolling fires many scroll events per animation frame, so this was
-    // forcing a full layout+style pass that often. That's invisible on a
-    // fast machine and a visible hang on a slower one. It's now coalesced
-    // to at most once per animation frame.
-    const onScrollOrResize = () => {
+    const onScroll = () => {
       if (ticking) return;
+
       ticking = true;
-      window.requestAnimationFrame(detectTheme);
+
+      window.requestAnimationFrame(() => {
+        detectTheme();
+      });
     };
 
-    detectTheme();
+    const onResize = () => {
+      lastSampleY = Number.NEGATIVE_INFINITY;
 
-    window.addEventListener("scroll", onScrollOrResize, { passive: true });
-    window.addEventListener("resize", onScrollOrResize);
+      if (ticking) return;
+
+      ticking = true;
+
+      window.requestAnimationFrame(() => {
+        detectTheme(true);
+      });
+    };
+
+    detectTheme(true);
+
+    window.addEventListener("scroll", onScroll, {
+      passive: true,
+    });
+
+    window.addEventListener("resize", onResize);
 
     return () => {
-      window.removeEventListener("scroll", onScrollOrResize);
-      window.removeEventListener("resize", onScrollOrResize);
+      window.removeEventListener("scroll", onScroll);
+
+      window.removeEventListener("resize", onResize);
     };
   }, []);
 
-  useEffect(() => {
-    document.body.style.overflow =
-      menuOpen ? "hidden" : "";
-
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [menuOpen]);
-
-  const textClass = darkTheme
-    ? "text-white"
-    : "text-black";
+  const textClass = darkTheme ? "text-white" : "text-black";
 
   const mutedTextClass = darkTheme
-    ? "text-white/70 hover:text-white"
-    : "text-black/55 hover:text-black";
+    ? "text-white/75 hover:text-white"
+    : "text-black/60 hover:text-black";
 
-  const mobileBorderClass = darkTheme
-    ? "border-white/10"
-    : "border-black/10";
+  const borderClass = darkTheme ? "border-white/[0.10]" : "border-black/[0.10]";
 
-  const mobileBackgroundClass = darkTheme
-    ? "bg-[#0a0a0a]/96"
-    : "bg-white/[0.96]";
+  const backgroundClass = darkTheme ? "bg-[#080808]/90" : "bg-white/90";
 
   return (
     <header
       data-querypilot-nav
-      className={`
+      className="
+
         fixed
-        inset-x-0
+
         top-3
+
+        left-[4vw]
+
+        right-[4vw]
+
         z-[60]
-        w-full
-        px-3
-        sm:px-5
-        transition-all
-        duration-400
-        ease-out
-      `}
+
+        min-[901px]:left-[15vw]
+
+        min-[901px]:right-[15vw]
+
+      "
     >
       <nav
         aria-label="Main navigation"
         className={`
-          mx-auto
+
           flex
-          h-[76px]
-          w-[calc(100%-12px)]
-          max-w-[1600px]
+
+          h-[58px]
+
+          w-full
+
           items-center
+
           justify-between
-          rounded-[18px]
+
+          rounded-none
+
           border
+
+          ${borderClass}
+
+          ${backgroundClass}
+
           px-5
+
+          sm:px-6
+
           backdrop-blur-xl
-          transition-[background,border-color,box-shadow,color]
+
+          transition-colors
+
           duration-300
-          sm:px-7
-          ${
-            darkTheme
-              ? "border-white/10 bg-[#0a0a0a]/55 shadow-[0_10px_40px_rgba(0,0,0,0.18)]"
-              : "border-white/60 bg-white/[0.46] shadow-[0_10px_40px_rgba(59,91,145,0.10)]"
-          }
+
         `}
       >
-        {/* Logo */}
-        <Link
-          href="/"
-          aria-label="QueryPilot home"
-          onClick={closeMenu}
-          className={`
-            inline-flex
-            flex-none
-            items-center
-            gap-2.5
-            whitespace-nowrap
-            text-lg
-            font-normal
-            leading-none
-            tracking-[-0.03em]
-            ${textClass}
-          `}
-        >
-          <img
-            src="/querypilot-logo.svg"
-            alt=""
+        {/* LEFT */}
+
+        <div className="flex items-center">
+          {/* QueryPilot */}
+
+          <Link
+            href="/"
+            aria-label="QueryPilot home"
+            className={`
+
+              inline-flex
+
+              items-center
+
+              gap-2.5
+
+              whitespace-nowrap
+
+              text-[18px]
+
+              sm:text-[19px]
+
+              font-normal
+
+              leading-none
+
+              tracking-[-0.035em]
+
+              transition-colors
+
+              duration-200
+
+              ${textClass}
+
+            `}
+          >
+            <img
+              src="/querypilot-logo.svg"
+              alt=""
+              aria-hidden="true"
+              className="h-[23px] w-[23px] shrink-0 object-contain"
+            />
+
+            <span>QueryPilot</span>
+          </Link>
+
+          {/* Divider */}
+
+          <span
             aria-hidden="true"
-            className="h-6 w-6 flex-none object-contain"
+            className={`
+
+              mx-4
+
+              h-5
+
+              w-px
+
+              ${darkTheme ? "bg-white/10" : "bg-black/10"}
+
+            `}
           />
 
-          <span>QueryPilot</span>
-        </Link>
+          {/* GitHub */}
 
-        {/* Main navigation */}
-        <div className="hidden items-center gap-8 md:flex">
-          {primaryLinks.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className={`
-                text-sm
-                font-normal
-                leading-none
-                tracking-[-0.01em]
-                transition-colors
-                duration-150
-                ${mutedTextClass}
-              `}
+          <a
+            href="https://github.com/Amogh-Mudakavi/QueryPilot_backend"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="QueryPilot GitHub"
+            className={`
+
+              inline-flex
+
+              items-center
+
+              justify-center
+
+              ${mutedTextClass}
+
+              transition-colors
+
+              duration-200
+
+            `}
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              aria-hidden="true"
+              className="h-[19px] w-[19px]"
             >
-              {link.label}
-            </Link>
-          ))}
+              <path d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.604-3.369-1.34-3.369-1.34-.455-1.157-1.11-1.466-1.11-1.466-.908-.62.069-.607.069-.607 1.004.07 1.532 1.03 1.532 1.03.892 1.529 2.341 1.087 2.91.831.091-.646.349-1.087.635-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.269.098-2.647 0 0 .839-.269 2.75 1.025A9.564 9.564 0 0 1 12 6.844c.85.004 1.705.115 2.504.337 1.909-1.294 2.746-1.025 2.746-1.025.546 1.378.202 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.843-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48A10.001 10.001 0 0 0 22 12c0-5.523-4.477-10-10-10Z" />
+            </svg>
+          </a>
         </div>
 
-        {/* Right actions */}
-        <div className="flex h-full flex-none items-center gap-5">
+        {/* RIGHT */}
+
+        <div className="flex items-center gap-6 sm:gap-8">
           <Link
-            href="/login"
+            href="/engineering"
             className={`
-              hidden
-              text-sm
+
+              text-[15px]
+
+              sm:text-[16px]
+
               font-normal
+
               leading-none
-              tracking-[-0.01em]
+
+              tracking-[-0.015em]
+
               transition-colors
-              duration-150
-              min-[901px]:inline-flex
+
+              duration-200
+
               ${mutedTextClass}
+
             `}
           >
-            Login
+            Engineering
           </Link>
 
-          <div className="hidden h-full items-center min-[901px]:flex">
-            <PixelDissolveButton
-              href="/signup"
-              label="GET STARTED"
-              color={darkTheme ? "#ffffff" : "#000000"}
-              dissolveColor={
-                darkTheme
-                  ? "#b8b8b8"
-                  : "#333333"
-              }
-              className={`
-                !min-w-0
-                !min-h-[40px]
-                !rounded-[11px]
-                !border-0
-                !px-5
-                !py-0
-                !text-xs
-                !font-medium
-                !tracking-[0.01em]
-                hover:!translate-y-0
-                ${
-                  darkTheme
-                    ? "!bg-white !text-black"
-                    : "!bg-black !text-white"
-                }
-              `}
-            />
-          </div>
-
-          {/* Mobile login */}
           <Link
             href="/login"
             className={`
-              text-xs
-              font-medium
+
+              text-[15px]
+
+              sm:text-[16px]
+
+              font-normal
+
+              leading-none
+
+              tracking-[-0.015em]
+
               transition-colors
-              min-[901px]:hidden
+
+              duration-200
+
               ${mutedTextClass}
+
             `}
           >
             Login
           </Link>
-
-          {/* Mobile menu button */}
-          <button
-            type="button"
-            onClick={() =>
-              setMenuOpen((prev) => !prev)
-            }
-            aria-label={
-              menuOpen
-                ? "Close navigation menu"
-                : "Open navigation menu"
-            }
-            aria-expanded={menuOpen}
-            aria-controls="mobile-navigation"
-            className="
-              relative
-              flex
-              h-9
-              w-9
-              flex-none
-              flex-col
-              items-center
-              justify-center
-              gap-[5px]
-              border-0
-              bg-transparent
-              p-0
-              min-[901px]:hidden
-            "
-          >
-            <span
-              className={`
-                h-0.5
-                w-[20px]
-                origin-center
-                transition-transform
-                duration-200
-                ${
-                  darkTheme
-                    ? "bg-white"
-                    : "bg-black"
-                }
-                ${
-                  menuOpen
-                    ? "translate-y-[6px] rotate-45"
-                    : ""
-                }
-              `}
-            />
-
-            <span
-              className={`
-                h-0.5
-                transition-all
-                duration-200
-                ${
-                  darkTheme
-                    ? "bg-white"
-                    : "bg-black"
-                }
-                ${
-                  menuOpen
-                    ? "w-0 opacity-0"
-                    : "w-[20px] opacity-100"
-                }
-              `}
-            />
-
-            <span
-              className={`
-                h-0.5
-                w-[20px]
-                origin-center
-                transition-transform
-                duration-200
-                ${
-                  darkTheme
-                    ? "bg-white"
-                    : "bg-black"
-                }
-                ${
-                  menuOpen
-                    ? "-translate-y-[6px] -rotate-45"
-                    : ""
-                }
-              `}
-            />
-          </button>
         </div>
       </nav>
-
-      {/* Mobile navigation */}
-      <div
-        id="mobile-navigation"
-        className={`
-          mx-auto
-          mt-2
-          w-[calc(100%-12px)]
-          max-w-[1600px]
-          overflow-hidden
-          rounded-[18px]
-          border
-          backdrop-blur-xl
-          transition-all
-          duration-300
-          min-[901px]:hidden
-          ${mobileBorderClass}
-          ${mobileBackgroundClass}
-          ${
-            menuOpen
-              ? "max-h-[500px] opacity-100"
-              : "pointer-events-none max-h-0 opacity-0"
-          }
-        `}
-      >
-        <div className="px-5 py-2 pb-5">
-          {primaryLinks.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              onClick={closeMenu}
-              className={`
-                flex
-                min-h-14
-                items-center
-                justify-between
-                border-b
-                px-1
-                text-base
-                tracking-[-0.02em]
-                transition-colors
-                ${mobileBorderClass}
-                ${textClass}
-              `}
-            >
-              <span>{link.label}</span>
-              <span>→</span>
-            </Link>
-          ))}
-
-          <PixelDissolveButton
-            href="/signup"
-            label="GET STARTED"
-            color={darkTheme ? "#ffffff" : "#000000"}
-            dissolveColor={
-              darkTheme
-                ? "#b8b8b8"
-                : "#333333"
-            }
-            className={`
-              !mt-4
-              !min-h-[40px]
-              !w-full
-              !rounded-[11px]
-              !border-0
-              ${
-                darkTheme
-                  ? "!bg-white !text-black"
-                  : "!bg-black !text-white"
-              }
-            `}
-          />
-        </div>
-      </div>
     </header>
   );
 }
@@ -870,92 +480,306 @@ function lerp(from: number, to: number, amount: number) {
   return from + (to - from) * amount;
 }
 
-const MAIN_WINDOW_ASPECT = 16 / 10;
+const MAIN_WINDOW_ASPECT = 16 / 8;
 
-const RESTING_MAX_WIDTH = 1600;
-const RESTING_SIDE_GUTTER = 24;
-const DEMO_WIDTH_VW = 74;
-const DEMO_MIN_WIDTH = 900;
-const DEMO_MAX_WIDTH = 1320;
+// Desktop hero frame: 15vw empty on the left and right.
+
+// The shared 70vw frame is used by the navbar, hero copy, background image,
+
+// and the resting product window.
+
+const PAGE_FRAME_WIDTH_VW = 70;
+
+// Resting product fills the horizontal frame.
+
+const RESTING_DEMO_WIDTH_VW = 92;
+
+const RESTING_DEMO_MIN_WIDTH = 780;
+
+const RESTING_DEMO_MAX_WIDTH = 1500;
+
+// Expanded center window: substantially larger than the old 43vw/560-760px
+
+// frame so the product dominates the composition, per the architecture-diagram
+
+// redesign. This is the single source of truth for expanded-demo geometry —
+
+// process-cards.tsx never hardcodes a competing size, it just reads the real
+
+// rendered window via mainWindowRef.
+
+const DEMO_WIDTH_VW = 54;
+
+const DEMO_MIN_WIDTH = 700;
+
+const DEMO_MAX_WIDTH = 960;
 
 const DEMO_DURATION_MS = 30000;
 
 const DEMO_OPEN_START = 0.02;
+
 const DEMO_RETURN_COMPLETE = 0.02;
+
 const DEMO_RETURN_START = 0.74;
+
 const CARD_DISMISS_START = 0.68;
+
 const CARD_DISMISS_END = 0.82;
+
+const DEMO_OPEN_DURATION_S = 0.82;
+
+const EXPANDED_WINDOW_ASPECT = 27 / 20;
 
 function StaticHeroHeading() {
   return (
-    <h1
-      className="mx-auto w-max max-w-[980px] text-balance text-[clamp(3.1rem,6vw,5rem)] font-semibold leading-[0.98] tracking-[-0.065em] text-[#111318]"
-    >
-      Welcome to agentic revenue.
+    <h1 className="w-full text-[clamp(2.05rem,2.35vw,2.65rem)] font-normal leading-[1.04] tracking-[-0.045em] text-white">
+      <span
+        data-hero-title-line
+        className="qp-hero-title-blur-hidden block whitespace-nowrap"
+      >
+        Don&apos;t just search your data.
+      </span>
+
+      <span data-hero-title-line className="qp-hero-title-blur-hidden block">
+        Understand it.
+      </span>
     </h1>
   );
 }
 
 function ProductPreview() {
   const sectionRef = useRef<HTMLElement | null>(null);
+
   const heroCopyRef = useRef<HTMLDivElement | null>(null);
+
   const sceneRef = useRef<HTMLDivElement | null>(null);
+
   const mainWindowRef = useRef<HTMLDivElement | null>(null);
+
+  // The actual visible QueryPilot window box (the DemoWindowChrome
+
+  // border), as opposed to mainWindowRef's outer positioning wrapper.
+
+  // The six process-card connectors read their source point off this
+
+  // element's real, responsive edge.
+
+  const centerWindowRef = useRef<HTMLDivElement | null>(null);
+
   const processCardsRef = useRef<HTMLDivElement | null>(null);
+
+  const restingBackgroundRef = useRef<HTMLDivElement | null>(null);
+
+  const restingEntryRef = useRef<HTMLDivElement | null>(null);
+
+  // Entrance-only refs. These control the first-load/reload reveal timeline
+
+  // (title -> paragraph -> buttons -> card -> background) and are not
+
+  // touched anywhere else — the existing scroll/demo render() logic never
+
+  // reads or writes these two elements.
+
+  const heroParagraphRef = useRef<HTMLParagraphElement | null>(null);
+
+  const heroActionsRef = useRef<HTMLDivElement | null>(null);
+
+  const restingIntroCompleteRef = useRef(false);
+
   const dragStateRef = useRef({
     active: false,
+
     pointerX: 0,
+
     pointerY: 0,
+
     x: 0,
+
     y: 0,
   });
 
   const rafRef = useRef<number | null>(null);
+
   const smoothProgressRef = useRef(0);
 
-  const demoPhaseRef = useRef<"resting" | "running" | "complete" | "returning">("resting");
+  const demoPhaseRef = useRef<"resting" | "running" | "complete" | "returning">(
+    "resting",
+  );
+
   const demoPlayedRef = useRef(false);
+
   const visualProgressRef = useRef(0);
+
   const openTweenRef = useRef<gsap.core.Tween | null>(null);
+
+  const lastScrollYRef = useRef(0);
 
   const userScrollIntentRef = useRef(false);
 
-  const [demoStarted, setDemoStarted] = useState(false);
+  /*
+
+   * PERF / FLICKER: the hero's scroll handler used to run for every scroll
+
+   * position on the page, including the whole Features section. Each frame it
+
+   * wrote width / height / top onto the demo window (layout-invalidating
+
+   * properties, not composited ones) plus a changing blur() onto the process
+
+   * cards, immediately after reading getBoundingClientRect(). That is a forced
+
+   * layout and a full repaint of an off-screen ~1300px scene on every frame
+
+   * the user spends scrolling the pinned feature scene.
+
+   *
+
+   * The demo clock had the same problem from the React side: setDemoElapsed()
+
+   * at 60fps for 30 seconds, re-rendering the demo UI and six process cards,
+
+   * even with the hero nowhere near the viewport.
+
+   *
+
+   * Both are now gated on hero visibility. A frame that overruns its budget is
+
+   * presented with a stale pinned scene — that is what "the section behind
+
+   * flashed through" actually is — so removing this work is the fix, not a
+
+   * nice-to-have.
+
+   */
+
+  const heroOnScreenRef = useRef(true);
+
+  const [heroOnScreen, setHeroOnScreen] = useState(true);
+
+  /*
+
+   * Demo clock.
+
+   *
+
+   * elapsed lives in a ref, not in the timer closure. The previous version
+
+   * derived it as (performance.now() - started) inside an effect that bailed
+
+   * out whenever the phase left "running", which produced two visible bugs:
+
+   *
+
+   *   1. Scrolling up mid-demo killed the loop for good. Scrolling back down
+
+   *      set the phase to "complete" rather than "running", so the clock
+
+   *      never restarted and the card sequence sat frozen.
+
+   *   2. beginDemo() had a firstRun branch that slammed elapsed to
+
+   *      DEMO_DURATION_MS on any re-entry. That made QueryPilotProcessCards
+
+   *      resolve straight to the final stage, so all six process cards
+
+   *      appeared at once with no staging and no active-dot pulse.
+
+   *
+
+   * With an accumulator the loop can idle through non-running phases and
+
+   * resume exactly where it paused, and beginDemo can always replay the
+
+   * sequence from zero.
+
+   */
+
+  const elapsedRef = useRef(0);
+
+  const [demoActive, setDemoActive] = useState(false);
+
   const [demoElapsed, setDemoElapsed] = useState(0);
 
-  useEffect(() => {
-    if (!demoStarted) return;
+  // The large resting backdrop is not mounted until the product card has
+  // completely entered. This prevents early image paint/load and keeps the
+  // entrance sequence deterministic.
+  const [showRestingBackgroundImage, setShowRestingBackgroundImage] =
+    useState(false);
 
-    const started = performance.now();
+  const restingBackgroundReadyRef = useRef(false);
+
+  useEffect(() => {
+    if (!demoActive || !heroOnScreen) return;
+
     let raf = 0;
 
-    const tick = () => {
-      if (demoPhaseRef.current !== "running") return;
+    let last = performance.now();
 
-      const elapsed = Math.min(performance.now() - started, DEMO_DURATION_MS);
-      setDemoElapsed(elapsed);
+    const tick = (now: number) => {
+      // Clamp the delta so a backgrounded tab / long frame can't fast-forward
 
-      if (elapsed >= DEMO_DURATION_MS) {
-        demoPhaseRef.current = "complete";
-        window.dispatchEvent(new Event("querypilot-demo-complete"));
-        return;
+      // the whole sequence in one step when the page becomes visible again.
+
+      const delta = Math.min(now - last, 100);
+
+      last = now;
+
+      if (demoPhaseRef.current === "running") {
+        const next = Math.min(elapsedRef.current + delta, DEMO_DURATION_MS);
+
+        elapsedRef.current = next;
+
+        setDemoElapsed(next);
+
+        if (next >= DEMO_DURATION_MS) {
+          demoPhaseRef.current = "complete";
+
+          window.dispatchEvent(new Event("querypilot-demo-complete"));
+
+          setDemoActive(false);
+
+          return;
+        }
       }
 
       raf = window.requestAnimationFrame(tick);
     };
 
     raf = window.requestAnimationFrame(tick);
+
     return () => window.cancelAnimationFrame(raf);
-  }, [demoStarted]);
+  }, [demoActive, heroOnScreen]);
 
   useLayoutEffect(() => {
     const section = sectionRef.current;
+
     const heroCopy = heroCopyRef.current;
+
     const scene = sceneRef.current;
+
     const mainWindow = mainWindowRef.current;
+
     const processCards = processCardsRef.current;
 
-    if (!section || !heroCopy || !scene || !mainWindow || !processCards) {
+    const restingBackground = restingBackgroundRef.current;
+
+    const restingEntry = restingEntryRef.current;
+
+    const heroParagraph = heroParagraphRef.current;
+
+    const heroActions = heroActionsRef.current;
+
+    if (
+      !section ||
+      !heroCopy ||
+      !scene ||
+      !mainWindow ||
+      !processCards ||
+      !restingBackground ||
+      !restingEntry ||
+      !heroParagraph ||
+      !heroActions
+    ) {
       return;
     }
 
@@ -965,107 +789,207 @@ function ProductPreview() {
 
     const setDrag = () => {
       const { x, y } = dragStateRef.current;
+
       gsap.set(scene, { x, y });
     };
 
     const resetDrag = () => {
       dragStateRef.current.active = false;
+
       dragStateRef.current.pointerX = 0;
+
       dragStateRef.current.pointerY = 0;
+
       dragStateRef.current.x = 0;
+
       dragStateRef.current.y = 0;
+
       setDrag();
     };
 
     const getProgress = () => {
       const rect = section.getBoundingClientRect();
+
       const distance = Math.max(section.offsetHeight - window.innerHeight, 1);
+
       return clamp01(-rect.top / distance);
     };
 
     const getGeometry = () => {
-      const restWidth = Math.min(
-        Math.max(window.innerWidth - RESTING_SIDE_GUTTER * 2, 0),
-        RESTING_MAX_WIDTH,
+      const viewportHeight = window.innerHeight;
+
+      // Shared 70vw content frame. The remaining 15vw on each side is empty.
+
+      const frameWidth = window.innerWidth * (PAGE_FRAME_WIDTH_VW / 100);
+
+      const desiredRestWidth = Math.min(
+        frameWidth * (RESTING_DEMO_WIDTH_VW / 100),
+
+        RESTING_DEMO_MAX_WIDTH,
       );
+
+      const restWidth = Math.max(
+        Math.min(desiredRestWidth, frameWidth),
+
+        Math.min(RESTING_DEMO_MIN_WIDTH, frameWidth),
+      );
+
+      const restLeft = Math.max((frameWidth - restWidth) / 2, 0);
 
       const demoWidth = Math.min(
         Math.max(window.innerWidth * (DEMO_WIDTH_VW / 100), DEMO_MIN_WIDTH),
+
         DEMO_MAX_WIDTH,
       );
 
-      const finalHeightFromWidth = demoWidth / MAIN_WINDOW_ASPECT;
+      const finalHeightFromWidth = demoWidth / EXPANDED_WINDOW_ASPECT;
+
       const finalDemoHeight = Math.min(
         finalHeightFromWidth,
-        window.innerHeight * 0.78,
+
+        viewportHeight * 0.78,
       );
 
-      const finalWidth = finalDemoHeight * MAIN_WINDOW_ASPECT < demoWidth
-        ? finalDemoHeight * MAIN_WINDOW_ASPECT
-        : demoWidth;
+      // Expanded mode uses a taller architecture frame rather than the resting 2:1 ratio.
+
+      const finalWidth = demoWidth;
+
+      const finalLeft = (frameWidth - finalWidth) / 2;
+
+      // The product card touches the bottom edge of the viewport.
+
+      const restHeight = restWidth / MAIN_WINDOW_ASPECT;
+
+      const restTop = viewportHeight - restHeight;
 
       return {
         restWidth,
+
+        restLeft,
+
         finalWidth,
-        restTop: Math.max(290, window.innerHeight * 0.42),
-        finalTop: Math.max(
-          108,
-          (window.innerHeight - finalDemoHeight) / 2,
-        ),
+
+        finalLeft,
+
+        restTop,
+
+        finalDemoHeight,
+
+        finalTop: Math.max(108, (viewportHeight - finalDemoHeight) / 2),
       };
     };
 
     const render = (progress = smoothProgressRef.current) => {
       const p = clamp01(progress);
+
       const {
         restWidth,
+
+        restLeft,
+
         finalWidth,
+
+        finalLeft,
+
         restTop,
+
         finalTop,
+
+        finalDemoHeight,
       } = getGeometry();
+
       const phase = demoPhaseRef.current;
 
       const visual =
-        phase === "returning" ||
-        phase === "complete" ||
-        phase === "running"
+        phase === "returning" || phase === "complete" || phase === "running"
           ? visualProgressRef.current
           : 0;
 
       const widthVisual = lerp(restWidth, finalWidth, visual);
-      const heightVisual = widthVisual / MAIN_WINDOW_ASPECT;
+
+      const heightVisual = lerp(
+        restWidth / MAIN_WINDOW_ASPECT,
+
+        finalDemoHeight,
+
+        visual,
+      );
+
       const topVisual = lerp(restTop, finalTop, visual);
 
+      const leftVisual = lerp(restLeft, finalLeft, visual);
+
+      const backgroundVisibility =
+        phase === "resting"
+          ? restingIntroCompleteRef.current
+            ? 1
+            : 0
+          : phase === "returning"
+            ? smoothstep(1 - visual)
+            : 1 - smoothstep(clamp01((visual - 0.05) / 0.5));
+
+      // During the resting entrance, the intro timeline owns the background.
+
+      // Do not let scroll/resize renders stomp its opacity back to 0/1.
+
+      if (
+        restingBackgroundReadyRef.current &&
+        (restingIntroCompleteRef.current || phase !== "resting")
+      ) {
+        gsap.set(restingBackground, {
+          opacity: backgroundVisibility,
+          visibility: backgroundVisibility > 0.001 ? "visible" : "hidden",
+          force3D: true,
+        });
+      } else if (!restingBackgroundReadyRef.current) {
+        gsap.set(restingBackground, {
+          opacity: 0,
+          visibility: "hidden",
+          force3D: true,
+        });
+      }
       gsap.set(mainWindow, {
-        left: "50%",
+        left: leftVisual,
+
         top: topVisual,
-        xPercent: -50,
+
+        xPercent: 0,
+
         yPercent: 0,
+
         width: widthVisual,
+
         height: heightVisual,
+
         scale: 1,
+
         transformOrigin: "50% 50%",
+
         visibility: "visible",
+
         force3D: true,
       });
+
+      // Copy and product expansion intentionally overlap. The text stays fixed
+
+      // on the LEFT; it only fades/softens while the product window expands.
 
       const copyReveal =
         phase === "resting"
           ? 1
           : phase === "returning"
-            ? smoothstep(
-                clamp01(
-                  (DEMO_RETURN_START * 0.5 - p) /
-                    (DEMO_RETURN_START * 0.5 - DEMO_RETURN_COMPLETE),
-                ),
-              )
-            : 0;
+            ? smoothstep(1 - visual)
+            : 1 - smoothstep(visual);
 
       gsap.set(heroCopy, {
         opacity: copyReveal,
-        y: -28 * (1 - copyReveal),
-        scale: lerp(0.985, 1, copyReveal),
-        filter: `blur(${lerp(2.5, 0, copyReveal)}px)`,
+
+        y: 0,
+
+        scale: lerp(1, 0.985, 1 - copyReveal),
+
+        filter: `blur(${lerp(2.25, 0, copyReveal)}px)`,
+
         force3D: true,
       });
 
@@ -1074,42 +998,54 @@ function ProductPreview() {
         demoPhaseRef.current === "complete" ||
         demoPhaseRef.current === "returning";
 
-      const cardVisibility = !demoPlayedRef.current || !cardsInDemoPhase
-        ? 0
-        : p <= CARD_DISMISS_START
-          ? 1
-          : p >= CARD_DISMISS_END
-            ? 0
-            : 1 -
-              smoothstep(
-                clamp01(
-                  (p - CARD_DISMISS_START) /
-                    (CARD_DISMISS_END - CARD_DISMISS_START),
-                ),
-              );
+      const cardVisibility =
+        !demoPlayedRef.current || !cardsInDemoPhase || p <= DEMO_RETURN_COMPLETE
+          ? 0
+          : demoPhaseRef.current === "returning"
+            ? p <= CARD_DISMISS_START
+              ? 1
+              : 1 -
+                smoothstep(
+                  clamp01(
+                    (p - CARD_DISMISS_START) /
+                      (CARD_DISMISS_END - CARD_DISMISS_START),
+                  ),
+                )
+            : p <= CARD_DISMISS_START
+              ? 1
+              : p >= CARD_DISMISS_END
+                ? 0
+                : 1 -
+                  smoothstep(
+                    clamp01(
+                      (p - CARD_DISMISS_START) /
+                        (CARD_DISMISS_END - CARD_DISMISS_START),
+                    ),
+                  );
 
       // BUGFIX: opacity alone is what the spec calls "merely low opacity while
+
       // still visible." Toggling visibility as well guarantees the cards are
+
       // truly inert (no residual paint, no hit-testing ambiguity) at the two
+
       // ends of the fade rather than only reaching opacity: 0 asymptotically.
+
       gsap.set(processCards, {
         opacity: cardVisibility,
+
         visibility: cardVisibility > 0.001 ? "visible" : "hidden",
+
         scale: lerp(0.985, 1, cardVisibility),
+
         y: lerp(-8, 0, cardVisibility),
+
         filter: `blur(${lerp(1.5, 0, cardVisibility)}px)`,
+
         transformOrigin: "50% 50%",
+
         force3D: true,
       });
-
-      if (p <= DEMO_RETURN_COMPLETE && demoPlayedRef.current) {
-        if (demoPhaseRef.current !== "resting") {
-          demoPhaseRef.current = "resting";
-          visualProgressRef.current = 0;
-          setDemoStarted(false);
-          window.dispatchEvent(new Event("querypilot-demo-reset"));
-        }
-      }
 
       if (!dragStateRef.current.active) {
         setDrag();
@@ -1117,27 +1053,38 @@ function ProductPreview() {
     };
 
     const tweenVisual = (
+
       to: number,
+
       duration: number,
+
       onComplete?: () => void,
+
     ) => {
       const proxy = { value: visualProgressRef.current };
 
       gsap.killTweensOf(proxy);
+
       return gsap.to(proxy, {
         value: to,
+
         duration,
-        ease: to > visualProgressRef.current
-          ? "power3.out"
-          : "power3.inOut",
+
+        ease: to > visualProgressRef.current ? "power3.out" : "power3.inOut",
+
         overwrite: true,
+
         onUpdate: () => {
           visualProgressRef.current = proxy.value;
+
           render();
         },
+
         onComplete: () => {
           visualProgressRef.current = to;
+
           render();
+
           onComplete?.();
         },
       });
@@ -1146,60 +1093,145 @@ function ProductPreview() {
     const beginDemo = () => {
       if (demoPhaseRef.current !== "resting") return;
 
-      const firstRun = !demoPlayedRef.current;
+      // Always replay the sequence from the top. The old firstRun branch
+
+      // jumped elapsed to DEMO_DURATION_MS on every re-entry, which is what
+
+      // made the six process cards appear all at once with no staging.
+
       demoPlayedRef.current = true;
-      demoPhaseRef.current = firstRun ? "running" : "complete";
+
+      demoPhaseRef.current = "running";
+
       visualProgressRef.current = 0;
 
-      if (firstRun) {
-        setDemoStarted(true);
-        setDemoElapsed(0);
-      } else {
-        setDemoStarted(false);
-        setDemoElapsed(DEMO_DURATION_MS);
-      }
+      elapsedRef.current = 0;
+
+      setDemoElapsed(0);
+
+      setDemoActive(true);
 
       window.dispatchEvent(new Event("querypilot-demo-start"));
 
       if (reduceMotion) {
         visualProgressRef.current = 1;
+
         render();
+
         return;
       }
 
       openTweenRef.current?.kill();
-      openTweenRef.current = tweenVisual(1, 1.05);
+
+      openTweenRef.current = tweenVisual(1, DEMO_OPEN_DURATION_S);
     };
 
-    const beginReturnToRest = () => {
+    const resetDemoToRest = () => {
+      openTweenRef.current?.kill();
+
+      openTweenRef.current = null;
+
+      demoPhaseRef.current = "resting";
+
+      visualProgressRef.current = 0;
+
+      elapsedRef.current = 0;
+
+      setDemoActive(false);
+
+      setDemoElapsed(0);
+
+      window.dispatchEvent(new Event("querypilot-demo-reset"));
+
+      render(0);
+    };
+
+    const beginReturnToRest = (progress: number) => {
       if (!demoPlayedRef.current) return;
-      if (demoPhaseRef.current === "resting") return;
+
+      if (progress <= DEMO_RETURN_COMPLETE) {
+        resetDemoToRest();
+
+        return;
+      }
 
       openTweenRef.current?.kill();
+
+      openTweenRef.current = null;
+
       demoPhaseRef.current = "returning";
-      setDemoStarted(false);
+
+      // The rAF loop stays alive here on purpose. The phase check inside it
+
+      // pauses the clock; keeping the loop mounted is what lets the sequence
+
+      // resume from its exact position if the user scrolls back down.
+
+      // Reverse is owned directly by scroll position. This prevents a large
+
+      // upward wheel/touch jump from skipping the cinematic return entirely.
+
+      visualProgressRef.current = smoothstep(
+        clamp01(
+          (progress - DEMO_RETURN_COMPLETE) /
+            (DEMO_RETURN_START - DEMO_RETURN_COMPLETE),
+        ),
+      );
     };
 
-    // BUGFIX (perf): getProgress() calls getBoundingClientRect(), which
-    // forces layout. That used to run on every native "scroll" event
-    // (unthrottled) — only the render() call further down was gated behind
-    // requestAnimationFrame. On a fast machine that's invisible; on a
-    // slower laptop, forcing layout dozens of times per frame across the
-    // whole 220vh hero section is enough to visibly stutter/hang. The fix
-    // coalesces the whole handler — geometry read included — to run at
-    // most once per animation frame. The branching logic itself is
-    // unchanged, just moved inside the rAF callback.
+    /*
+
+     * Scroll orchestration is intentionally stateful:
+
+     * resting -> running/complete -> returning -> resting
+
+     *
+
+     * The previous implementation only called beginReturnToRest() on the
+
+     * first frame that crossed the threshold. A high-velocity scroll could
+
+     * cross both the "return" and "rest" thresholds in one browser frame,
+
+     * leaving the cards painted while the window had already returned.
+
+     *
+
+     * Here every frame reconciles the phase against the current scroll
+
+     * position. The page can therefore skip any number of intermediate
+
+     * scroll positions without getting visually stuck.
+
+     */
+
     const onScroll = () => {
       if (rafRef.current !== null) return;
 
       rafRef.current = window.requestAnimationFrame(() => {
         rafRef.current = null;
 
+        // Hero off-screen: no layout reads, no GSAP writes, nothing at all.
+
+        // This is the frame budget the pinned feature scene needs.
+
+        if (!heroOnScreenRef.current) {
+          lastScrollYRef.current = window.scrollY;
+
+          return;
+        }
+
         const p = getProgress();
-        const previous = smoothProgressRef.current;
-        const delta = p - previous;
-        const isMovingUp = delta < -0.0015;
-        const isMovingDown = delta > 0.0015;
+
+        const scrollY = window.scrollY;
+
+        const deltaY = scrollY - lastScrollYRef.current;
+
+        lastScrollYRef.current = scrollY;
+
+        const isMovingUp = deltaY < -0.5;
+
+        const isMovingDown = deltaY > 0.5;
 
         if (
           isMovingDown &&
@@ -1216,26 +1248,49 @@ function ProductPreview() {
           demoPhaseRef.current === "returning" &&
           p > DEMO_RETURN_COMPLETE
         ) {
-          demoPhaseRef.current = "complete";
-          tweenVisual(1, 0.7);
+          // Resume an unfinished sequence instead of forcing "complete",
+
+          // which used to strand the clock wherever it paused.
+
+          if (elapsedRef.current >= DEMO_DURATION_MS) {
+            demoPhaseRef.current = "complete";
+          } else {
+            demoPhaseRef.current = "running";
+
+            setDemoActive(true);
+          }
+
+          tweenVisual(1, 0.52);
         }
 
-        if (
-          isMovingUp &&
-          demoPlayedRef.current &&
-          p < DEMO_RETURN_START
-        ) {
-          beginReturnToRest();
-          const reverseProgress = smoothstep(
+        if (isMovingUp && demoPlayedRef.current) {
+          if (p <= DEMO_RETURN_COMPLETE) {
+            resetDemoToRest();
+          } else if (
+            p < DEMO_RETURN_START &&
+            demoPhaseRef.current !== "resting"
+          ) {
+            beginReturnToRest(p);
+          }
+        }
+
+        // While returning, continuously bind the visual state to the current
+
+        // scroll progress so rapid upward movement still reveals the cards and
+
+        // closes the main window in a deterministic way.
+
+        if (demoPhaseRef.current === "returning" && p > DEMO_RETURN_COMPLETE) {
+          visualProgressRef.current = smoothstep(
             clamp01(
               (p - DEMO_RETURN_COMPLETE) /
                 (DEMO_RETURN_START - DEMO_RETURN_COMPLETE),
             ),
           );
-          visualProgressRef.current = reverseProgress;
         }
 
         smoothProgressRef.current = p;
+
         render(p);
       });
     };
@@ -1258,71 +1313,367 @@ function ProductPreview() {
 
     const onResize = () => {
       resetDrag();
+
+      if (!heroOnScreenRef.current) return;
+
       render(getProgress());
     };
 
+    // Visibility gate. The margin re-arms the hero slightly before it is
+
+    // actually on screen, so its first visible frame is already correct.
+
+    const visibilityObserver = new IntersectionObserver(
+
+      (entries) => {
+        const entry = entries[0];
+
+        const onScreen = entry ? entry.isIntersecting : true;
+
+        if (heroOnScreenRef.current === onScreen) return;
+
+        heroOnScreenRef.current = onScreen;
+
+        setHeroOnScreen(onScreen);
+
+        if (onScreen) {
+          lastScrollYRef.current = window.scrollY;
+
+          smoothProgressRef.current = getProgress();
+
+          render(smoothProgressRef.current);
+        }
+      },
+
+      { rootMargin: "160px 0px 160px 0px" },
+
+    );
+
+    visibilityObserver.observe(section);
+
+    const heroTitleLines = heroCopy.querySelectorAll<HTMLElement>(
+      "[data-hero-title-line]",
+    );
+
+    // Establish the true entrance state before the initial render.
+
+    // The browser must never paint the completed hero and then hide it.
+
+    restingIntroCompleteRef.current =
+      reduceMotion || heroTitleLines.length === 0;
+
+    if (!restingIntroCompleteRef.current) {
+      gsap.set(restingBackground, {
+        opacity: 0,
+
+        visibility: "hidden",
+      });
+
+      gsap.set(restingEntry, {
+        opacity: 0,
+
+        y: 16,
+
+        scale: 0.985,
+      });
+
+      gsap.set(heroTitleLines, {
+        opacity: 0,
+
+        y: 14,
+
+        filter: "blur(14px)",
+      });
+
+      gsap.set(heroParagraph, {
+        opacity: 0,
+
+        y: 10,
+      });
+
+      gsap.set(heroActions, {
+        opacity: 0,
+
+        y: 8,
+      });
+    } else {
+      setShowRestingBackgroundImage(true);
+
+      restingBackgroundReadyRef.current = true;
+
+      restingIntroCompleteRef.current = true;
+
+      gsap.set(restingBackground, {
+        opacity: 1,
+
+        visibility: "visible",
+      });
+
+      gsap.set(restingEntry, {
+        opacity: 1,
+
+        y: 0,
+
+        scale: 1,
+      });
+
+      gsap.set(heroTitleLines, {
+        opacity: 1,
+
+        y: 0,
+
+        filter: "blur(0px)",
+      });
+
+      gsap.set(heroParagraph, {
+        opacity: 1,
+
+        y: 0,
+      });
+
+      gsap.set(heroActions, {
+        opacity: 1,
+
+        y: 0,
+      });
+    }
+
     visualProgressRef.current = 0;
+
     smoothProgressRef.current = getProgress();
+
+    lastScrollYRef.current = window.scrollY;
+
     render(smoothProgressRef.current);
 
+    if (!reduceMotion && heroTitleLines.length > 0) {
+      // First-load/reload entrance only. Isolated from the scroll/demo timeline.
+      // It owns the text/card choreography and signals the deferred background
+      // mount only after the product card has completely settled.
+
+      const restingIntro = gsap.timeline({
+        defaults: {
+          ease: "power3.out",
+        },
+      });
+
+      // Exact first-load sequence:
+      // title (blur -> focus) -> description -> buttons -> product card -> background mount.
+      // The background image is intentionally the LAST thing to enter —
+      // it doesn't even mount into the DOM until this call() fires below,
+      // and it then waits for its own load event before fading in.
+      restingIntro.to(heroTitleLines, {
+        opacity: 1,
+        y: 0,
+        filter: "blur(0px)",
+        duration: 0.9,
+        stagger: 0.1,
+        ease: "power2.out",
+      });
+
+      restingIntro.to(heroParagraph, {
+        opacity: 1,
+        y: 0,
+        duration: 0.38,
+      });
+
+      restingIntro.to(heroActions, {
+        opacity: 1,
+        y: 0,
+        duration: 0.34,
+      });
+
+      restingIntro.to(restingEntry, {
+        opacity: 1,
+        y: 0,
+        scale: 1,
+        duration: 0.5,
+      });
+
+      // Only now does the background image enter the DOM. It is the final
+      // step in the sequence and fades in on its own once loaded (see the
+      // showRestingBackgroundImage effect below) — never before the card.
+      restingIntro.call(() => {
+        setShowRestingBackgroundImage(true);
+      });
+    }
+
     window.addEventListener("wheel", armUserScrollIntent, { passive: true });
-    window.addEventListener("touchstart", armUserScrollIntent, { passive: true });
-    window.addEventListener("touchmove", armUserScrollIntent, { passive: true });
+
+    window.addEventListener("touchstart", armUserScrollIntent, {
+      passive: true,
+    });
+
+    window.addEventListener("touchmove", armUserScrollIntent, {
+      passive: true,
+    });
+
     window.addEventListener("keydown", onKeyDown);
+
     window.addEventListener("scroll", onScroll, { passive: true });
+
     window.addEventListener("resize", onResize);
 
     return () => {
+      visibilityObserver.disconnect();
+
       window.removeEventListener("wheel", armUserScrollIntent);
+
       window.removeEventListener("touchstart", armUserScrollIntent);
+
       window.removeEventListener("touchmove", armUserScrollIntent);
+
       window.removeEventListener("keydown", onKeyDown);
+
       window.removeEventListener("scroll", onScroll);
+
       window.removeEventListener("resize", onResize);
+
       if (rafRef.current !== null) {
         window.cancelAnimationFrame(rafRef.current);
       }
+
       openTweenRef.current?.kill();
+
       gsap.killTweensOf([
+
         heroCopy,
+
         mainWindow,
+
         scene,
+
         processCards,
+
+        restingBackground,
+
+        restingEntry,
+
+        heroParagraph,
+
+        heroActions,
+
       ]);
+
+      gsap.killTweensOf(heroTitleLines);
     };
   }, []);
 
+  // Deferred backdrop reveal. The image is mounted only after the card
+  // entrance. Wait for load/cache completion before fading it in so the user
+  // never sees an unloaded or half-painted background.
+  useLayoutEffect(() => {
+    if (!showRestingBackgroundImage) return;
+
+    const background = restingBackgroundRef.current;
+    if (!background) return;
+
+    const image = background.querySelector("img");
+    if (!image) return;
+
+    let cancelled = false;
+
+    const reveal = () => {
+      if (cancelled) return;
+
+      restingBackgroundReadyRef.current = true;
+      gsap.killTweensOf(background);
+
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        gsap.set(background, {
+          opacity: 1,
+          visibility: "visible",
+        });
+        restingIntroCompleteRef.current = true;
+        return;
+      }
+
+      gsap.fromTo(
+        background,
+        {
+          opacity: 0,
+          visibility: "visible",
+        },
+        {
+          opacity: 1,
+          duration: 0.55,
+          ease: "power2.out",
+          overwrite: true,
+          onComplete: () => {
+            if (!cancelled) {
+              restingIntroCompleteRef.current = true;
+            }
+          },
+        },
+      );
+    };
+
+    if (image.complete) {
+      reveal();
+      return () => {
+        cancelled = true;
+        gsap.killTweensOf(background);
+      };
+    }
+
+    image.addEventListener("load", reveal, { once: true });
+    image.addEventListener("error", reveal, { once: true });
+
+    return () => {
+      cancelled = true;
+      image.removeEventListener("load", reveal);
+      image.removeEventListener("error", reveal);
+      gsap.killTweensOf(background);
+    };
+  }, [showRestingBackgroundImage]);
+
   const canDrag = () => {
     const section = sectionRef.current;
+
     if (!section) return false;
+
     const distance = Math.max(section.offsetHeight - window.innerHeight, 1);
-    return clamp01(-section.getBoundingClientRect().top / distance) >= 0.90;
+
+    return clamp01(-section.getBoundingClientRect().top / distance) >= 0.9;
   };
 
-  const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+  const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
     if (event.button !== 0 || !canDrag()) return;
 
     const drag = dragStateRef.current;
+
     drag.active = true;
+
     drag.pointerX = event.clientX;
+
     drag.pointerY = event.clientY;
+
     event.currentTarget.setPointerCapture(event.pointerId);
   };
 
-  const handlePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+  const handlePointerMove = (event: PointerEvent<HTMLDivElement>) => {
     const drag = dragStateRef.current;
+
     if (!drag.active) return;
 
     const maxX = Math.min(window.innerWidth * 0.11, 170);
+
     const maxY = Math.min(window.innerHeight * 0.075, 72);
 
     drag.x = Math.max(
+
       -maxX,
+
       Math.min(maxX, event.clientX - drag.pointerX),
+
     );
+
     drag.y = Math.max(
+
       -maxY,
+
       Math.min(maxY, event.clientY - drag.pointerY),
+
     );
 
     if (sceneRef.current) {
@@ -1330,8 +1681,9 @@ function ProductPreview() {
     }
   };
 
-  const handlePointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
+  const handlePointerUp = (event: PointerEvent<HTMLDivElement>) => {
     dragStateRef.current.active = false;
+
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId);
     }
@@ -1340,52 +1692,80 @@ function ProductPreview() {
   return (
     <section
       ref={sectionRef}
-      className="relative hidden h-[220vh] w-full bg-white min-[901px]:block"
+      className="relative hidden h-[220vh] w-full bg-[#0A0A0A] min-[901px]:block"
       aria-label="QueryPilot hero"
+      /*
+
+       * The hero scene uses z-50 / z-60 / z-75 / z-80 on overflow-visible
+
+       * containers. Without a stacking context on the section itself, those
+
+       * indices escape into the root. isolation:isolate confines the hero
+
+       * scene to its own stacking context while the fixed navbar still wins.
+
+       */
+
+      style={{ isolation: "isolate" }}
     >
       <div className="sticky top-0 h-screen overflow-visible">
         <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 z-0 bg-cover bg-center"
-          style={{ backgroundImage: 'url("/cloud.png")' }}
-        />
-        <div className="relative mx-auto h-full w-full max-w-[1600px] px-5 sm:px-8 lg:px-10">
+          className="relative mx-auto h-full w-[70vw] overflow-visible"
+          style={{ marginLeft: "15vw", marginRight: "15vw" }}
+        >
+          <div
+            ref={restingBackgroundRef}
+            aria-hidden="true"
+            className="qp-hero-entrance-hidden pointer-events-none absolute left-0 top-[34vh] z-0 h-[71vh] w-full overflow-hidden rounded-[30px] border border-white/10 bg-[#0a0a0a]"
+          >
+            {showRestingBackgroundImage ? (
+              <img
+                src="/bg-img.png"
+                alt=""
+                aria-hidden="true"
+                className="h-full w-full object-cover object-center"
+              />
+            ) : null}
+
+            <div className="absolute inset-0 bg-black/20" />
+          </div>
+
           <div
             ref={heroCopyRef}
-            className="hero-copy absolute inset-x-0 top-[calc(3.5vh+96px)] z-[80] flex w-full justify-center px-5 text-center sm:px-8 will-change-[transform,opacity]"
+            className="hero-copy absolute left-0 top-[12vh] z-[80] flex w-[min(44%,520px)] max-w-[520px] flex-col items-start px-0 text-left will-change-[transform,opacity]"
           >
-            <div className="w-full max-w-[980px]">
-              <a
-                href="#learn"
-                className="inline-flex items-center gap-2 rounded-full border border-[#d9dce3] px-3.5 py-2 text-[13px] font-medium text-[#20242b] shadow-sm transition-colors hover:bg-[#f5f6f8]"
-              >
-                GTM lessons from Elena Verna and more
-                <ArrowRight size={13} />
-              </a>
-
-              <div className="mx-auto mt-6 flex justify-center overflow-visible">
+            <div className="w-full max-w-[500px]">
+              <div className="flex justify-start overflow-visible">
                 <StaticHeroHeading />
               </div>
 
-              <p className="mx-auto mt-5 max-w-[440px] text-pretty text-[17px] leading-6 text-[#687184]">
-                QueryPilot is the AI retrieval system that builds grounded answers from your connected data.
+              <p
+                ref={heroParagraphRef}
+                className="qp-hero-entrance-hidden mt-3 max-w-[410px] text-pretty text-[14px] leading-5.5 text-white/55"
+              >
+                QueryPilot works across documents and structured data. Ask your
+                question and it finds the right source for you.
               </p>
 
-              <div className="mt-5 flex items-center justify-center gap-2.5">
-                <a
-                  href="#sales"
-                  className="rounded-xl border border-[#d9dce3] px-4 py-2.5 text-sm font-medium text-[#20242b] hover:bg-[#f5f6f8]"
-                >
-                  Talk to sales
-                </a>
+              <div
+                ref={heroActionsRef}
+                className="qp-hero-entrance-hidden mt-4 flex items-center justify-start gap-2.5"
+              >
                 <PixelDissolveButton
-                  label="Start for free"
-                  href="/signup"
-                  color="#20242b"
-                  dissolveColor="#a8b4ff"
+                  label="Read engineering docs"
+                  href="/engineering"
+                  color="#ffffff"
+                  dissolveColor="#808080"
                   cellSize={5}
-                  className="min-h-10 rounded-xl px-4 text-sm normal-case tracking-normal"
+                  className="!min-h-10 !rounded-[11px] !px-4 !text-sm !font-medium !normal-case !tracking-normal !bg-white !text-black"
                 />
+
+                <a
+                  href="/login"
+                  className="rounded-[11px] border border-white/20 px-4 py-2.5 text-sm font-normal text-white transition-colors hover:bg-white/10"
+                >
+                  Try QueryPilot
+                </a>
               </div>
             </div>
           </div>
@@ -1396,31 +1776,45 @@ function ProductPreview() {
           >
             <div
               ref={mainWindowRef}
-              className="invisible absolute left-1/2 top-[42vh] z-[50] aspect-[16/10] w-[min(calc(100% - 48px),1600px)] -translate-x-1/2 will-change-[width,height,top,opacity]"
+              className="visible absolute left-1/2 top-0 z-[50] aspect-auto w-full -translate-x-1/2 will-change-[width,height,top,opacity]"
             >
-              <div className="querypilot-resting-entry relative h-full w-full">
+              <div
+                ref={restingEntryRef}
+                className="querypilot-resting-entry qp-hero-entrance-hidden relative z-10 h-full w-full"
+              >
                 {/*
-                  Soft sky-toned halo behind the window. Without this the
-                  dark demo window sits as a flat rectangle on top of the
-                  cloud backdrop; the halo lets it read as floating in the
-                  scene instead.
+
+                  Subtle neutral halo behind the window so the white product
+
+                  surface separates cleanly from the black hero background.
+
                 */}
+
                 <div
                   aria-hidden="true"
-                  className="pointer-events-none absolute -inset-x-8 -inset-y-10 -z-10 rounded-[48px] bg-[radial-gradient(closest-side,rgba(255,255,255,0.6),rgba(158,197,255,0.32)_45%,rgba(158,197,255,0)_75%)] blur-2xl"
+                  className="pointer-events-none absolute -inset-x-8 -inset-y-10 -z-10 rounded-[48px] bg-[radial-gradient(closest-side,rgba(255,255,255,0.16),rgba(255,255,255,0.07)_45%,rgba(255,255,255,0)_75%)] blur-2xl"
                 />
 
-                <div className="relative h-full w-full overflow-visible rounded-[18px] border border-white/[0.14] bg-[#0D0F12] shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_24px_60px_-12px_rgba(24,52,110,0.35),0_60px_140px_-20px_rgba(15,30,70,0.35)]">
-                  <QueryPilotApp elapsed={demoElapsed} />
+                <div
+                  ref={centerWindowRef}
+                  className="absolute inset-[1.5%] z-10 overflow-hidden rounded-[22px]"
+                >
+                  <DemoWindowChrome label="QueryPilot, live demo" radius={18}>
+                    <QueryPilotApp elapsed={demoElapsed} />
+                  </DemoWindowChrome>
                 </div>
 
                 {/*
-                  Grounded reflection so the window feels seated in the
-                  scene rather than pasted over the clouds.
+
+                  Soft neutral reflection so the window feels grounded against
+
+                  the black surface rather than pasted on top of it.
+
                 */}
+
                 <div
                   aria-hidden="true"
-                  className="pointer-events-none absolute -bottom-7 left-1/2 h-14 w-[72%] -translate-x-1/2 rounded-full bg-[radial-gradient(closest-side,rgba(30,58,110,0.22),rgba(30,58,110,0)_72%)] blur-xl"
+                  className="pointer-events-none absolute -bottom-7 left-1/2 h-14 w-[72%] -translate-x-1/2 rounded-full bg-[radial-gradient(closest-side,rgba(255,255,255,0.10),rgba(255,255,255,0)_72%)] blur-xl"
                 />
 
                 <div
@@ -1439,6 +1833,8 @@ function ProductPreview() {
                   <QueryPilotProcessCards
                     elapsed={demoElapsed}
                     show
+                    containerRef={processCardsRef}
+                    mainWindowRef={centerWindowRef}
                   />
                 </div>
               </div>
@@ -1447,49 +1843,114 @@ function ProductPreview() {
         </div>
       </div>
 
-      <style jsx>{`
+      {/*
+
+        This block is intentionally `jsx global`, not scoped `jsx`.
+
+        `.qp-hero-entrance-hidden` is also used on the title-line spans,
+
+        which live inside StaticHeroHeading — a separate component — so a
+
+        scoped style tag (which only stamps elements returned by *this*
+
+        component) would silently fail to hide them. Global CSS is also
+
+        what makes this safe against the reload flash in the first place:
+
+        it ships inside the server-rendered HTML and is parsed by the
+
+        browser before first paint, unlike anything driven by
+
+        useLayoutEffect/GSAP, which only runs after hydration. GSAP writes
+
+        opacity as an inline style once it takes over, and inline style
+
+        always wins over this class, so there's no fight between the two.
+
+        `.qp-hero-title-blur-hidden` is the same idea but scoped to just the
+
+        headline lines, which additionally start out-of-focus (blur) rather
+
+        than only invisible, to match the reference blur-to-focus reveal.
+
+      */}
+
+      <style jsx global>{`
         .querypilot-resting-entry {
-          opacity: 1;
           transform: none;
+
           transform-origin: 50% 50%;
+
           will-change: auto;
+        }
+
+        .qp-hero-entrance-hidden {
+          opacity: 0;
+        }
+
+        .qp-hero-title-blur-hidden {
+          opacity: 0;
+
+          filter: blur(14px);
+
+          will-change: opacity, filter, transform;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .qp-hero-entrance-hidden {
+            opacity: 1;
+          }
+
+          .qp-hero-title-blur-hidden {
+            opacity: 1;
+
+            filter: none;
+          }
         }
       `}</style>
     </section>
   );
 }
 
-
 function HeroMobile() {
   const [demoStarted, setDemoStarted] = useState(false);
+
   const [demoElapsed, setDemoElapsed] = useState(0);
 
   useEffect(() => {
     if (demoStarted) return;
 
     const onFirstScroll = () => setDemoStarted(true);
+
     window.addEventListener("scroll", onFirstScroll, {
       once: true,
+
       passive: true,
     });
 
-    return () =>
-      window.removeEventListener("scroll", onFirstScroll);
+    return () => window.removeEventListener("scroll", onFirstScroll);
   }, [demoStarted]);
 
   useEffect(() => {
     if (!demoStarted) return;
 
     const started = performance.now();
+
     const duration = 30000;
+
     let raf = 0;
 
     // BUGFIX (perf): setInterval fires on its own clock regardless of
+
     // whether the browser is ready to paint, which can pile up work on
+
     // slower devices. requestAnimationFrame ties the update to the
+
     // browser's own paint cadence instead, so it never over-schedules.
+
     const tick = () => {
       const elapsed = Math.min(performance.now() - started, duration);
+
       setDemoElapsed(elapsed);
 
       if (elapsed < duration) {
@@ -1498,790 +1959,140 @@ function HeroMobile() {
     };
 
     raf = window.requestAnimationFrame(tick);
+
     return () => window.cancelAnimationFrame(raf);
   }, [demoStarted]);
 
   return (
-    <section className="relative w-full overflow-hidden bg-white px-5 pb-16 pt-24 min-[901px]:hidden">
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 z-0 bg-cover bg-center"
-        style={{ backgroundImage: 'url("/cloud.png")' }}
-      />
-      <div className="relative z-10 mx-auto max-w-[680px] text-center">
-        <h1
-          className="mx-auto max-w-[660px] text-[clamp(38px,10vw,62px)] font-medium leading-[0.93] tracking-[-0.055em] text-[#111318]"
-          style={{
-            fontFamily: '"ALTMistral", sans-serif',
-            fontWeight: 500,
-            fontKerning: "none",
-          }}
-        >
+    <section className="relative w-full overflow-hidden bg-[#0A0A0A] px-5 pb-[15vh] pt-[15vh] text-white min-[901px]:hidden">
+      <div className="relative z-10 mx-auto w-full max-w-[720px] text-center">
+        <h1 className="mx-auto max-w-[660px] text-[clamp(36px,9vw,58px)] font-normal leading-[1.02] tracking-[-0.045em] text-white">
           Don&apos;t just search your data.
           <span className="block">Understand it.</span>
         </h1>
 
-        <p className="mx-auto mt-7 max-w-[440px] text-[16px] leading-6 text-[#687184]">
-          QueryPilot is the AI retrieval system built to understand, query, and ground knowledge across your data.
+        <p className="mx-auto mt-6 max-w-[520px] text-[16px] leading-6 text-white/55">
+          Ask about your documents or business data without knowing which source
+          has the answer.
         </p>
 
-        <div className="relative mt-10">
-          <div
+        <div className="relative mt-9 overflow-hidden rounded-[22px] border border-white/15 bg-[#090909] p-[2.6%] shadow-[0_24px_70px_rgba(0,0,0,0.22)]">
+          <img
+            src="/bg-img.png"
+            alt=""
             aria-hidden="true"
-            className="pointer-events-none absolute -inset-x-4 -inset-y-6 -z-10 rounded-[32px] bg-[radial-gradient(closest-side,rgba(255,255,255,0.65),rgba(158,197,255,0.3)_50%,rgba(158,197,255,0)_75%)] blur-2xl"
+            className="pointer-events-none absolute inset-0 h-full w-full object-cover object-center"
           />
 
-          <div className="relative aspect-[4/3] w-full overflow-hidden rounded-[16px] border border-[#dfe2e8] bg-[#f3f4f6] shadow-[0_24px_70px_rgba(84,92,140,0.16)] sm:aspect-video">
+          <div className="pointer-events-none absolute inset-0 bg-black/25" />
+
+          <div className="relative aspect-[4/3] w-full overflow-hidden rounded-[16px] border border-white/15 bg-white sm:aspect-video">
             <QueryPilotApp elapsed={demoElapsed} />
           </div>
         </div>
-      </div>
-    </section>
-  );
-}
 
-/* ============================================================
-   FEATURES
-   ============================================================ */
-
-type TechnicalFeature = {
-  title: string;
-  description: string;
-  image: string;
-  icon: ComponentType<{ className?: string; style?: CSSProperties }>;
-};
-
-const technicalFeatures: TechnicalFeature[] = [
-  {
-    title: "Planner Agent",
-    description:
-      "Agent which interprets the user's request, resolves referenced resources and entities, and constructs the execution plan required to answer it. It can coordinate document search, structured queries, metadata lookup, memory, and multi-source execution before evidence is validated.",
-    image: "/querypilot-planner-agent-architecture-responsive.svg",
-    icon: Route,
-  },
-  {
-    title: "Async Ingestion Pipeline",
-    description:
-      "Handles document ingestion asynchronously through background workers so parsing and indexing do not block the request lifecycle. Uploaded files are validated, parsed, chunked, embedded, indexed, and persisted before their ingestion status is updated and the content becomes searchable.",
-    image: "/querypilot-document-processing-pipeline.svg",
-    icon: UploadCloud,
-  },
-  {
-    title: "Conversation Memory",
-    description:
-      "Maintains workspace-scoped conversation context so previous questions, answers, and referenced entities remain available across turns. This enables follow-up queries, pronoun resolution, and contextual references without requiring users to repeat earlier information.",
-    image: "/conversation_memory.svg",
-    icon: MessagesSquare,
-  },
-  {
-    title: "Real-Time SSE Streaming",
-    description:
-      "Streams assistant responses from the Django backend to the frontend over Server-Sent Events as execution progresses. Incremental answer_delta events update a single response in real time, followed by a complete event containing the final answer, sources, and execution state.",
-    image: "/2-sse-streaming.svg",
-    icon: Radio,
-  },
-  {
-    title: "Structured Data Pipeline",
-    description:
-      "Processes XLSX and CSV sources into workspace-scoped SQLite tables with inferred schemas and registered metadata. Natural-language requests are translated into safe, read-only SQL to return structured rows, aggregates, and evidence for the final answer.",
-    image: "/querypilot-structured-data-pipeline.svg",
-    icon: Database,
-  },
-  {
-    title: "Workspace Isolation",
-    description:
-      "Enforces workspace boundaries across documents, tables, retrieval, conversations, and execution so data cannot leak across workspaces. Authorization and workspace-scoped resource access ensure every query operates only against resources the current user is permitted to access.",
-    image: "/querypilot-workspace-isolation(2).svg",
-    icon: ShieldCheck,
-  },
-];
-
-function TechnicalFeaturePanel({
-  feature,
-  index,
-  active,
-  panelRef,
-  onActivate,
-}: {
-  feature: TechnicalFeature;
-  index: number;
-  active: boolean;
-  panelRef: (element: HTMLElement | null) => void;
-  onActivate: (index: number) => void;
-}) {
-  return (
-    <article
-      id={`technical-feature-${index}`}
-      ref={panelRef}
-      className="relative flex min-h-[78vh] scroll-mt-8 flex-col justify-center border-t border-white/10 px-4 py-20 sm:px-6 min-[901px]:min-h-[88vh] min-[901px]:px-6 min-[901px]:py-20"
-      data-feature-index={index}
-    >
-      <div className="mx-auto flex w-full max-w-[1240px] flex-col">
-        <div className="max-w-[820px]">
-          <h3
-            className="text-balance text-[clamp(38px,5.2vw,70px)] font-light leading-[0.94] tracking-[-0.055em] text-white transition-[opacity,transform,filter] duration-700 ease-out"
-            style={{
-              opacity: active ? 1 : 0.42,
-              transform: active ? "translateY(0)" : "translateY(10px)",
-              filter: active ? "blur(0px)" : "blur(3px)",
-            }}
-          >
-            {feature.title}
-          </h3>
-
-          <p
-            className="mt-6 max-w-[730px] text-[clamp(16px,1.35vw,19px)] leading-[1.55] tracking-[-0.01em] text-white/58 transition-[opacity,transform,filter] duration-700 ease-out"
-            style={{
-              opacity: active ? 1 : 0.32,
-              transform: active ? "translateY(0)" : "translateY(8px)",
-              filter: active ? "blur(0px)" : "blur(2px)",
-              transitionDelay: active ? "70ms" : "0ms",
-            }}
-          >
-            {feature.description}
-          </p>
-        </div>
-
-        <div
-          className={`
-            mt-10 overflow-hidden rounded-[22px] border border-white/10
-            bg-[#111214] shadow-[0_35px_100px_rgba(0,0,0,0.38)]
-            transition-[border-color,box-shadow] duration-500 sm:mt-12
-            ${active ? "border-white/16 shadow-[0_40px_110px_rgba(0,0,0,0.48)]" : ""}
-          `}
-        >
-          <div className="relative flex min-h-[600px] items-center justify-center overflow-visible p-6 sm:min-h-[680px] sm:p-10">
-  <div
-    aria-hidden="true"
-    className="pointer-events-none absolute inset-0 z-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.035)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.035)_1px,transparent_1px)] bg-[size:44px_44px]"
-  />
-  <img
-    src={feature.image}
-    alt={`${feature.title} architecture`}
-    loading={index === 0 ? "eager" : "lazy"}
-    decoding="async"
-    draggable={false}
-    className="relative z-10 block h-full w-full object-contain object-center max-h-[520px] sm:max-h-[600px]"
-  />
-</div>
-        </div>
-      </div>
-
-      <button
-        type="button"
-        className="sr-only"
-        onClick={() => onActivate(index)}
-        aria-label={`Activate ${feature.title}`}
-      >
-        {feature.title}
-      </button>
-    </article>
-  );
-}
-
-/* ============================================================
-   TechnicalSplitSection
-   ============================================================ */
-
-function TechnicalSplitSection() {
-  const sectionRef = useRef<HTMLElement | null>(null);
-  const panelRefs = useRef<(HTMLElement | null)[]>([]);
-  const tickingRef = useRef(false);
-  const [activeFeature, setActiveFeature] = useState(0);
-
-  useEffect(() => {
-    const updateActiveFeature = () => {
-      tickingRef.current = false;
-
-      const targetY = window.innerHeight * 0.46;
-      let closestIndex = 0;
-      let closestDistance = Number.POSITIVE_INFINITY;
-      const distanceByIndex: number[] = [];
-
-      panelRefs.current.forEach((panel, index) => {
-        if (!panel) {
-          distanceByIndex[index] = Number.POSITIVE_INFINITY;
-          return;
-        }
-
-        const rect = panel.getBoundingClientRect();
-        const centerY = rect.top + rect.height / 2;
-        const distance = Math.abs(centerY - targetY);
-        distanceByIndex[index] = distance;
-
-        if (distance < closestDistance) {
-          closestDistance = distance;
-          closestIndex = index;
-        }
-      });
-
-      // Hysteresis: only switch away from the current panel once the new
-      // candidate is meaningfully closer, not just marginally closer. Without
-      // this, two adjacent panels that are briefly equidistant from the
-      // target line cause the active index (and every highlight it drives)
-      // to flicker back and forth on tiny scroll deltas.
-      setActiveFeature((current) => {
-        const currentDistance = distanceByIndex[current] ?? Number.POSITIVE_INFINITY;
-        if (closestIndex === current) return current;
-        const improvement = currentDistance - closestDistance;
-        const SWITCH_THRESHOLD_PX = 24;
-        return improvement > SWITCH_THRESHOLD_PX ? closestIndex : current;
-      });
-    };
-
-    const onScroll = () => {
-      if (tickingRef.current) return;
-
-      tickingRef.current = true;
-      window.requestAnimationFrame(updateActiveFeature);
-    };
-
-    updateActiveFeature();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", onScroll);
-
-    return () => {
-      window.removeEventListener("scroll", onScroll);
-      window.removeEventListener("resize", onScroll);
-    };
-  }, []);
-
-  const scrollToFeature = (index: number) => {
-    const panel = panelRefs.current[index];
-    if (!panel) return;
-
-    const offset = Math.max(28, window.innerHeight * 0.08);
-    const top =
-      window.scrollY + panel.getBoundingClientRect().top - offset;
-
-    window.scrollTo({
-      top,
-      behavior: "smooth",
-    });
-  };
-
-  return (
-    <section
-      id="technical-features"
-      ref={sectionRef}
-      className="w-full bg-[#070707] text-white"
-    >
-      <div className="mx-auto w-[calc(100%-40px)] max-w-[1600px] max-[768px]:w-[calc(100%-28px)]">
-        {/* Features intro */}
-        <div className="border-b border-white/10 px-6 pb-20 pt-28 sm:px-9 min-[901px]:px-12 min-[901px]:pb-24 min-[901px]:pt-36">
-          <div className="max-w-[1180px]">
-            <span className="inline-flex rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[11px] font-medium tracking-[0.08em] text-white/75">
-              Features
-            </span>
-
-            <h2 className="mt-7 max-w-[1050px] text-balance text-[clamp(38px,5.8vw,78px)] font-light leading-[0.96] tracking-[-0.06em] text-white">
-              The system that turns natural language into grounded answers.
-            </h2>
-
-            <p className="mt-7 max-w-[820px] text-[clamp(17px,1.6vw,22px)] leading-[1.45] tracking-[-0.015em] text-white/48">
-              An enterprise workspace assistant that can reason across both
-              unstructured company documents and structured business data.
-            </p>
-          </div>
-        </div>
-
-        {/* Sticky navigation + scrolling feature cards */}
-        <div className="grid min-[901px]:grid-cols-[25%_75%]">
-          <aside className="bg-[#070707] min-[901px]:sticky min-[901px]:top-0 min-[901px]:h-screen">
-            <div className="flex h-full flex-col justify-center px-6 py-16 sm:px-9 min-[901px]:px-12 min-[901px]:py-0">
-              <div className="mb-7 text-[10px] font-medium uppercase tracking-[0.2em] text-white/35">
-                Features
-              </div>
-
-              {/*
-                Fixed icon rail: every button keeps the same icon, the same
-                size, and the same position at all times. Nothing here ever
-                moves, resizes, or swaps content — the only thing that
-                changes as you scroll between features is the highlight
-                (background/border/icon color) on whichever one is active.
-              */}
-              <nav
-                aria-label="QueryPilot features"
-                className="flex flex-col gap-2.5"
-              >
-                {technicalFeatures.map((feature, index) => {
-                  const isActive = index === activeFeature;
-                  const Icon = feature.icon;
-
-                  return (
-                    <button
-                      key={feature.title}
-                      type="button"
-                      onClick={() => scrollToFeature(index)}
-                      aria-current={isActive ? "step" : undefined}
-                      aria-label={feature.title}
-                      title={feature.title}
-                      className="group relative flex items-center gap-3.5 text-left"
-                    >
-                      <span
-                        className="flex h-11 w-11 flex-none items-center justify-center rounded-xl border transition-[background-color,border-color] duration-300"
-                        style={{
-                          backgroundColor: isActive
-                            ? "rgba(255,255,255,0.08)"
-                            : "transparent",
-                          borderColor: isActive
-                            ? "rgba(255,255,255,0.22)"
-                            : "rgba(255,255,255,0.08)",
-                        }}
-                      >
-                        <Icon
-                          className="h-[18px] w-[18px] transition-colors duration-300"
-                          style={{
-                            color: isActive
-                              ? "#ffffff"
-                              : "rgba(255,255,255,0.32)",
-                          }}
-                        />
-                      </span>
-
-                      <span
-                        className="text-[13.5px] tracking-[-0.01em] transition-colors duration-300"
-                        style={{
-                          color: isActive
-                            ? "#ffffff"
-                            : "rgba(255,255,255,0.28)",
-                          fontWeight: isActive ? 500 : 400,
-                        }}
-                      >
-                        {feature.title}
-                      </span>
-                    </button>
-                  );
-                })}
-              </nav>
-
-              
-            </div>
-          </aside>
-
-          <div className="overflow-hidden bg-[#0b0b0b]">
-            {technicalFeatures.map((feature, index) => (
-              <TechnicalFeaturePanel
-                key={feature.title}
-                feature={feature}
-                index={index}
-                active={index === activeFeature}
-                panelRef={(element) => {
-                  panelRefs.current[index] = element;
-                }}
-                onActivate={setActiveFeature}
-              />
-            ))}
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-
-/* ============================================================
-   BuilderClosingSection
-   ============================================================ */
-
-function BuilderClosingSection() {
-  const sectionRef = useRef<HTMLElement | null>(null);
-  const statementCopyRef = useRef<HTMLDivElement | null>(null);
-  const statementSideRef = useRef<HTMLDivElement | null>(null);
-  const cardsRef = useRef<HTMLDivElement | null>(null);
-
-  const cards = [
-    {
-      label: "HOW IT'S BUILT",
-      title: "From architecture to deployment.",
-      copy:
-        "Read how QueryPilot is put together — backend services, retrieval, grounding, structured querying, streaming, and deployment.",
-      href: "/engineering",
-      button: "VIEW ENGINEERING",
-    },
-    {
-      label: "TECHNICAL CHALLENGES",
-      title: "The hard problems behind it.",
-      copy:
-        "Read through the constraints, trade-offs, failures, and engineering decisions that shaped the system.",
-      href: "/technical-challenges",
-      button: "READ THE CHALLENGES",
-    },
-    {
-      label: "GITHUB",
-      title: "The code is open.",
-      copy:
-        "Explore the implementation, architecture, issues, and source behind QueryPilot.",
-      href: GITHUB_URL,
-      button: "VIEW ON GITHUB",
-    },
-    {
-      label: "CONTACT",
-      title: "Talk directly with the builder.",
-      copy:
-        "Have a question about the system, an implementation detail, or an engineering decision? Reach out directly.",
-      href: `mailto:${BUILDER_EMAIL}`,
-      button: "CONTACT THE BUILDER",
-    },
-  ];
-
-  useEffect(() => {
-    const section = sectionRef.current;
-    const statementCopy = statementCopyRef.current;
-    const statementSide = statementSideRef.current;
-    const cardsEl = cardsRef.current;
-
-    if (!section || !statementCopy || !statementSide || !cardsEl) {
-      return;
-    }
-
-    const isMobile = window.matchMedia("(max-width: 900px)").matches;
-
-    if (isMobile) {
-      gsap.set(
-        [statementCopy, statementSide, cardsEl.children],
-        {
-          clearProps: "all",
-        },
-      );
-      return;
-    }
-
-    const cards = Array.from(cardsEl.children);
-
-    gsap.set(statementCopy, {
-      opacity: 0,
-      y: 46,
-      filter: "blur(10px)",
-    });
-
-    gsap.set(statementSide, {
-      opacity: 0,
-      y: 34,
-      filter: "blur(9px)",
-    });
-
-    gsap.set(cards, {
-      opacity: 0,
-      y: 52,
-      scale: 0.985,
-      filter: "blur(8px)",
-    });
-
-    let statementPlayed = false;
-    let cardsPlayed = false;
-
-    const statementObserver = new IntersectionObserver(
-      (entries) => {
-        const entry = entries[0];
-
-        if (!entry?.isIntersecting || statementPlayed) {
-          return;
-        }
-
-        statementPlayed = true;
-
-        const timeline = gsap.timeline();
-
-        timeline.to(
-          statementCopy,
-          {
-            opacity: 1,
-            y: 0,
-            filter: "blur(0px)",
-            duration: 1.0,
-            ease: "power4.out",
-          },
-          0.05,
-        );
-
-        timeline.to(
-          statementSide,
-          {
-            opacity: 1,
-            y: 0,
-            filter: "blur(0px)",
-            duration: 0.9,
-            ease: "power3.out",
-          },
-          0.25,
-        );
-
-        statementObserver.disconnect();
-      },
-      {
-        threshold: 0.34,
-        rootMargin: "0px 0px -10% 0px",
-      },
-    );
-
-    const cardsObserver = new IntersectionObserver(
-      (entries) => {
-        const entry = entries[0];
-
-        if (!entry?.isIntersecting || cardsPlayed) {
-          return;
-        }
-
-        cardsPlayed = true;
-
-        gsap.to(cards, {
-          opacity: 1,
-          y: 0,
-          scale: 1,
-          filter: "blur(0px)",
-          duration: 0.76,
-          ease: "power3.out",
-          stagger: 0.18,
-        });
-
-        cardsObserver.disconnect();
-      },
-      {
-        threshold: 0.2,
-        rootMargin: "0px 0px -8% 0px",
-      },
-    );
-
-    statementObserver.observe(section);
-    cardsObserver.observe(cardsEl);
-
-    return () => {
-      statementObserver.disconnect();
-      cardsObserver.disconnect();
-      gsap.killTweensOf([
-        statementCopy,
-        statementSide,
-        cards,
-      ]);
-    };
-  }, []);
-
-  return (
-    <section
-      ref={sectionRef}
-      className="builder-closing-section w-full overflow-hidden bg-black text-white"
-    >
-      <div className="builder-closing-inner mx-auto w-[calc(100%-12px)] max-w-[1600px]">
-        <div className="builder-statement relative min-h-[610px] overflow-hidden border-x border-b border-white/10">
-          <img
-            src="/querypilot-builder-field.png"
-            alt=""
-            aria-hidden="true"
-            draggable={false}
-            className="pointer-events-none absolute inset-y-0 right-0 h-full w-[67%] max-w-none object-cover object-right"
+        <div className="mt-7 flex flex-wrap items-center justify-center gap-2.5">
+          <PixelDissolveButton
+            label="Read engineering docs"
+            href="/engineering"
+            color="#ffffff"
+            dissolveColor="#808080"
+            cellSize={5}
+            className="!min-h-10 !rounded-[11px] !px-4 !text-sm !font-medium !normal-case !tracking-normal !bg-white !text-black"
           />
 
-          <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,#000_0%,#000_38%,rgba(0,0,0,0.94)_52%,rgba(0,0,0,0.16)_100%)]" />
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_72%_48%,rgba(0,125,81,0.06),transparent_34%)]" />
-
-          <div className="relative z-10 grid min-h-[610px] grid-cols-[58%_42%] items-center">
-            <div
-              ref={statementCopyRef}
-              className="px-[clamp(24px,3.2vw,54px)] py-24"
-            >
-              <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#007D51]">
-                Built in the open
-              </span>
-
-              <h2 className="mt-6 max-w-[760px] text-[clamp(32px,4.2vw,58px)] font-light leading-[0.96] tracking-[-0.05em] text-white">
-                For builders.
-                <br />
-                For senior engineers.
-                <br />
-                For people who want to know
-                <br />
-                how it works.
-              </h2>
-            </div>
-
-            <div
-              ref={statementSideRef}
-              className="relative z-10 flex h-full items-center px-[clamp(24px,3.5vw,56px)] py-24"
-            >
-              <div className="max-w-[410px]">
-                <p className="text-[clamp(20px,1.7vw,28px)] font-light leading-[1.25] tracking-[-0.03em] text-white/92">
-                  QueryPilot is built in the open, with the architecture,
-                  engineering decisions, and trade-offs available to inspect.
-                </p>
-
-                <div className="mt-7 h-px w-9 bg-[#007D51]" />
-
-                <p className="mt-7 max-w-[330px] text-[11px] font-medium uppercase leading-[1.9] tracking-[0.19em] text-white/55">
-                  Read the engineering notes from first decision to final
-                  implementation.
-                </p>
-              </div>
-            </div>
-          </div>
+          <a
+            href="/login"
+            className="rounded-[11px] border border-white/20 px-4 py-2.5 text-sm font-medium text-white"
+          >
+            Login
+          </a>
         </div>
-
-        <div
-          ref={cardsRef}
-          className="builder-card-grid grid border-x border-b border-black/10 bg-white min-[901px]:grid-cols-4"
-        >
-          {cards.map((card) => (
-            <article
-              key={card.label}
-              className="builder-card group relative flex min-h-[390px] flex-col justify-between border-black/10 bg-white p-[clamp(24px,2.5vw,40px)] transition-colors duration-300 hover:bg-[#fbfffd]"
-            >
-              <div>
-                <span className="text-[10px] font-medium uppercase tracking-[0.19em] text-[#007D51]">
-                  {card.label}
-                </span>
-
-                <h3 className="mt-10 max-w-[330px] text-[clamp(24px,2vw,32px)] font-light leading-[1.04] tracking-[-0.04em] text-black">
-                  {card.title}
-                </h3>
-
-                <p className="mt-5 max-w-[330px] text-sm leading-6 text-neutral-500 transition-colors duration-300 group-hover:text-neutral-700">
-                  {card.copy}
-                </p>
-              </div>
-
-              <div className="mt-10 bg-black p-px">
-                <PixelDissolveButton
-                  href={card.href}
-                  label={card.button}
-                  color="#ffffff"
-                  dissolveColor="#b8f8b8"
-                  className="builder-pixel-button !min-h-[54px] !w-full !min-w-0 !rounded-none !border-0 !bg-white !py-0 !pl-5 !pr-4 !text-left !text-[11px] !font-medium !tracking-[0.015em] !text-black hover:!translate-y-0"
-                />
-              </div>
-            </article>
-          ))}
-        </div>
-
       </div>
-
-      <style jsx>{`
-        .builder-card + .builder-card {
-          border-left: 1px solid rgba(0, 0, 0, 0.1);
-        }
-
-        .builder-pixel-button {
-          box-shadow: none !important;
-          transition:
-            background-color 220ms ease,
-            box-shadow 220ms ease,
-            color 220ms ease,
-            border-color 220ms ease;
-        }
-
-        .builder-card:hover .builder-pixel-button {
-          background: #effff6 !important;
-          border-color: #0c3f2c !important;
-          box-shadow:
-            0 0 0 1px rgba(0, 125, 81, 0.08),
-            0 8px 24px rgba(0, 125, 81, 0.06);
-          color: #063c29 !important;
-        }
-
-        @media (max-width: 900px) {
-          .builder-closing-inner {
-            width: calc(100% - 28px);
-          }
-
-          .builder-statement {
-            min-height: 700px;
-          }
-
-          .builder-statement > img {
-            width: 100%;
-            height: 56%;
-            top: auto;
-            bottom: 0;
-            object-position: right bottom;
-            opacity: 0.72;
-          }
-
-          .builder-statement > .relative.z-10 {
-            display: block;
-            min-height: 700px;
-          }
-
-          .builder-statement > .relative.z-10 > div:first-child {
-            padding-bottom: 0;
-          }
-
-          .builder-statement > .relative.z-10 > div:last-child {
-            min-height: 0;
-            padding-top: 0;
-            padding-bottom: 64px;
-          }
-
-          .builder-card-grid {
-            grid-template-columns: 1fr;
-          }
-
-          .builder-card + .builder-card {
-            border-left: 0;
-            border-top: 1px solid rgba(0, 0, 0, 0.1);
-          }
-
-          .builder-card:first-child {
-            border-top: 0;
-          }
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-          .builder-pixel-button {
-            transition: none;
-          }
-        }
-      `}</style>
     </section>
   );
 }
 
 /* ============================================================
-   LandingPage
+   LANDING PAGE
    ============================================================ */
 
 export function LandingPage() {
-  useLayoutEffect(() => {
-    const navigation = performance.getEntriesByType("navigation")[0] as
-      | PerformanceNavigationTiming
-      | undefined;
-    const isReload = navigation?.type === "reload";
+  useEffect(() => {
+    const isReload =
+      performance.getEntriesByType("navigation")[0] &&
+      (
+        performance.getEntriesByType(
+          "navigation",
+        )[0] as PerformanceNavigationTiming
+      ).type === "reload";
 
     if (!isReload) return;
 
     const previousScrollRestoration = history.scrollRestoration;
+
     history.scrollRestoration = "manual";
 
     const forceTop = () => {
       window.scrollTo({
+
         top: 0,
+
         left: 0,
+
         behavior: "auto",
+
       });
     };
 
     forceTop();
+
     const frame = window.requestAnimationFrame(() => {
       forceTop();
+
       window.requestAnimationFrame(forceTop);
     });
-    const delayed = window.setTimeout(() => {
-      forceTop();
-    }, 120);
+
+    const delayed = window.setTimeout(forceTop, 120);
 
     return () => {
       window.cancelAnimationFrame(frame);
+
       window.clearTimeout(delayed);
+
       history.scrollRestoration = previousScrollRestoration;
     };
   }, []);
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="querypilot-public-site min-h-screen bg-[#0A0A0A] text-white">
       <style jsx global>{`
         html,
         body {
-          background-color: #ffffff;
+          background-color: #0a0a0a;
+
           overscroll-behavior-y: none;
+
           height: 100%;
+        }
+
+        .querypilot-public-site,
+        .querypilot-public-site * {
+          font-family:
+            var(--font-sans),
+            ui-sans-serif,
+            system-ui,
+            -apple-system,
+            BlinkMacSystemFont,
+            "Segoe UI",
+            sans-serif;
+        }
+
+        .querypilot-public-site .font-mono,
+        .querypilot-public-site [class*="font-mono"] {
+          font-family:
+            var(--font-mono), ui-monospace, SFMono-Regular, Menlo, Monaco,
+            Consolas, "Liberation Mono", monospace;
         }
       `}</style>
 
@@ -2289,9 +2100,8 @@ export function LandingPage() {
 
       <main>
         <ProductPreview />
+
         <HeroMobile />
-        <TechnicalSplitSection />
-        <BuilderClosingSection />
       </main>
     </div>
   );
@@ -2301,17 +2111,11 @@ export function LandingPage() {
    Engineering Page
    ============================================================ */
 
-function Logo({
-  dark = false,
-}: {
-  dark?: boolean;
-}) {
+function Logo({ dark = false }: { dark?: boolean }) {
   return (
     <Link
       href="/"
-      className={`flex items-center gap-2.5 ${
-        dark ? "text-white" : ""
-      }`}
+      className={`flex items-center gap-2.5 ${dark ? "text-white" : ""}`}
     >
       <img
         src="/querypilot-logo.svg"
@@ -2331,22 +2135,31 @@ export function EngineeringPage() {
   const nodes = [
     {
       title: "Workspace scope",
+
       copy: "Tenant, permissions, active sources",
     },
+
     {
       title: "Question parser",
+
       copy: "Intent, entities, time range",
     },
+
     {
       title: "Retrieval layer",
+
       copy: "Hybrid semantic and lexical search",
     },
+
     {
       title: "Reasoning context",
+
       copy: "Ranked passages and relationships",
     },
+
     {
       title: "Evidence renderer",
+
       copy: "Citations, snippets, confidence",
     },
   ];
@@ -2358,10 +2171,7 @@ export function EngineeringPage() {
           <Logo dark />
 
           <div className="flex items-center gap-4">
-            <Link
-              href="/"
-              className="text-xs text-white/60 hover:text-white"
-            >
+            <Link href="/" className="text-xs text-white/60 hover:text-white">
               Product
             </Link>
 
@@ -2377,28 +2187,25 @@ export function EngineeringPage() {
 
       <main className="mx-auto max-w-7xl px-5 py-20 lg:px-8 lg:py-32">
         <div className="max-w-3xl">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#007D51]">
-            Engineering / System architecture
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#007D51]">
+            Engineering, system architecture
           </p>
 
-          <h1 className="mt-7 text-5xl font-semibold leading-[1.02] tracking-[-0.07em] sm:text-7xl">
-            A question is a path
+          <h1 className="mt-7 text-5xl font-semibold leading-[1.02] tracking-[-0.045em] sm:text-7xl">
+            A question becomes a path
             <br />
             through your workspace.
           </h1>
 
           <p className="mt-8 max-w-xl text-base leading-7 text-white/60">
-            QueryPilot is designed around a
-            simple contract: understand the
-            scope, retrieve the right context,
-            reason over evidence, and show the
-            work.
+            QueryPilot follows a simple flow. Understand the request, find the
+            right data, check the evidence, then answer.
           </p>
         </div>
 
         <div className="mt-24 border border-white/15">
           <div className="flex items-center justify-between border-b border-white/15 px-5 py-4">
-            <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#007D51]">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#007D51]">
               Request lifecycle
             </span>
 
@@ -2409,9 +2216,13 @@ export function EngineeringPage() {
 
           <div className="grid md:grid-cols-5">
             {nodes.map(
+
               (
+
                 node,
+
                 i,
+
               ) => (
                 <div
                   key={node.title}
@@ -2421,9 +2232,7 @@ export function EngineeringPage() {
                     0{i + 1}
                   </span>
 
-                  <h2 className="mt-10 text-sm font-medium">
-                    {node.title}
-                  </h2>
+                  <h2 className="mt-10 text-sm font-medium">{node.title}</h2>
 
                   <p className="mt-2 text-xs leading-5 text-white/50">
                     {node.copy}
@@ -2437,67 +2246,56 @@ export function EngineeringPage() {
                   )}
                 </div>
               ),
+
             )}
           </div>
         </div>
 
         <div className="mt-24 grid gap-12 border-t border-white/15 pt-12 lg:grid-cols-3">
           <div>
-            <p className="font-mono text-xs text-[#007D51]">
-              01 / SCOPE
-            </p>
+            <p className="font-mono text-xs text-[#007D51]">01 / SCOPE</p>
 
             <h2 className="mt-4 text-xl font-medium">
               Workspace context is the boundary.
             </h2>
 
             <p className="mt-3 text-sm leading-6 text-white/55">
-              Every question inherits an active
-              workspace, making permissions and
-              source selection explicit before
-              retrieval begins.
+              Every question inherits an active workspace, making permissions
+              and source selection explicit before retrieval begins.
             </p>
           </div>
 
           <div>
-            <p className="font-mono text-xs text-[#007D51]">
-              02 / GROUNDING
-            </p>
+            <p className="font-mono text-xs text-[#007D51]">02 / GROUNDING</p>
 
             <h2 className="mt-4 text-xl font-medium">
               Evidence is a first-class output.
             </h2>
 
             <p className="mt-3 text-sm leading-6 text-white/55">
-              Answers are streamed with source
-              references, page anchors, and the
-              snippets that support each
-              conclusion.
+              Answers are streamed with source references, page anchors, and the
+              snippets that support each conclusion.
             </p>
           </div>
 
           <div>
-            <p className="font-mono text-xs text-[#007D51]">
-              03 / STREAMING
-            </p>
+            <p className="font-mono text-xs text-[#007D51]">03 / STREAMING</p>
 
             <h2 className="mt-4 text-xl font-medium">
               Useful before complete.
             </h2>
 
             <p className="mt-3 text-sm leading-6 text-white/55">
-              The interface exposes progress
-              through retrieval and reasoning so
-              users can follow a response as it
-              forms.
+              The interface exposes progress through retrieval and reasoning so
+              users can follow a response as it forms.
             </p>
           </div>
         </div>
 
         <div className="mt-24 flex flex-col gap-8 border-t border-white/15 pt-10 md:flex-row md:items-center md:justify-between">
           <p className="max-w-xl text-2xl font-medium tracking-[-0.04em]">
-            The architecture stays invisible when
-            it works. The evidence never should.
+            The architecture stays invisible when it works. The evidence never
+            should.
           </p>
 
           <Link

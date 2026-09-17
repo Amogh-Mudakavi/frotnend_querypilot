@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import {
   ArrowUp,
@@ -17,10 +17,10 @@ import {
   ThumbsUp,
   Copy,
   X,
-} from "lucide-react"
+} from "lucide-react";
 
 const QUESTION =
-  "How much salary should be deducted from Rahul Sharma based on his leave taken and the salary rules?"
+  "How much salary should be deducted from Rahul Sharma based on his leave taken and the salary rules?";
 
 const STEPS = [
   "Understanding question",
@@ -28,7 +28,7 @@ const STEPS = [
   "Planning execution",
   "Retrieving evidence",
   "Validating answer",
-]
+];
 
 const HISTORY = [
   "Rahul salary deduction",
@@ -36,25 +36,25 @@ const HISTORY = [
   "Employee salary details",
   "Working days vs leave",
   "Half-day leave calculation",
-]
+];
 
-const HISTORY_YESTERDAY = [
-  "Q2 payroll analysis",
-  "Leave balance check",
-]
+const HISTORY_YESTERDAY = ["Q2 payroll analysis", "Leave balance check"];
 
-type Phase =
-  | "upload"
-  | "typing"
-  | "sent"
-  | "thinking"
-  | "answer"
+type Phase = "upload" | "typing" | "sent" | "thinking" | "answer";
 
-export function QueryPilotApp({
-  elapsed = 0,
-}: {
-  elapsed?: number
-}) {
+export function QueryPilotApp({ elapsed = 0 }: { elapsed?: number }) {
+  /*
+   * Demo lifecycle intentionally remains unchanged:
+   *
+   * 0s  - 3s   upload
+   * 3s  - 8s   typing
+   * 8s  - 9s   sent
+   * 9s  - 23s  thinking
+   * 23s+       answer
+   *
+   * public-site.tsx owns the demo clock.
+   * This component only derives its visual state from elapsed.
+   */
   const phase: Phase =
     elapsed < 3000
       ? "upload"
@@ -64,42 +64,35 @@ export function QueryPilotApp({
           ? "sent"
           : elapsed < 23000
             ? "thinking"
-            : "answer"
+            : "answer";
 
-  const typingProgress = Math.max(
-    0,
-    Math.min(1, (elapsed - 3000) / 5000),
-  )
+  const typingProgress = Math.max(0, Math.min(1, (elapsed - 3000) / 5000));
 
-  const typed = QUESTION.slice(
-    0,
-    Math.floor(typingProgress * QUESTION.length),
-  )
+  const typed = QUESTION.slice(0, Math.floor(typingProgress * QUESTION.length));
 
   const stepIndex =
     phase === "thinking"
-      ? Math.min(
-          STEPS.length - 1,
-          Math.floor((elapsed - 9000) / 2800),
-        )
-      : STEPS.length
+      ? Math.min(STEPS.length - 1, Math.floor((elapsed - 9000) / 2800))
+      : STEPS.length;
 
-  // The question only ever lives in ONE place at a time: while it's
-  // being typed it's in the composer, and it only moves into the
-  // conversation once it's actually "sent" — this is what stops the
-  // duplicate "message already there while still typing" glitch.
+  /*
+   * The question only enters the conversation once it is sent.
+   * During typing it exists exclusively inside the composer.
+   * This prevents the "duplicate user message while typing" glitch.
+   */
   const showConversation =
-    phase === "sent" ||
-    phase === "thinking" ||
-    phase === "answer"
+    phase === "sent" || phase === "thinking" || phase === "answer";
 
   return (
     <main className="h-full min-h-0 overflow-hidden bg-white text-[#111318]">
-      <section className="h-full overflow-hidden bg-white">
-        <div className="grid h-full min-h-0 grid-cols-1 md:grid-cols-[240px_1fr]">
+      <section className="h-full min-h-0 overflow-hidden bg-white">
+        <div className="grid h-full min-h-0 grid-cols-1 md:grid-cols-[240px_minmax(0,1fr)]">
           <Sidebar />
 
           <div className="relative flex min-h-0 min-w-0 flex-col bg-white">
+            {/* ----------------------------------------------------------------
+                Conversation header
+               ---------------------------------------------------------------- */}
             <div className="flex h-12 shrink-0 items-center justify-between border-b border-[#EEF0F3] px-5">
               <div className="flex items-center gap-2 text-sm font-medium text-[#3B404B]">
                 <span className="h-1.5 w-1.5 rounded-full bg-[#3FB984]" />
@@ -110,22 +103,30 @@ export function QueryPilotApp({
                 <button className="rounded-md border border-[#E5E7EB] px-3 py-1.5 text-xs text-[#687184]">
                   Share
                 </button>
+
                 <MoreHorizontal className="h-4 w-4 text-[#9AA1AF]" />
               </div>
             </div>
 
-            <div className="min-h-0 flex-1 overflow-hidden px-5 py-5 sm:px-8 sm:py-7">
-              {phase === "upload" ? (
-                <UploadState elapsed={elapsed} />
-              ) : null}
+            {/* ----------------------------------------------------------------
+                Main conversation surface
+
+                Important:
+                - The surface itself remains clipped to the product window.
+                - Internal content gets min-w-0 so flex/grid cannot force it
+                  beyond the available width.
+                - We intentionally do not alter the outer window dimensions.
+               ---------------------------------------------------------------- */}
+            <div className="min-h-0 min-w-0 flex-1 overflow-hidden px-5 py-5 sm:px-8 sm:py-7">
+              {phase === "upload" ? <UploadState elapsed={elapsed} /> : null}
 
               {phase !== "upload" ? (
-                <div className="mx-auto flex h-full max-w-[640px] flex-col justify-end pb-2">
+                <div className="mx-auto flex h-full min-h-0 w-full max-w-[640px] flex-col justify-end pb-2">
                   {showConversation ? (
-                    <div className="space-y-5">
+                    <div className="min-w-0 space-y-5">
                       <UserMessage text={QUESTION} />
 
-                      {(phase === "thinking" || phase === "answer") ? (
+                      {phase === "thinking" || phase === "answer" ? (
                         <AssistantMessage>
                           {phase === "thinking" ? (
                             <ThinkingPanel stepIndex={stepIndex} />
@@ -140,16 +141,34 @@ export function QueryPilotApp({
               ) : null}
             </div>
 
-            <div className="shrink-0 border-t border-[#EEF0F3] px-5 py-3.5 sm:px-8">
-              <div className="mx-auto flex max-w-[640px] items-center gap-3 rounded-xl border border-[#E5E7EB] bg-[#FBFBFC] px-3.5 py-2.5">
-                <Paperclip className="h-4 w-4 shrink-0 text-[#9AA1AF]" />
+            {/* ----------------------------------------------------------------
+                Composer
 
-                <div className="min-w-0 flex-1 truncate text-xs text-[#20242B]">
+                Production fix:
+                The old composer used `truncate`, which forced the demo
+                question into one line and clipped the typed content. A later
+                fix capped it at two lines with `max-h-10 overflow-hidden`,
+                which still clipped on narrower renders of the window.
+
+                The composer now has no height cap: it wraps naturally and
+                grows with the typed text, so the full question stays
+                visible and stable while it's being typed, however many
+                lines it takes. `break-words` still stops a long token from
+                escaping horizontally, and the composer sits inside the
+                scrollable product window, so it can never push the window
+                itself off-screen.
+               ---------------------------------------------------------------- */}
+            <div className="shrink-0 border-t border-[#EEF0F3] px-5 py-3.5 sm:px-8">
+              <div className="mx-auto flex min-h-[44px] max-w-[640px] items-end gap-3 rounded-xl border border-[#E5E7EB] bg-[#FBFBFC] px-3.5 py-2.5">
+                <Paperclip className="mb-0.5 h-4 w-4 shrink-0 text-[#9AA1AF]" />
+
+                <div className="min-w-0 flex-1 text-xs leading-5 text-[#20242B]">
                   {phase === "typing" ? (
-                    <>
+                    <div className="break-words whitespace-normal">
                       {typed}
+
                       <span className="ml-0.5 inline-block h-3.5 w-px animate-pulse bg-[#20242B] align-middle" />
-                    </>
+                    </div>
                   ) : (
                     <span className="text-[#9AA1AF]">
                       Ask anything about your documents...
@@ -157,7 +176,10 @@ export function QueryPilotApp({
                   )}
                 </div>
 
-                <button className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#111318] text-white">
+                <button
+                  className="mb-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#111318] text-white"
+                  aria-label="Send"
+                >
                   <ArrowUp className="h-3.5 w-3.5" />
                 </button>
               </div>
@@ -166,7 +188,7 @@ export function QueryPilotApp({
         </div>
       </section>
     </main>
-  )
+  );
 }
 
 function Sidebar() {
@@ -179,6 +201,7 @@ function Sidebar() {
           </span>
           QueryPilot
         </div>
+
         <X className="h-3.5 w-3.5 text-[#9AA1AF]" />
       </div>
 
@@ -187,10 +210,12 @@ function Sidebar() {
           <p className="text-xs font-medium text-[#111318]">
             HR Analysis Workspace
           </p>
+
           <p className="mt-0.5 text-[10px] text-[#9AA1AF]">
             Personal workspace
           </p>
         </div>
+
         <ChevronDown className="h-3.5 w-3.5 text-[#9AA1AF]" />
       </button>
 
@@ -202,21 +227,25 @@ function Sidebar() {
       <div className="mb-4 flex items-center gap-2 rounded-lg border border-[#E5E7EB] px-3 py-2 text-xs text-[#9AA1AF]">
         <Search className="h-3.5 w-3.5" />
         Search chats...
-        <span className="ml-auto text-[10px] text-[#9AA1AF]">
-          ⌘ K
-        </span>
+        <span className="ml-auto text-[10px] text-[#9AA1AF]">⌘ K</span>
       </div>
 
       <nav className="space-y-0.5 border-b border-[#EEF0F3] pb-4 text-xs text-[#687184]">
         <NavItem icon={<Home className="h-3.5 w-3.5" />} label="Home" />
-        <NavItem icon={<FileText className="h-3.5 w-3.5" />} label="Documents" />
-        <NavItem icon={<Grid2X2 className="h-3.5 w-3.5" />} label="Workspaces" />
+
+        <NavItem
+          icon={<FileText className="h-3.5 w-3.5" />}
+          label="Documents"
+        />
+
+        <NavItem
+          icon={<Grid2X2 className="h-3.5 w-3.5" />}
+          label="Workspaces"
+        />
       </nav>
 
-      <div className="mt-4 flex-1 overflow-hidden">
-        <p className="px-2 text-[10px] font-medium text-[#9AA1AF]">
-          Today
-        </p>
+      <div className="mt-4 min-h-0 flex-1 overflow-hidden">
+        <p className="px-2 text-[10px] font-medium text-[#9AA1AF]">Today</p>
 
         <div className="mt-1.5 space-y-0.5 text-xs text-[#687184]">
           {HISTORY.map((label, i) => (
@@ -239,10 +268,7 @@ function Sidebar() {
 
         <div className="mt-1.5 space-y-0.5 text-xs text-[#687184]">
           {HISTORY_YESTERDAY.map((label) => (
-            <div
-              key={label}
-              className="truncate rounded-md px-2.5 py-1.5"
-            >
+            <div key={label} className="truncate rounded-md px-2.5 py-1.5">
               {label}
             </div>
           ))}
@@ -254,8 +280,10 @@ function Sidebar() {
           <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#F1F2F5] text-[10px] font-medium text-[#3B404B]">
             A
           </span>
+
           <div className="min-w-0 leading-tight">
             <p className="truncate text-[#3B404B]">Amogh</p>
+
             <p className="truncate text-[10px] text-[#9AA1AF]">
               QueryPilot builder
             </p>
@@ -268,34 +296,24 @@ function Sidebar() {
         </div>
       </div>
     </aside>
-  )
+  );
 }
 
-function NavItem({
-  icon,
-  label,
-}: {
-  icon: React.ReactNode
-  label: string
-}) {
+function NavItem({ icon, label }: { icon: React.ReactNode; label: string }) {
   return (
     <div className="flex items-center gap-2.5 rounded-md px-2 py-1.5">
       {icon}
       {label}
     </div>
-  )
+  );
 }
 
-function UploadState({
-  elapsed,
-}: {
-  elapsed: number
-}) {
-  const progress = Math.min(1, elapsed / 3000)
-  const complete = progress >= 0.92
+function UploadState({ elapsed }: { elapsed: number }) {
+  const progress = Math.min(1, elapsed / 3000);
+  const complete = progress >= 0.92;
 
   return (
-    <div className="flex h-full flex-col items-center justify-center">
+    <div className="flex h-full min-h-0 flex-col items-center justify-center">
       <div className="w-full max-w-[470px]">
         <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-[#9AA1AF]">
           Workspace sources
@@ -322,7 +340,7 @@ function UploadState({
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 function UploadRow({
@@ -331,10 +349,10 @@ function UploadRow({
   progress,
   complete,
 }: {
-  icon: React.ReactNode
-  name: string
-  progress: number
-  complete: boolean
+  icon: React.ReactNode;
+  name: string;
+  progress: number;
+  complete: boolean;
 }) {
   return (
     <div className="rounded-xl border border-[#E5E7EB] bg-[#FBFBFC] px-3.5 py-3">
@@ -352,32 +370,28 @@ function UploadRow({
             {complete ? (
               <Check className="h-3.5 w-3.5 shrink-0 text-[#3FB984]" />
             ) : (
-              <span className="text-[10px] text-[#9AA1AF]">
-                Uploading
-              </span>
+              <span className="text-[10px] text-[#9AA1AF]">Uploading</span>
             )}
           </div>
 
           <div className="mt-2 h-1 overflow-hidden rounded-full bg-[#EEF0F3]">
             <div
               className="h-full rounded-full bg-[#9AA1AF] transition-[width] duration-100"
-              style={{ width: `${Math.max(8, progress * 100)}%` }}
+              style={{
+                width: `${Math.max(8, progress * 100)}%`,
+              }}
             />
           </div>
         </div>
       </div>
     </div>
-  )
+  );
 }
 
-function UserMessage({
-  text,
-}: {
-  text: string
-}) {
+function UserMessage({ text }: { text: string }) {
   return (
-    <div className="flex items-start justify-end gap-3">
-      <div className="max-w-[480px] rounded-xl rounded-tr-md bg-[#F1F2F5] px-4 py-3 text-sm leading-6 text-[#111318]">
+    <div className="flex min-w-0 items-start justify-end gap-3">
+      <div className="max-w-[480px] break-words rounded-xl rounded-tr-md bg-[#F1F2F5] px-4 py-3 text-sm leading-6 text-[#111318]">
         {text}
       </div>
 
@@ -385,38 +399,26 @@ function UserMessage({
         A
       </span>
     </div>
-  )
+  );
 }
 
-function AssistantMessage({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+function AssistantMessage({ children }: { children: React.ReactNode }) {
   return (
-    <div>
+    <div className="min-w-0">
       <div className="mb-2.5 flex items-center gap-2 text-xs font-medium text-[#3B404B]">
         <span className="flex h-5 w-5 items-center justify-center rounded-full border border-[#3FB984] text-[#3FB984]">
           <span className="h-1.5 w-1.5 rounded-full bg-[#3FB984]" />
         </span>
-
         QueryPilot
-
-        <span className="text-[10px] font-normal text-[#9AA1AF]">
-          just now
-        </span>
+        <span className="text-[10px] font-normal text-[#9AA1AF]">just now</span>
       </div>
 
       {children}
     </div>
-  )
+  );
 }
 
-function ThinkingPanel({
-  stepIndex,
-}: {
-  stepIndex: number
-}) {
+function ThinkingPanel({ stepIndex }: { stepIndex: number }) {
   return (
     <div className="rounded-xl border border-[#EEF0F3] bg-[#FBFBFC] p-4">
       <div className="mb-3 flex items-center gap-2 text-xs font-medium text-[#3B404B]">
@@ -426,10 +428,7 @@ function ThinkingPanel({
 
       <div className="space-y-2">
         {STEPS.map((step, i) => (
-          <div
-            key={step}
-            className="flex items-center gap-2.5 text-xs"
-          >
+          <div key={step} className="flex items-center gap-2.5 text-xs">
             {i < stepIndex ? (
               <Check className="h-3.5 w-3.5 shrink-0 text-[#3FB984]" />
             ) : i === stepIndex ? (
@@ -453,19 +452,18 @@ function ThinkingPanel({
         ))}
       </div>
     </div>
-  )
+  );
 }
 
 function AnswerPanel() {
   return (
-    <div className="space-y-4">
-      <p className="text-sm leading-6 text-[#111318]">
+    <div className="min-w-0 space-y-4">
+      <p className="break-words text-sm leading-6 text-[#111318]">
         <span className="font-semibold">
           Rahul Sharma has no salary deduction.
         </span>{" "}
-        He took 12 days of leave against a 20-day paid-leave
-        entitlement, so his unpaid leave is 0 days and his salary
-        remains ₹60,000.
+        He took 12 days of leave against a 20-day paid-leave entitlement, so his
+        unpaid leave is 0 days and his salary remains ₹60,000.
       </p>
 
       <div className="rounded-xl border border-[#EEF0F3] bg-[#FBFBFC] p-4">
@@ -475,20 +473,14 @@ function AnswerPanel() {
 
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
           <Metric label="Monthly Salary" value="₹60,000" />
-          <Metric
-            label="Paid Leave Entitlement"
-            value="20 days"
-          />
+
+          <Metric label="Paid Leave Entitlement" value="20 days" />
+
           <Metric label="Leave Taken" value="12 days" />
-          <Metric
-            label="Unpaid Leave Days"
-            value="0 days"
-          />
-          <Metric
-            label="Salary Deduction"
-            value="₹0"
-            green
-          />
+
+          <Metric label="Unpaid Leave Days" value="0 days" />
+
+          <Metric label="Salary Deduction" value="₹0" green />
         </div>
       </div>
 
@@ -499,18 +491,14 @@ function AnswerPanel() {
 
         <div className="flex flex-wrap gap-2">
           <SourceChip
-            icon={
-              <FileSpreadsheet className="h-3.5 w-3.5 text-[#3FB984]" />
-            }
+            icon={<FileSpreadsheet className="h-3.5 w-3.5 text-[#3FB984]" />}
             label="employee.xlsx"
             sub="Employee data"
             tag="1"
           />
 
           <SourceChip
-            icon={
-              <FileText className="h-3.5 w-3.5 text-[#687184]" />
-            }
+            icon={<FileText className="h-3.5 w-3.5 text-[#687184]" />}
             label="salary.pdf"
             sub="Salary rules"
             tag="2"
@@ -524,7 +512,7 @@ function AnswerPanel() {
         <Copy className="h-3.5 w-3.5" />
       </div>
     </div>
-  )
+  );
 }
 
 function Metric({
@@ -532,27 +520,23 @@ function Metric({
   value,
   green = false,
 }: {
-  label: string
-  value: string
-  green?: boolean
+  label: string;
+  value: string;
+  green?: boolean;
 }) {
   return (
-    <div>
-      <p className="text-[10px] text-[#9AA1AF]">
-        {label}
-      </p>
+    <div className="min-w-0">
+      <p className="text-[10px] text-[#9AA1AF]">{label}</p>
 
       <p
-        className={`mt-1 text-xs font-semibold ${
-          green
-            ? "text-[#3FB984]"
-            : "text-[#111318]"
+        className={`mt-1 break-words text-xs font-semibold ${
+          green ? "text-[#3FB984]" : "text-[#111318]"
         }`}
       >
         {value}
       </p>
     </div>
-  )
+  );
 }
 
 function SourceChip({
@@ -561,27 +545,22 @@ function SourceChip({
   sub,
   tag,
 }: {
-  icon: React.ReactNode
-  label: string
-  sub: string
-  tag: string
+  icon: React.ReactNode;
+  label: string;
+  sub: string;
+  tag: string;
 }) {
   return (
     <div className="flex items-center gap-2 rounded-lg border border-[#EEF0F3] bg-[#FBFBFC] px-3 py-2">
       {icon}
 
-      <div className="leading-tight">
-        <p className="text-xs text-[#3B404B]">
-          {label}
-        </p>
-        <p className="text-[10px] text-[#9AA1AF]">
-          {sub}
-        </p>
+      <div className="min-w-0 leading-tight">
+        <p className="truncate text-xs text-[#3B404B]">{label}</p>
+
+        <p className="truncate text-[10px] text-[#9AA1AF]">{sub}</p>
       </div>
 
-      <span className="ml-1 text-[10px] text-[#9AA1AF]">
-        [{tag}]
-      </span>
+      <span className="ml-1 shrink-0 text-[10px] text-[#9AA1AF]">[{tag}]</span>
     </div>
-  )
+  );
 }
