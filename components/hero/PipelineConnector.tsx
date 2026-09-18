@@ -38,9 +38,9 @@ export interface PipelineConnectorProps {
   /** Callback fired immediately when the beam reaches the target */
   onArrival?: () => void;
 
-  /** Glow & outer filament color (default: warm amber #F2C6A0) */
+  /** Kept for backwards compatibility; connector is rendered black. */
   color?: string;
-  /** Core stroke color (default: warm ivory #FFFDF7) */
+  /** Kept for backwards compatibility; connector is rendered black. */
   coreColor?: string;
   /** Width of the core stroke in px (default: 1.5) */
   strokeWidth?: number;
@@ -92,8 +92,8 @@ export const PipelineConnector: React.FC<PipelineConnectorProps> = ({
   status = 'originating',
   drawDuration = 1200,
   onArrival,
-  color = '#F2C6A0',
-  coreColor = '#FFFDF7',
+  color: _color,
+  coreColor: _coreColor,
   strokeWidth = 1.5,
   curvature = 0.5,
   showEndpoints = true,
@@ -103,6 +103,11 @@ export const PipelineConnector: React.FC<PipelineConnectorProps> = ({
   className = '',
   id: customId,
 }) => {
+  // QueryPilot's white hero background needs a crisp neutral connector.
+  // Keep the color props for API compatibility, but intentionally render
+  // every connector layer in black so no warm/golden tint can appear.
+  const CONNECTOR_BLACK = '#000000';
+  const CONNECTOR_CORE = '#000000';
   const uniqueId = useId();
   const safeId = (customId || `conn-${uniqueId}`).replace(/:/g, '-');
   const pathRef = useRef<SVGPathElement | null>(null);
@@ -293,7 +298,7 @@ export const PipelineConnector: React.FC<PipelineConnectorProps> = ({
       <path
         d={pathD}
         fill="none"
-        stroke={color}
+        stroke={CONNECTOR_BLACK}
         strokeWidth={strokeWidth * 4.2}
         strokeOpacity={0.28}
         strokeDasharray={pathLength}
@@ -306,7 +311,7 @@ export const PipelineConnector: React.FC<PipelineConnectorProps> = ({
       <path
         d={pathD}
         fill="none"
-        stroke={color}
+        stroke={CONNECTOR_BLACK}
         strokeWidth={strokeWidth * 2.2}
         strokeOpacity={0.6}
         strokeDasharray={pathLength}
@@ -318,7 +323,7 @@ export const PipelineConnector: React.FC<PipelineConnectorProps> = ({
       <path
         d={pathD}
         fill="none"
-        stroke={coreColor}
+        stroke={CONNECTOR_CORE}
         strokeWidth={strokeWidth}
         strokeOpacity={0.95}
         strokeDasharray={pathLength}
@@ -333,7 +338,7 @@ export const PipelineConnector: React.FC<PipelineConnectorProps> = ({
             cx={startX}
             cy={startY}
             r={endpointRadius * 1.8}
-            fill={color}
+            fill={CONNECTOR_BLACK}
             fillOpacity={0.25}
             filter={`url(#${glowFilterId})`}
           />
@@ -341,11 +346,11 @@ export const PipelineConnector: React.FC<PipelineConnectorProps> = ({
             cx={startX}
             cy={startY}
             r={endpointRadius}
-            fill="#111217"
-            stroke={color}
+            fill="#000000"
+            stroke={CONNECTOR_BLACK}
             strokeWidth={1.5}
           />
-          <circle cx={startX} cy={startY} r={endpointRadius * 0.5} fill={coreColor} />
+          <circle cx={startX} cy={startY} r={endpointRadius * 0.5} fill={CONNECTOR_CORE} />
         </g>
       )}
 
@@ -356,7 +361,7 @@ export const PipelineConnector: React.FC<PipelineConnectorProps> = ({
             cx={headPos.x}
             cy={headPos.y}
             r={endpointRadius * 2}
-            fill={color}
+            fill={CONNECTOR_BLACK}
             opacity={0.6}
             filter={`url(#${sparkFilterId})`}
           />
@@ -364,7 +369,7 @@ export const PipelineConnector: React.FC<PipelineConnectorProps> = ({
             cx={headPos.x}
             cy={headPos.y}
             r={endpointRadius * 0.9}
-            fill="#FFFFFF"
+            fill="#000000"
             filter={`url(#${sparkFilterId})`}
           />
         </g>
@@ -377,7 +382,7 @@ export const PipelineConnector: React.FC<PipelineConnectorProps> = ({
             cx={endX}
             cy={endY}
             r={endpointRadius * 1.8}
-            fill={color}
+            fill={CONNECTOR_BLACK}
             fillOpacity={0.3}
             filter={`url(#${glowFilterId})`}
           />
@@ -385,11 +390,11 @@ export const PipelineConnector: React.FC<PipelineConnectorProps> = ({
             cx={endX}
             cy={endY}
             r={endpointRadius}
-            fill="#111217"
-            stroke={color}
+            fill="#000000"
+            stroke={CONNECTOR_BLACK}
             strokeWidth={1.5}
           />
-          <circle cx={endX} cy={endY} r={endpointRadius * 0.5} fill={coreColor} />
+          <circle cx={endX} cy={endY} r={endpointRadius * 0.5} fill={CONNECTOR_CORE} />
 
           {arrivalRippling && (
             <circle
@@ -397,7 +402,7 @@ export const PipelineConnector: React.FC<PipelineConnectorProps> = ({
               cy={endY}
               r={endpointRadius * 4}
               fill="none"
-              stroke={color}
+              stroke={CONNECTOR_BLACK}
               strokeWidth={2}
               opacity={0.8}
               className="animate-ping"
@@ -410,7 +415,7 @@ export const PipelineConnector: React.FC<PipelineConnectorProps> = ({
       {status === 'completed' && continuousPulse && (
         <g>
           <path id={completedPathId} d={pathD} fill="none" stroke="transparent" />
-          <circle r={endpointRadius * 0.7} fill="#FFFFFF" filter={`url(#${sparkFilterId})`}>
+          <circle r={endpointRadius * 0.7} fill="#000000" filter={`url(#${sparkFilterId})`}>
             <animateMotion dur={`${pulseDuration}s`} repeatCount="indefinite" calcMode="linear">
               <mpath href={`#${completedPathId}`} />
             </animateMotion>

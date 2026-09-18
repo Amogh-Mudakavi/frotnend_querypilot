@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 import {
   useEffect,
@@ -6,22 +6,22 @@ import {
   useState,
   type CSSProperties,
   type PointerEvent as ReactPointerEvent,
-} from 'react'
+} from "react";
 
 export type PixelDissolveButtonProps = {
-  label: string
+  label: string;
 
   /**
    * Base button color.
    *
    * Any valid CSS color.
    */
-  color?: string
+  color?: string;
 
   /**
    * Optional CSS gradient.
    */
-  gradient?: string
+  gradient?: string;
 
   /**
    * Optional dissolve effect color.
@@ -32,38 +32,38 @@ export type PixelDissolveButtonProps = {
    *   color="#ffffff"
    *   dissolveColor="#ccffcc"
    */
-  dissolveColor?: string
+  dissolveColor?: string;
 
   /**
    * Kept for backwards compatibility.
    */
-  baseColor?: string
+  baseColor?: string;
 
-  href?: string
+  href?: string;
 
-  onClick?: () => void
+  onClick?: () => void;
 
   /**
    * Size of each dissolve pixel.
    */
-  cellSize?: number
+  cellSize?: number;
 
-  type?: 'button' | 'submit'
+  type?: "button" | "submit";
 
-  disabled?: boolean
+  disabled?: boolean;
 
-  className?: string
+  className?: string;
 
-  disableAnimation?: boolean
+  disableAnimation?: boolean;
 
-  icon?: string
-}
+  icon?: string;
+};
 
 type PixelCell = {
-  phase: number
-  speed: number
-  jitter: number
-}
+  phase: number;
+  speed: number;
+  jitter: number;
+};
 
 /* ============================================================
    COLOR PARSING
@@ -76,140 +76,67 @@ type PixelCell = {
  * This is ONLY used as a fallback when the caller hasn't
  * provided an explicit dissolveColor.
  */
-function getLuminance(
-  input: string | undefined,
-): number | null {
-  if (
-    !input ||
-    typeof document === 'undefined'
-  ) {
-    return null
+function getLuminance(input: string | undefined): number | null {
+  if (!input || typeof document === "undefined") {
+    return null;
   }
 
-  const canvas =
-    document.createElement(
-      'canvas',
-    )
+  const canvas = document.createElement("canvas");
 
-  canvas.width = 1
-  canvas.height = 1
+  canvas.width = 1;
+  canvas.height = 1;
 
-  const context =
-    canvas.getContext('2d')
+  const context = canvas.getContext("2d");
 
   if (!context) {
-    return null
+    return null;
   }
 
-  context.clearRect(
-    0,
-    0,
-    1,
-    1,
-  )
+  context.clearRect(0, 0, 1, 1);
 
-  context.fillStyle = input
+  context.fillStyle = input;
 
-  context.fillRect(
-    0,
-    0,
-    1,
-    1,
-  )
+  context.fillRect(0, 0, 1, 1);
 
-  const pixel =
-    context.getImageData(
-      0,
-      0,
-      1,
-      1,
-    ).data
+  const pixel = context.getImageData(0, 0, 1, 1).data;
 
-  const r = pixel[0]
-  const g = pixel[1]
-  const b = pixel[2]
+  const r = pixel[0];
+  const g = pixel[1];
+  const b = pixel[2];
 
-  return (
-    0.2126 * r +
-    0.7152 * g +
-    0.0722 * b
-  ) / 255
+  return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
 }
 
 /* ============================================================
    DETERMINISTIC HASH
    ============================================================ */
 
-function hash01(
-  x: number,
-  y: number,
-  salt = 0,
-): number {
-  const value =
-    Math.sin(
-      x * 127.1 +
-        y * 311.7 +
-        salt * 74.7,
-    ) *
-    43758.5453123
+function hash01(x: number, y: number, salt = 0): number {
+  const value = Math.sin(x * 127.1 + y * 311.7 + salt * 74.7) * 43758.5453123;
 
-  return (
-    value -
-    Math.floor(value)
-  )
+  return value - Math.floor(value);
 }
 
 /* ============================================================
    BUILD PIXELS
    ============================================================ */
 
-function buildCells(
-  cols: number,
-  rows: number,
-): PixelCell[] {
-  const cells: PixelCell[] = []
+function buildCells(cols: number, rows: number): PixelCell[] {
+  const cells: PixelCell[] = [];
 
-  for (
-    let row = 0;
-    row < rows;
-    row += 1
-  ) {
-    for (
-      let column = 0;
-      column < cols;
-      column += 1
-    ) {
+  for (let row = 0; row < rows; row += 1) {
+    for (let column = 0; column < cols; column += 1) {
       cells.push({
-        phase:
-          hash01(
-            column,
-            row,
-            3.17,
-          ) *
-          Math.PI *
-          2,
+        phase: hash01(column, row, 3.17) * Math.PI * 2,
 
-        speed:
-          0.6 +
-          hash01(
-            column,
-            row,
-            8.9,
-          ) *
-            0.8,
+        speed: 0.6 + hash01(column, row, 8.9) * 0.8,
 
-        jitter:
-          hash01(
-            column,
-            row,
-            13.4,
-          ) -
-          0.5,
-      })
+        jitter: hash01(column, row, 13.4) - 0.5,
+      });
     }
   }
 
-  return cells
+  return cells;
 }
 
 /* ============================================================
@@ -219,7 +146,7 @@ function buildCells(
 export function PixelDissolveButton({
   label,
 
-  color = '#2C5F34',
+  color = "#2C5F34",
 
   gradient,
 
@@ -233,94 +160,72 @@ export function PixelDissolveButton({
 
   cellSize = 8,
 
-  type = 'button',
+  type = "button",
 
   disabled = false,
 
-  className = '',
+  className = "",
 
   disableAnimation = false,
 
   icon,
 }: PixelDissolveButtonProps) {
-  const canvasRef =
-    useRef<HTMLCanvasElement | null>(
-      null,
-    )
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
-  const frameRef =
-    useRef<number | null>(
-      null,
-    )
+  const frameRef = useRef<number | null>(null);
 
-  const cellsRef =
-    useRef<PixelCell[]>([])
+  const cellsRef = useRef<PixelCell[]>([]);
 
-  const sizeRef =
-    useRef({
-      width: 0,
-      height: 0,
-      cols: 0,
-      rows: 0,
-      dpr: 1,
-    })
+  const sizeRef = useRef({
+    width: 0,
+    height: 0,
+    cols: 0,
+    rows: 0,
+    dpr: 1,
+  });
 
-  const hoverRef =
-    useRef(false)
+  const hoverRef = useRef(false);
 
-  const [hovered, setHovered] =
-    useState(false)
+  const [hovered, setHovered] = useState(false);
 
   /*
    * Used only when dissolveColor isn't provided.
    */
-  const luminanceRef =
-    useRef(0.35)
+  const luminanceRef = useRef(0.35);
 
   /* ==========================================================
      DETERMINE FALLBACK EFFECT COLOR
      ========================================================== */
 
   useEffect(() => {
-    const measured =
-      getLuminance(color)
+    const measured = getLuminance(color);
 
-    luminanceRef.current =
-      measured ?? 0.35
-  }, [color])
+    luminanceRef.current = measured ?? 0.35;
+  }, [color]);
 
   /* ==========================================================
      CANVAS ENGINE
      ========================================================== */
 
   useEffect(() => {
-    const canvas =
-      canvasRef.current
+    const canvas = canvasRef.current;
 
-    if (
-      !canvas ||
-      disableAnimation
-    ) {
-      return
+    if (!canvas || disableAnimation) {
+      return;
     }
 
-    const parent =
-      canvas.parentElement
+    const parent = canvas.parentElement;
 
     if (!parent) {
-      return
+      return;
     }
 
-    const context =
-      canvas.getContext(
-        '2d',
-        {
-          alpha: true,
-        },
-      )
+    const context = canvas.getContext("2d", {
+      alpha: true,
+    });
 
     if (!context) {
-      return
+      return;
     }
 
     /*
@@ -331,78 +236,37 @@ export function PixelDissolveButton({
      * This means the dissolve pixels remain visible
      * on white backgrounds.
      */
-    context.globalCompositeOperation =
-      'source-over'
+    context.globalCompositeOperation = "source-over";
 
-    context.imageSmoothingEnabled =
-      false
+    context.imageSmoothingEnabled = false;
 
-    let lastCols = 0
-    let lastRows = 0
+    let lastCols = 0;
+    let lastRows = 0;
 
     /* ========================================================
        RESIZE
        ======================================================== */
 
     const resize = () => {
-      const rect =
-        parent.getBoundingClientRect()
+      const rect = parent.getBoundingClientRect();
 
-      const dpr =
-        Math.max(
-          1,
-          Math.min(
-            2,
-            window.devicePixelRatio ||
-              1,
-          ),
-        )
+      const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
 
-      const width =
-        Math.max(
-          1,
-          rect.width,
-        )
+      const width = Math.max(1, rect.width);
 
-      const height =
-        Math.max(
-          1,
-          rect.height,
-        )
+      const height = Math.max(1, rect.height);
 
-      const cols =
-        Math.max(
-          1,
-          Math.ceil(
-            width /
-              cellSize,
-          ),
-        )
+      const cols = Math.max(1, Math.ceil(width / cellSize));
 
-      const rows =
-        Math.max(
-          1,
-          Math.ceil(
-            height /
-              cellSize,
-          ),
-        )
+      const rows = Math.max(1, Math.ceil(height / cellSize));
 
-      canvas.width =
-        Math.round(
-          width * dpr,
-        )
+      canvas.width = Math.round(width * dpr);
 
-      canvas.height =
-        Math.round(
-          height * dpr,
-        )
+      canvas.height = Math.round(height * dpr);
 
-      canvas.style.width =
-        `${width}px`
+      canvas.style.width = `${width}px`;
 
-      canvas.style.height =
-        `${height}px`
+      canvas.style.height = `${height}px`;
 
       sizeRef.current = {
         width,
@@ -410,97 +274,49 @@ export function PixelDissolveButton({
         cols,
         rows,
         dpr,
+      };
+
+      context.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      if (cols !== lastCols || rows !== lastRows) {
+        cellsRef.current = buildCells(cols, rows);
+
+        lastCols = cols;
+
+        lastRows = rows;
       }
 
-      context.setTransform(
-        dpr,
-        0,
-        0,
-        dpr,
-        0,
-        0,
-      )
+      context.clearRect(0, 0, width, height);
+    };
 
-      if (
-        cols !== lastCols ||
-        rows !== lastRows
-      ) {
-        cellsRef.current =
-          buildCells(
-            cols,
-            rows,
-          )
+    resize();
 
-        lastCols =
-          cols
+    const observer = new ResizeObserver(resize);
 
-        lastRows =
-          rows
-      }
-
-      context.clearRect(
-        0,
-        0,
-        width,
-        height,
-      )
-    }
-
-    resize()
-
-    const observer =
-      new ResizeObserver(
-        resize,
-      )
-
-    observer.observe(parent)
+    observer.observe(parent);
 
     /* ========================================================
        DRAW
        ======================================================== */
 
-    const draw = (
-      now: number,
-    ) => {
-      if (
-        !hoverRef.current
-      ) {
-        frameRef.current =
-          null
+    const draw = (now: number) => {
+      if (!hoverRef.current) {
+        frameRef.current = null;
 
-        return
+        return;
       }
 
-      frameRef.current =
-        window.requestAnimationFrame(
-          draw,
-        )
+      frameRef.current = window.requestAnimationFrame(draw);
 
-      const {
-        width,
-        height,
-        cols,
-        rows,
-      } = sizeRef.current
+      const { width, height, cols, rows } = sizeRef.current;
 
-      if (
-        !width ||
-        !height ||
-        !cols ||
-        !rows
-      ) {
-        return
+      if (!width || !height || !cols || !rows) {
+        return;
       }
 
-      const time =
-        now * 0.001
+      const time = now * 0.001;
 
-      context.clearRect(
-        0,
-        0,
-        width,
-        height,
-      )
+      context.clearRect(0, 0, width, height);
 
       /*
        * If dissolveColor is supplied, use it directly.
@@ -508,12 +324,10 @@ export function PixelDissolveButton({
        * Otherwise, choose a sensible light/dark
        * contrast color from the button color.
        */
-      let effectColor =
-        dissolveColor
+      let effectColor = dissolveColor;
 
       if (!effectColor) {
-        const luminance =
-          luminanceRef.current
+        const luminance = luminanceRef.current;
 
         /*
          * Use a fixed, high-contrast palette based on
@@ -524,10 +338,7 @@ export function PixelDissolveButton({
          *
          * Dark buttons get white dissolve pixels.
          */
-        effectColor =
-          luminance > 0.58
-            ? '#008000'
-            : '#ffffff'
+        effectColor = luminance > 0.58 ? "#008000" : "#ffffff";
       }
 
       /*
@@ -535,71 +346,34 @@ export function PixelDissolveButton({
        * rgb(), rgba(), hex, hsl(), named colors, etc.
        * all work.
        */
-      context.fillStyle =
-        effectColor
+      context.fillStyle = effectColor;
 
-      for (
-        let row = 0;
-        row < rows;
-        row += 1
-      ) {
-        const y =
-          row * cellSize
+      for (let row = 0; row < rows; row += 1) {
+        const y = row * cellSize;
 
-        for (
-          let column = 0;
-          column < cols;
-          column += 1
-        ) {
-          const index =
-            row * cols +
-            column
+        for (let column = 0; column < cols; column += 1) {
+          const index = row * cols + column;
 
-          const cell =
-            cellsRef.current[
-              index
-            ]
+          const cell = cellsRef.current[index];
 
           if (!cell) {
-            continue
+            continue;
           }
 
-          const x =
-            column * cellSize
+          const x = column * cellSize;
 
           /* --------------------------------------------------
              ORIGINAL DISSOLVE FIELD
              -------------------------------------------------- */
 
           const wave =
-            0.5 +
-            0.5 *
-              Math.sin(
-                time *
-                  cell.speed *
-                  2.4 +
-                  cell.phase,
-              )
+            0.5 + 0.5 * Math.sin(time * cell.speed * 2.4 + cell.phase);
 
-          const intensity =
-            Math.min(
-              1,
-              Math.max(
-                0,
-                wave +
-                  cell.jitter *
-                    0.15,
-              ),
-            )
+          const intensity = Math.min(1, Math.max(0, wave + cell.jitter * 0.15));
 
-          const centered =
-            (intensity - 0.5) *
-            2
+          const centered = (intensity - 0.5) * 2;
 
-          const strength =
-            Math.abs(
-              centered,
-            )
+          const strength = Math.abs(centered);
 
           /*
            * Keep the quiet middle mostly empty.
@@ -608,19 +382,11 @@ export function PixelDissolveButton({
            * moving pixel clusters instead of a flat
            * texture covering the whole button.
            */
-          if (
-            strength < 0.08
-          ) {
-            continue
+          if (strength < 0.08) {
+            continue;
           }
 
-          const alpha =
-            Math.min(
-              0.82,
-              0.08 +
-                strength *
-                  0.72,
-            )
+          const alpha = Math.min(0.82, 0.08 + strength * 0.72);
 
           /*
            * IMPORTANT:
@@ -628,237 +394,168 @@ export function PixelDissolveButton({
            * Alpha is assigned per cell, while the actual
            * effect color comes directly from dissolveColor.
            */
-          context.globalAlpha =
-            alpha
+          context.globalAlpha = alpha;
 
-          context.fillRect(
-            x,
-            y,
-            cellSize,
-            cellSize,
-          )
+          context.fillRect(x, y, cellSize, cellSize);
         }
       }
 
-      context.globalAlpha = 1
-    }
+      context.globalAlpha = 1;
+    };
 
     /* ========================================================
        STOP
        ======================================================== */
 
     const stop = () => {
-      hoverRef.current =
-        false
+      hoverRef.current = false;
 
-      if (
-        frameRef.current !==
-        null
-      ) {
-        window.cancelAnimationFrame(
-          frameRef.current,
-        )
+      if (frameRef.current !== null) {
+        window.cancelAnimationFrame(frameRef.current);
 
-        frameRef.current =
-          null
+        frameRef.current = null;
       }
 
-      const {
-        width,
-        height,
-      } = sizeRef.current
+      const { width, height } = sizeRef.current;
 
-      context.clearRect(
-        0,
-        0,
-        width,
-        height,
-      )
+      context.clearRect(0, 0, width, height);
 
-      context.globalAlpha =
-        1
-    }
+      context.globalAlpha = 1;
+    };
 
     /* ========================================================
        START
        ======================================================== */
 
     if (hovered) {
-      hoverRef.current =
-        true
+      hoverRef.current = true;
 
-      frameRef.current =
-        window.requestAnimationFrame(
-          draw,
-        )
+      frameRef.current = window.requestAnimationFrame(draw);
     } else {
-      stop()
+      stop();
     }
 
     return () => {
-      stop()
-      observer.disconnect()
-    }
-  }, [
-    hovered,
-    disableAnimation,
-    cellSize,
-    color,
-    dissolveColor,
-  ])
+      stop();
+      observer.disconnect();
+    };
+  }, [hovered, disableAnimation, cellSize, color, dissolveColor]);
 
   /* ==========================================================
      HOVER
      ========================================================== */
 
-  const handleEnter =
-    () => {
-      if (
-        disabled ||
-        disableAnimation
-      ) {
-        return
-      }
-
-      hoverRef.current =
-        true
-
-      setHovered(true)
+  const handleEnter = () => {
+    if (disabled || disableAnimation) {
+      return;
     }
 
-  const handleLeave =
-    () => {
-      hoverRef.current =
-        false
+    hoverRef.current = true;
 
-      setHovered(false)
+    setHovered(true);
+  };
 
-      const canvas =
-        canvasRef.current
+  const handleLeave = () => {
+    hoverRef.current = false;
 
-      if (!canvas) {
-        return
-      }
+    setHovered(false);
 
-      const context =
-        canvas.getContext(
-          '2d',
-        )
+    const canvas = canvasRef.current;
 
-      if (!context) {
-        return
-      }
-
-      context.clearRect(
-        0,
-        0,
-        canvas.width,
-        canvas.height,
-      )
-
-      context.globalAlpha =
-        1
+    if (!canvas) {
+      return;
     }
 
-  const handlePointerEnter =
-    (
-      event: ReactPointerEvent<HTMLElement>,
-    ) => {
-      /*
-       * Don't activate hover animation
-       * on touch devices.
-       */
-      if (
-        event.pointerType ===
-        'touch'
-      ) {
-        return
-      }
+    const context = canvas.getContext("2d");
 
-      handleEnter()
+    if (!context) {
+      return;
     }
+
+    context.clearRect(0, 0, canvas.width, canvas.height);
+
+    context.globalAlpha = 1;
+  };
+
+  const handlePointerEnter = (event: ReactPointerEvent<HTMLElement>) => {
+    /*
+     * Don't activate hover animation
+     * on touch devices.
+     */
+    if (event.pointerType === "touch") {
+      return;
+    }
+
+    handleEnter();
+  };
 
   /* ==========================================================
      BASE BUTTON STYLE
      ========================================================== */
 
   const style: CSSProperties = {
-    background:
-      gradient ??
-      color,
-  }
+    background: gradient ?? color,
+  };
 
   /* ==========================================================
      BUTTON CLASSES
      ========================================================== */
 
   const baseClassName = [
-    'group',
-    'relative',
-    'isolate',
-    'inline-flex',
-    'items-center',
-    'justify-between',
-    'gap-3',
-    'overflow-hidden',
-    'px-7',
-    'py-0',
-    'min-h-12',
+    "group",
+    "relative",
+    "isolate",
+    "inline-flex",
+    "items-center",
+    "justify-between",
+    "gap-3",
+    "overflow-hidden",
+    "px-7",
+    "py-0",
+    "min-h-12",
 
-    'text-[15px]',
-    'font-semibold',
-    'uppercase',
-    'tracking-[-0.01em]',
+    "text-[15px]",
+    "font-semibold",
+    "uppercase",
+    "tracking-[-0.01em]",
 
-    'text-white',
+    "text-white",
 
-    'focus-visible:outline',
-    'focus-visible:outline-2',
-    'focus-visible:outline-offset-2',
-    'focus-visible:outline-white',
+    "focus-visible:outline",
+    "focus-visible:outline-2",
+    "focus-visible:outline-offset-2",
+    "focus-visible:outline-white",
 
-    'disabled:cursor-not-allowed',
-    'disabled:opacity-50',
+    "disabled:cursor-not-allowed",
+    "disabled:opacity-50",
 
     className,
   ]
     .filter(Boolean)
-    .join(' ')
+    .join(" ");
 
   /* ==========================================================
      ARROW
      ========================================================== */
 
   const arrowStyle: CSSProperties = {
-    transition:
-      'transform 200ms ease-out',
+    transition: "transform 200ms ease-out",
 
-    transform:
-      hovered
-        ? 'rotate(-45deg)'
-        : 'rotate(0deg)',
-  }
+    transform: hovered ? "rotate(-45deg)" : "rotate(0deg)",
+  };
 
   /* ==========================================================
      CANVAS
      ========================================================== */
 
   const canvasStyle: CSSProperties = {
-    opacity:
-      disableAnimation
-        ? 0
-        : hovered
-          ? 1
-          : 0,
+    opacity: disableAnimation ? 0 : hovered ? 1 : 0,
 
-    transition:
-      'opacity 100ms ease-out',
+    transition: "opacity 100ms ease-out",
 
-    pointerEvents:
-      'none',
+    pointerEvents: "none",
 
-    imageRendering:
-      'pixelated',
+    imageRendering: "pixelated",
 
     /*
      * DO NOT use overlay here.
@@ -867,9 +564,8 @@ export function PixelDissolveButton({
      * dissolveColor visible regardless
      * of the base button color.
      */
-    mixBlendMode:
-      'normal',
-  }
+    mixBlendMode: "normal",
+  };
 
   /* ==========================================================
      CONTENT
@@ -879,9 +575,7 @@ export function PixelDissolveButton({
     <>
       {/* Label */}
 
-      <span className="relative z-10 whitespace-nowrap">
-        {label}
-      </span>
+      <span className="relative z-10 whitespace-nowrap">{label}</span>
 
       {/* Arrow */}
 
@@ -896,12 +590,7 @@ export function PixelDissolveButton({
         className="relative z-10 h-4 w-4 shrink-0"
         style={arrowStyle}
       >
-        <line
-          x1="5"
-          y1="12"
-          x2="19"
-          y2="12"
-        />
+        <line x1="5" y1="12" x2="19" y2="12" />
 
         <polyline points="12 5 19 12 12 19" />
       </svg>
@@ -926,7 +615,7 @@ export function PixelDissolveButton({
         style={canvasStyle}
       />
     </>
-  )
+  );
 
   /* ==========================================================
      LINK
@@ -938,27 +627,15 @@ export function PixelDissolveButton({
         href={href}
         className={baseClassName}
         style={style}
-        onMouseEnter={
-          handleEnter
-        }
-        onMouseLeave={
-          handleLeave
-        }
-        onPointerEnter={
-          handlePointerEnter
-        }
-        onPointerLeave={
-          handleLeave
-        }
-        aria-disabled={
-          disabled
-            ? true
-            : undefined
-        }
+        onMouseEnter={handleEnter}
+        onMouseLeave={handleLeave}
+        onPointerEnter={handlePointerEnter}
+        onPointerLeave={handleLeave}
+        aria-disabled={disabled ? true : undefined}
       >
         {content}
       </a>
-    )
+    );
   }
 
   /* ==========================================================
@@ -969,30 +646,18 @@ export function PixelDissolveButton({
     <button
       type={type}
       disabled={disabled}
-      aria-disabled={
-        disabled
-          ? true
-          : undefined
-      }
+      aria-disabled={disabled ? true : undefined}
       className={baseClassName}
       style={style}
       onClick={onClick}
-      onMouseEnter={
-        handleEnter
-      }
-      onMouseLeave={
-        handleLeave
-      }
-      onPointerEnter={
-        handlePointerEnter
-      }
-      onPointerLeave={
-        handleLeave
-      }
+      onMouseEnter={handleEnter}
+      onMouseLeave={handleLeave}
+      onPointerEnter={handlePointerEnter}
+      onPointerLeave={handleLeave}
     >
       {content}
     </button>
-  )
+  );
 }
 
-export default PixelDissolveButton
+export default PixelDissolveButton;

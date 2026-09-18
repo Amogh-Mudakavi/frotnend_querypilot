@@ -64,42 +64,42 @@ export function HeroEmployeeEvidenceCard({
       />
 
       <div className="mt-2 space-y-2">
-        <p className="text-[11px] text-[#687184]">
+        <p className="text-[11px] text-[#A7A29A]">
           Resolving employee, gathering evidence...
         </p>
 
         <RevealRow show={step >= 1}>
-          <div className="flex items-center justify-between rounded-lg border border-[#EEF0F3] bg-[#FBFBFC] px-3 py-2">
+          <div className="flex items-center justify-between rounded-lg border border-[#302C25] bg-[#0D0C0A] px-3 py-2">
             <div>
-              <p className="text-[11.5px] text-[#111318]">Rahul Sharma</p>
-              <p className="mt-0.5 font-mono text-[9.5px] text-[#9AA1AF]">
+              <p className="text-[11.5px] text-[#F3F0E8]">Rahul Sharma</p>
+              <p className="mt-0.5 font-mono text-[9.5px] text-[#6F6A61]">
                 Employee ID: E001
               </p>
             </div>
-            <span className="text-[9.5px] text-[#9AA1AF]">employee.xlsx</span>
+            <span className="text-[9.5px] text-[#6F6A61]">employee.xlsx</span>
           </div>
         </RevealRow>
 
         <RevealRow show={step >= 2}>
           <div className="grid grid-cols-3 gap-2">
-            <div className="rounded-lg border border-[#EEF0F3] bg-[#FBFBFC] px-2.5 py-2">
-              <p className="text-[8.5px] text-[#9AA1AF]">Salary</p>
-              <p className="mt-1 text-[10.5px] font-medium text-[#3B404B]">₹60,000</p>
+            <div className="rounded-lg border border-[#302C25] bg-[#0D0C0A] px-2.5 py-2">
+              <p className="text-[8.5px] text-[#6F6A61]">Salary</p>
+              <p className="mt-1 text-[10.5px] font-medium text-[#D7D2C7]">₹60,000</p>
             </div>
-            <div className="rounded-lg border border-[#EEF0F3] bg-[#FBFBFC] px-2.5 py-2">
-              <p className="text-[8.5px] text-[#9AA1AF]">Entitlement</p>
-              <p className="mt-1 text-[10.5px] font-medium text-[#3B404B]">20 days</p>
+            <div className="rounded-lg border border-[#302C25] bg-[#0D0C0A] px-2.5 py-2">
+              <p className="text-[8.5px] text-[#6F6A61]">Entitlement</p>
+              <p className="mt-1 text-[10.5px] font-medium text-[#D7D2C7]">20 days</p>
             </div>
-            <div className="rounded-lg border border-[#EEF0F3] bg-[#FBFBFC] px-2.5 py-2">
-              <p className="text-[8.5px] text-[#9AA1AF]">Taken</p>
-              <p className="mt-1 text-[10.5px] font-medium text-[#3B404B]">12 days</p>
+            <div className="rounded-lg border border-[#302C25] bg-[#0D0C0A] px-2.5 py-2">
+              <p className="text-[8.5px] text-[#6F6A61]">Taken</p>
+              <p className="mt-1 text-[10.5px] font-medium text-[#D7D2C7]">12 days</p>
             </div>
           </div>
         </RevealRow>
 
         <RevealRow show={step >= 3}>
-          <div className="rounded-lg border border-[#EEF0F3] bg-[#FBFBFC] px-3 py-2.5">
-            <p className="text-[10.5px] text-[#3B404B]">
+          <div className="rounded-lg border border-[#302C25] bg-[#0D0C0A] px-3 py-2.5">
+            <p className="text-[10.5px] text-[#D7D2C7]">
               Leave within entitlement → no deduction
             </p>
             <div className="mt-2 flex flex-wrap gap-1.5">
@@ -145,25 +145,25 @@ export function HeroAnswerGenerationCard({
       />
 
       <div className="mt-2 space-y-2">
-        <p className="text-[11px] text-[#687184]">
+        <p className="text-[11px] text-[#A7A29A]">
           Reasoning over verified evidence...
         </p>
 
         {values.map(([label, value], i) => (
           <div
             key={label}
-            className="flex items-center justify-between rounded-lg border border-[#EEF0F3] bg-[#FBFBFC] px-3 py-2 transition-all duration-300"
+            className="flex items-center justify-between rounded-lg border border-[#302C25] bg-[#0D0C0A] px-3 py-2 transition-all duration-300"
             style={{
               opacity: step >= i + 1 ? 1 : 0,
               transform: step >= i + 1 ? "translateY(0)" : "translateY(6px)",
             }}
           >
-            <span className="text-[10px] text-[#9AA1AF]">{label}</span>
+            <span className="text-[10px] text-[#6F6A61]">{label}</span>
             <span
               className={
                 label === "Salary Deduction"
                   ? "text-[10.5px] font-semibold text-[#3FB984]"
-                  : "text-[10.5px] font-semibold text-[#3B404B]"
+                  : "text-[10.5px] font-semibold text-[#D7D2C7]"
               }
             >
               {value}

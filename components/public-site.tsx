@@ -18,6 +18,17 @@ import { DemoWindowChrome } from "@/components/hero/demo-window-chrome";
 
 import { QueryPilotProcessCards } from "@/components/hero/process-cards";
 
+import { SkyBlueBackground } from "@/components/hero/SkyBlueBackground";
+
+import {
+  PlannerAgentDemo,
+  AsyncIngestionDemo,
+  ConversationMemoryDemo,
+  SSEStreamingDemo,
+  StructuredDataDemo,
+  WorkspaceIsolationDemo,
+} from "@/components/demos";
+
 // Prevent the browser from painting a previous scroll position during a hard reload.
 
 // This runs as soon as the client module evaluates, before the first React layout pass.
@@ -42,7 +53,7 @@ if (typeof window !== "undefined") {
 
  * Shared palette
 
- *
+ * ---------------------------------------------------------------------------
 
  * Single source of truth for the warm beige used across the public site
 
@@ -62,51 +73,13 @@ const PAGE_BEIGE = "#F4EFE4";
 
  * Navbar theme detection
 
- *
-
- * The nav needs to flip between a light look (glass background, dark text)
-
- * and a dark look (near-black background, white text) depending on whatever
-
- * section is currently sitting underneath it. Rather than matching a
-
- * hardcoded whitelist of background colors (which silently breaks the
-
- * moment a section's background shade changes, e.g. #070707 vs #000000),
-
- * this reads the actual computed background color of whatever is under the
-
- * nav and classifies it as light/dark using relative luminance. The
-
- * classification logic is unchanged.
-
- *
-
- * PERF: elementFromPoint() and getComputedStyle() each force the browser to
-
- * flush pending style/layout work. Running that pair on every scroll frame —
-
- * which is what happened for every scroll position past ~0.92 viewports, i.e.
-
- * the entire Features section — steals frame budget from the pinned feature
-
- * scene. A frame that misses its budget gets presented with a stale pinned
-
- * scene, which is exactly what reads as "the section behind flashed through".
-
- * The sample is now taken on a scroll-distance interval. The theme only
-
- * changes at two section boundaries, so a 32px window is visually identical
-
- * and costs roughly a tenth as much.
-
  * ------------------------------------------------------------------------ */
 
 const NAV_SAMPLE_EPSILON_PX = 32;
 
 function parseRgbColor(color: string): [number, number, number, number] | null {
   const match = color.match(
-    /rgba?\s*\(?\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*(?:,\s*([\d.]+)\s*)?\)?/,
+    /rgba?\s*\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*(?:,\s*([\d.]+)\s*)?\)/,
   );
 
   if (!match) return null;
@@ -130,11 +103,10 @@ function relativeLuminance(r: number, g: number, b: number) {
 }
 
 export function PublicNav() {
-  const [darkTheme, setDarkTheme] = useState(true);
+  const [darkTheme, setDarkTheme] = useState(false);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     let ticking = false;
-
     let lastSampleY = Number.NEGATIVE_INFINITY;
 
     const detectTheme = (force = false) => {
@@ -144,13 +116,14 @@ export function PublicNav() {
 
       if (scrollY < window.innerHeight * 0.92) {
         lastSampleY = scrollY;
-
-        setDarkTheme(true);
-
+        setDarkTheme(false);
         return;
       }
 
-      if (!force && Math.abs(scrollY - lastSampleY) < NAV_SAMPLE_EPSILON_PX) {
+      if (
+        !force &&
+        Math.abs(scrollY - lastSampleY) < NAV_SAMPLE_EPSILON_PX
+      ) {
         return;
       }
 
@@ -165,15 +138,11 @@ export function PublicNav() {
       const navRect = nav.getBoundingClientRect();
 
       const sampleX = navRect.left + navRect.width / 2;
-
       const sampleY = navRect.bottom + 8;
 
       const element = document.elementFromPoint(
-
         sampleX,
-
         sampleY,
-
       ) as HTMLElement | null;
 
       if (!element) return;
@@ -182,7 +151,6 @@ export function PublicNav() {
 
       while (current) {
         const background = window.getComputedStyle(current).backgroundColor;
-
         const parsed = parseRgbColor(background);
 
         if (parsed) {
@@ -192,7 +160,6 @@ export function PublicNav() {
             const luminance = relativeLuminance(r, g, b);
 
             setDarkTheme(luminance < 0.5);
-
             return;
           }
         }
@@ -227,15 +194,11 @@ export function PublicNav() {
 
     detectTheme(true);
 
-    window.addEventListener("scroll", onScroll, {
-      passive: true,
-    });
-
+    window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("resize", onResize);
 
     return () => {
       window.removeEventListener("scroll", onScroll);
-
       window.removeEventListener("resize", onResize);
     };
   }, []);
@@ -243,102 +206,64 @@ export function PublicNav() {
   const textClass = darkTheme ? "text-white" : "text-black";
 
   const mutedTextClass = darkTheme
-    ? "text-white/75 hover:text-white"
+    ? "text-white/70 hover:text-white"
     : "text-black/60 hover:text-black";
 
-  const borderClass = darkTheme ? "border-white/[0.10]" : "border-black/[0.10]";
+  const backgroundClass = darkTheme
+    ? "bg-[#080808]/72"
+    : "bg-white/72";
 
-  const backgroundClass = darkTheme ? "bg-[#080808]/90" : "bg-white/90";
+  const signupClass = darkTheme
+    ? "bg-white text-black hover:bg-white/90"
+    : "bg-black text-white hover:bg-black/90";
 
   return (
     <header
       data-querypilot-nav
       className="
-
         fixed
-
         top-3
-
         left-[4vw]
-
         right-[4vw]
-
         z-[60]
-
         min-[901px]:left-[15vw]
-
         min-[901px]:right-[15vw]
-
       "
     >
       <nav
         aria-label="Main navigation"
         className={`
-
-          flex
-
+          grid
           h-[58px]
-
           w-full
-
+          grid-cols-[1fr_auto_1fr]
           items-center
-
-          justify-between
-
-          rounded-none
-
-          border
-
-          ${borderClass}
-
           ${backgroundClass}
-
-          px-5
-
-          sm:px-6
-
-          backdrop-blur-xl
-
+          px-1
+          sm:px-2
+          backdrop-blur-md
           transition-colors
-
           duration-300
-
         `}
       >
-        {/* LEFT */}
-
-        <div className="flex items-center">
-          {/* QueryPilot */}
-
+        {/* LEFT ------------------------------------------------------ */}
+        <div className="flex min-w-0 items-center justify-self-start">
           <Link
             href="/"
             aria-label="QueryPilot home"
             className={`
-
               inline-flex
-
               items-center
-
               gap-2.5
-
               whitespace-nowrap
-
               text-[18px]
-
               sm:text-[19px]
-
               font-normal
-
               leading-none
-
               tracking-[-0.035em]
-
               transition-colors
-
               duration-200
-
               ${textClass}
-
             `}
           >
             <img
@@ -351,24 +276,15 @@ export function PublicNav() {
             <span>QueryPilot</span>
           </Link>
 
-          {/* Divider */}
-
           <span
             aria-hidden="true"
             className={`
-
               mx-4
-
               h-5
-
               w-px
-
               ${darkTheme ? "bg-white/10" : "bg-black/10"}
-
             `}
           />
-
-          {/* GitHub */}
 
           <a
             href="https://github.com/Amogh-Mudakavi/QueryPilot_backend"
@@ -376,19 +292,12 @@ export function PublicNav() {
             rel="noopener noreferrer"
             aria-label="QueryPilot GitHub"
             className={`
-
               inline-flex
-
               items-center
-
               justify-center
-
               ${mutedTextClass}
-
               transition-colors
-
               duration-200
-
             `}
           >
             <svg
@@ -402,57 +311,95 @@ export function PublicNav() {
           </a>
         </div>
 
-        {/* RIGHT */}
-
-        <div className="flex items-center gap-6 sm:gap-8">
-          <Link
-            href="/engineering"
+        {/* CENTER ---------------------------------------------------- */}
+        <div
+          className="
+            hidden
+            items-center
+            gap-7
+            min-[901px]:flex
+            justify-self-center
+          "
+        >
+          <a
+            href="#use-cases"
             className={`
-
               text-[15px]
-
               sm:text-[16px]
-
               font-normal
-
               leading-none
-
               tracking-[-0.015em]
-
               transition-colors
-
               duration-200
-
               ${mutedTextClass}
-
             `}
           >
             Engineering
-          </Link>
+          </a>
 
+          <Link
+            href="/technical-challenges"
+            className={`
+              text-[15px]
+              sm:text-[16px]
+              font-normal
+              leading-none
+              tracking-[-0.015em]
+              transition-colors
+              duration-200
+              ${mutedTextClass}
+            `}
+          >
+            Technical challenges
+          </Link>
+        </div>
+
+        {/* RIGHT ----------------------------------------------------- */}
+        <div
+          className="
+            flex
+            items-center
+            gap-3
+            sm:gap-4
+            justify-self-end
+          "
+        >
           <Link
             href="/login"
             className={`
-
-              text-[15px]
-
-              sm:text-[16px]
-
+              text-[14px]
+              sm:text-[15px]
               font-normal
-
               leading-none
-
               tracking-[-0.015em]
-
-              transition-colors
-
-              duration-200
-
               ${mutedTextClass}
-
+              transition-colors
+              duration-200
             `}
           >
-            Login
+            Log in
+          </Link>
+
+          <Link
+            href="/signup"
+            className={`
+              inline-flex
+              h-9
+              items-center
+              justify-center
+              rounded-[10px]
+              px-3.5
+              text-[14px]
+              font-medium
+              leading-none
+              tracking-[-0.02em]
+              shadow-[0_3px_14px_rgba(0,0,0,0.08)]
+              transition-all
+              duration-200
+              ${signupClass}
+            `}
+          >
+            Sign up
           </Link>
         </div>
       </nav>
@@ -461,7 +408,9 @@ export function PublicNav() {
 }
 
 /* ============================================================
+
    ProductPreview / Hero
+
    ============================================================ */
 
 function clamp01(value: number) {
@@ -482,31 +431,13 @@ function lerp(from: number, to: number, amount: number) {
 
 const MAIN_WINDOW_ASPECT = 16 / 8;
 
-// Desktop hero frame: 15vw empty on the left and right.
-
-// The shared 70vw frame is used by the navbar, hero copy, background image,
-
-// and the resting product window.
-
 const PAGE_FRAME_WIDTH_VW = 70;
-
-// Resting product fills the horizontal frame.
 
 const RESTING_DEMO_WIDTH_VW = 92;
 
 const RESTING_DEMO_MIN_WIDTH = 780;
 
 const RESTING_DEMO_MAX_WIDTH = 1500;
-
-// Expanded center window: substantially larger than the old 43vw/560-760px
-
-// frame so the product dominates the composition, per the architecture-diagram
-
-// redesign. This is the single source of truth for expanded-demo geometry —
-
-// process-cards.tsx never hardcodes a competing size, it just reads the real
-
-// rendered window via mainWindowRef.
 
 const DEMO_WIDTH_VW = 54;
 
@@ -516,15 +447,25 @@ const DEMO_MAX_WIDTH = 960;
 
 const DEMO_DURATION_MS = 30000;
 
+// Cap how often the demo timer pushes a React state update. The visible
+// content (typing text, process cards) reads fine at 15 updates/sec -
+// there is no reason to re-render React at a full 60fps for 30 seconds
+// straight. This alone cuts re-render volume by ~4x during the demo.
+const DEMO_STATE_UPDATE_INTERVAL_MS = 66;
+
 const DEMO_OPEN_START = 0.02;
+
+// Height of the blue pinstripe band as a share of the screen, measured from
+// the bottom edge upward: 25% while the hero is resting, 40% once the demo
+// is open. The band is always laid out at the taller (demo) size and squashed
+// with scaleY at rest, so nothing is resized or repainted while scrolling.
+const STROKES_REST_HEIGHT = 0.75;
+
+const STROKES_DEMO_HEIGHT = 0.65;
 
 const DEMO_RETURN_COMPLETE = 0.02;
 
 const DEMO_RETURN_START = 0.74;
-
-const CARD_DISMISS_START = 0.68;
-
-const CARD_DISMISS_END = 0.82;
 
 const DEMO_OPEN_DURATION_S = 0.82;
 
@@ -532,16 +473,13 @@ const EXPANDED_WINDOW_ASPECT = 27 / 20;
 
 function StaticHeroHeading() {
   return (
-    <h1 className="w-full text-[clamp(2.05rem,2.35vw,2.65rem)] font-normal leading-[1.04] tracking-[-0.045em] text-white">
-      <span
-        data-hero-title-line
-        className="qp-hero-title-blur-hidden block whitespace-nowrap"
-      >
-        Don&apos;t just search your data.
+    <h1 className="w-full text-[clamp(2.05rem,2.35vw,2.65rem)] font-normal leading-[1.04] tracking-[-0.045em] text-black">
+      <span data-hero-title-line className="block whitespace-nowrap">
+        Don't Search Your Data.
       </span>
 
-      <span data-hero-title-line className="qp-hero-title-blur-hidden block">
-        Understand it.
+      <span data-hero-title-line className="block">
+        Understand It.
       </span>
     </h1>
   );
@@ -556,14 +494,6 @@ function ProductPreview() {
 
   const mainWindowRef = useRef<HTMLDivElement | null>(null);
 
-  // The actual visible QueryPilot window box (the DemoWindowChrome
-
-  // border), as opposed to mainWindowRef's outer positioning wrapper.
-
-  // The six process-card connectors read their source point off this
-
-  // element's real, responsive edge.
-
   const centerWindowRef = useRef<HTMLDivElement | null>(null);
 
   const processCardsRef = useRef<HTMLDivElement | null>(null);
@@ -572,17 +502,13 @@ function ProductPreview() {
 
   const restingEntryRef = useRef<HTMLDivElement | null>(null);
 
-  // Entrance-only refs. These control the first-load/reload reveal timeline
-
-  // (title -> paragraph -> buttons -> card -> background) and are not
-
-  // touched anywhere else — the existing scroll/demo render() logic never
-
-  // reads or writes these two elements.
-
   const heroParagraphRef = useRef<HTMLParagraphElement | null>(null);
 
   const heroActionsRef = useRef<HTMLDivElement | null>(null);
+
+  const strokesRef = useRef<HTMLDivElement | null>(null);
+
+  const strokesCenterCoverRef = useRef<HTMLDivElement | null>(null);
 
   const restingIntroCompleteRef = useRef(false);
 
@@ -616,97 +542,39 @@ function ProductPreview() {
 
   const userScrollIntentRef = useRef(false);
 
-  /*
+  // A wheel/trackpad gesture is a burst of wheel events, not one intent per
 
-   * PERF / FLICKER: the hero's scroll handler used to run for every scroll
+  // event. These refs let the hero consume one whole burst when a running
 
-   * position on the page, including the whole Features section. Each frame it
+  // demo is skipped, preventing the same momentum from entering Features.
 
-   * wrote width / height / top onto the demo window (layout-invalidating
+  const wheelBurstActiveRef = useRef(false);
 
-   * properties, not composited ones) plus a changing blur() onto the process
+  const wheelBurstTimerRef = useRef<number | null>(null);
 
-   * cards, immediately after reading getBoundingClientRect(). That is a forced
+  const consumeWheelBurstRef = useRef(false);
 
-   * layout and a full repaint of an off-screen ~1300px scene on every frame
+  const returnStartElapsedRef = useRef(0);
 
-   * the user spends scrolling the pinned feature scene.
-
-   *
-
-   * The demo clock had the same problem from the React side: setDemoElapsed()
-
-   * at 60fps for 30 seconds, re-rendering the demo UI and six process cards,
-
-   * even with the hero nowhere near the viewport.
-
-   *
-
-   * Both are now gated on hero visibility. A frame that overruns its budget is
-
-   * presented with a stale pinned scene — that is what "the section behind
-
-   * flashed through" actually is — so removing this work is the fix, not a
-
-   * nice-to-have.
-
-   */
+  const keyboardIntentConsumedRef = useRef(false);
 
   const heroOnScreenRef = useRef(true);
 
   const [heroOnScreen, setHeroOnScreen] = useState(true);
 
-  /*
-
-   * Demo clock.
-
-   *
-
-   * elapsed lives in a ref, not in the timer closure. The previous version
-
-   * derived it as (performance.now() - started) inside an effect that bailed
-
-   * out whenever the phase left "running", which produced two visible bugs:
-
-   *
-
-   *   1. Scrolling up mid-demo killed the loop for good. Scrolling back down
-
-   *      set the phase to "complete" rather than "running", so the clock
-
-   *      never restarted and the card sequence sat frozen.
-
-   *   2. beginDemo() had a firstRun branch that slammed elapsed to
-
-   *      DEMO_DURATION_MS on any re-entry. That made QueryPilotProcessCards
-
-   *      resolve straight to the final stage, so all six process cards
-
-   *      appeared at once with no staging and no active-dot pulse.
-
-   *
-
-   * With an accumulator the loop can idle through non-running phases and
-
-   * resume exactly where it paused, and beginDemo can always replay the
-
-   * sequence from zero.
-
-   */
-
-  const elapsedRef = useRef(0);
+  const elapsedRef = useRef(DEMO_DURATION_MS);
 
   const [demoActive, setDemoActive] = useState(false);
 
-  const [demoElapsed, setDemoElapsed] = useState(0);
+  // Keep the resting hero on the finished answer state so the first frame
+  // communicates product value. The existing scroll interaction still calls
+  // beginDemo(), which resets the timeline to 0 and plays the demo normally.
+  const [demoElapsed, setDemoElapsed] = useState(DEMO_DURATION_MS);
 
-  // The large resting backdrop is not mounted until the product card has
-  // completely entered. This prevents early image paint/load and keeps the
-  // entrance sequence deterministic.
   const [showRestingBackgroundImage, setShowRestingBackgroundImage] =
-    useState(false);
+    useState(true);
 
-  const restingBackgroundReadyRef = useRef(false);
+  const restingBackgroundReadyRef = useRef(true);
 
   useEffect(() => {
     if (!demoActive || !heroOnScreen) return;
@@ -715,26 +583,40 @@ function ProductPreview() {
 
     let last = performance.now();
 
+    let lastStateFlush = 0;
+
     const tick = (now: number) => {
-      // Clamp the delta so a backgrounded tab / long frame can't fast-forward
-
-      // the whole sequence in one step when the page becomes visible again.
-
       const delta = Math.min(now - last, 100);
 
       last = now;
 
       if (demoPhaseRef.current === "running") {
-        const next = Math.min(elapsedRef.current + delta, DEMO_DURATION_MS);
+        const next = Math.min(
+          elapsedRef.current + delta,
+
+          DEMO_DURATION_MS,
+        );
 
         elapsedRef.current = next;
 
-        setDemoElapsed(next);
+        const isDone = next >= DEMO_DURATION_MS;
 
-        if (next >= DEMO_DURATION_MS) {
+        // Throttle the React state flush instead of pushing a re-render on
+        // every animation frame. The ref above always holds the true value
+        // for the imperative/GSAP side; the state below only needs to be
+        // "fresh enough" for what's actually rendered on screen.
+        if (isDone || now - lastStateFlush >= DEMO_STATE_UPDATE_INTERVAL_MS) {
+          lastStateFlush = now;
+
+          setDemoElapsed(next);
+        }
+
+        if (isDone) {
           demoPhaseRef.current = "complete";
 
           window.dispatchEvent(new Event("querypilot-demo-complete"));
+
+          setDemoElapsed(DEMO_DURATION_MS);
 
           setDemoActive(false);
 
@@ -768,6 +650,10 @@ function ProductPreview() {
     const heroParagraph = heroParagraphRef.current;
 
     const heroActions = heroActionsRef.current;
+
+    const strokes = strokesRef.current;
+
+    const strokesCenterCover = strokesCenterCoverRef.current;
 
     if (
       !section ||
@@ -810,15 +696,17 @@ function ProductPreview() {
     const getProgress = () => {
       const rect = section.getBoundingClientRect();
 
-      const distance = Math.max(section.offsetHeight - window.innerHeight, 1);
+      const distance = Math.max(
+        section.offsetHeight - window.innerHeight,
+
+        1,
+      );
 
       return clamp01(-rect.top / distance);
     };
 
     const getGeometry = () => {
       const viewportHeight = window.innerHeight;
-
-      // Shared 70vw content frame. The remaining 15vw on each side is empty.
 
       const frameWidth = window.innerWidth * (PAGE_FRAME_WIDTH_VW / 100);
 
@@ -834,10 +722,18 @@ function ProductPreview() {
         Math.min(RESTING_DEMO_MIN_WIDTH, frameWidth),
       );
 
-      const restLeft = Math.max((frameWidth - restWidth) / 2, 0);
+      const restLeft = Math.max(
+        (frameWidth - restWidth) / 2,
+
+        0,
+      );
 
       const demoWidth = Math.min(
-        Math.max(window.innerWidth * (DEMO_WIDTH_VW / 100), DEMO_MIN_WIDTH),
+        Math.max(
+          window.innerWidth * (DEMO_WIDTH_VW / 100),
+
+          DEMO_MIN_WIDTH,
+        ),
 
         DEMO_MAX_WIDTH,
       );
@@ -850,13 +746,9 @@ function ProductPreview() {
         viewportHeight * 0.78,
       );
 
-      // Expanded mode uses a taller architecture frame rather than the resting 2:1 ratio.
-
       const finalWidth = demoWidth;
 
       const finalLeft = (frameWidth - finalWidth) / 2;
-
-      // The product card touches the bottom edge of the viewport.
 
       const restHeight = restWidth / MAIN_WINDOW_ASPECT;
 
@@ -875,7 +767,11 @@ function ProductPreview() {
 
         finalDemoHeight,
 
-        finalTop: Math.max(108, (viewportHeight - finalDemoHeight) / 2),
+        finalTop: Math.max(
+          108,
+
+          (viewportHeight - finalDemoHeight) / 2,
+        ),
       };
     };
 
@@ -905,7 +801,13 @@ function ProductPreview() {
           ? visualProgressRef.current
           : 0;
 
-      const widthVisual = lerp(restWidth, finalWidth, visual);
+      const widthVisual = lerp(
+        restWidth,
+
+        finalWidth,
+
+        visual,
+      );
 
       const heightVisual = lerp(
         restWidth / MAIN_WINDOW_ASPECT,
@@ -915,9 +817,21 @@ function ProductPreview() {
         visual,
       );
 
-      const topVisual = lerp(restTop, finalTop, visual);
+      const topVisual = lerp(
+        restTop,
 
-      const leftVisual = lerp(restLeft, finalLeft, visual);
+        finalTop,
+
+        visual,
+      );
+
+      const leftVisual = lerp(
+        restLeft,
+
+        finalLeft,
+
+        visual,
+      );
 
       const backgroundVisibility =
         phase === "resting"
@@ -928,26 +842,27 @@ function ProductPreview() {
             ? smoothstep(1 - visual)
             : 1 - smoothstep(clamp01((visual - 0.05) / 0.5));
 
-      // During the resting entrance, the intro timeline owns the background.
-
-      // Do not let scroll/resize renders stomp its opacity back to 0/1.
-
       if (
         restingBackgroundReadyRef.current &&
         (restingIntroCompleteRef.current || phase !== "resting")
       ) {
         gsap.set(restingBackground, {
           opacity: backgroundVisibility,
+
           visibility: backgroundVisibility > 0.001 ? "visible" : "hidden",
+
           force3D: true,
         });
       } else if (!restingBackgroundReadyRef.current) {
         gsap.set(restingBackground, {
           opacity: 0,
+
           visibility: "hidden",
+
           force3D: true,
         });
       }
+
       gsap.set(mainWindow, {
         left: leftVisual,
 
@@ -970,9 +885,31 @@ function ProductPreview() {
         force3D: true,
       });
 
-      // Copy and product expansion intentionally overlap. The text stays fixed
+      // Blue pinstripe band: grows from 25% to 40% of the screen height as
+      // the demo opens (and shrinks back on the way out). The centre cover
+      // fades away at the same time so the strokes run edge to edge instead
+      // of leaving a white gap around/below the demo window.
+      if (strokes) {
+        gsap.set(strokes, {
+          scaleY: lerp(
+            STROKES_REST_HEIGHT / STROKES_DEMO_HEIGHT,
 
-      // on the LEFT; it only fades/softens while the product window expands.
+            1,
+
+            clamp01(visual),
+          ),
+
+          transformOrigin: "50% 100%",
+
+          force3D: true,
+        });
+      }
+
+      if (strokesCenterCover) {
+        gsap.set(strokesCenterCover, {
+          opacity: 1 - smoothstep(clamp01(visual)),
+        });
+      }
 
       const copyReveal =
         phase === "resting"
@@ -981,17 +918,34 @@ function ProductPreview() {
             ? smoothstep(1 - visual)
             : 1 - smoothstep(visual);
 
+      // NOTE: no `filter: blur()` here anymore. Blur can't be composited on
+      // the GPU, so animating it every scroll frame forced a full repaint of
+      // this block on every tick - that was the single biggest cause of
+      // scroll jank. Opacity + scale give a near-identical "focus" feel and
+      // are compositor-only (cheap).
       gsap.set(heroCopy, {
         opacity: copyReveal,
 
         y: 0,
 
-        scale: lerp(1, 0.985, 1 - copyReveal),
+        scale: lerp(
+          1,
 
-        filter: `blur(${lerp(2.25, 0, copyReveal)}px)`,
+          0.985,
+
+          1 - copyReveal,
+        ),
 
         force3D: true,
       });
+
+      // The process-card component already receives the exact demo timeline
+
+      // through `elapsed`. Keep this parent wrapper as a simple lifecycle gate
+
+      // instead of applying a second, unrelated scroll-position animation on
+
+      // top of it. That lets the same cards play forward and reverse naturally.
 
       const cardsInDemoPhase =
         demoPhaseRef.current === "running" ||
@@ -999,48 +953,33 @@ function ProductPreview() {
         demoPhaseRef.current === "returning";
 
       const cardVisibility =
-        !demoPlayedRef.current || !cardsInDemoPhase || p <= DEMO_RETURN_COMPLETE
+        !demoPlayedRef.current || !cardsInDemoPhase || elapsedRef.current <= 0.5
           ? 0
-          : demoPhaseRef.current === "returning"
-            ? p <= CARD_DISMISS_START
-              ? 1
-              : 1 -
-                smoothstep(
-                  clamp01(
-                    (p - CARD_DISMISS_START) /
-                      (CARD_DISMISS_END - CARD_DISMISS_START),
-                  ),
-                )
-            : p <= CARD_DISMISS_START
-              ? 1
-              : p >= CARD_DISMISS_END
-                ? 0
-                : 1 -
-                  smoothstep(
-                    clamp01(
-                      (p - CARD_DISMISS_START) /
-                        (CARD_DISMISS_END - CARD_DISMISS_START),
-                    ),
-                  );
+          : 1;
 
-      // BUGFIX: opacity alone is what the spec calls "merely low opacity while
-
-      // still visible." Toggling visibility as well guarantees the cards are
-
-      // truly inert (no residual paint, no hit-testing ambiguity) at the two
-
-      // ends of the fade rather than only reaching opacity: 0 asymptotically.
-
+      // Same fix here: dropped the animated `filter: blur()` in favor of
+      // opacity/scale/translate, which the compositor can handle without
+      // repainting the cards every frame.
       gsap.set(processCards, {
         opacity: cardVisibility,
 
         visibility: cardVisibility > 0.001 ? "visible" : "hidden",
 
-        scale: lerp(0.985, 1, cardVisibility),
+        scale: lerp(
+          0.985,
 
-        y: lerp(-8, 0, cardVisibility),
+          1,
 
-        filter: `blur(${lerp(1.5, 0, cardVisibility)}px)`,
+          cardVisibility,
+        ),
+
+        y: lerp(
+          -8,
+
+          0,
+
+          cardVisibility,
+        ),
 
         transformOrigin: "50% 50%",
 
@@ -1053,15 +992,15 @@ function ProductPreview() {
     };
 
     const tweenVisual = (
-
       to: number,
 
       duration: number,
 
       onComplete?: () => void,
-
     ) => {
-      const proxy = { value: visualProgressRef.current };
+      const proxy = {
+        value: visualProgressRef.current,
+      };
 
       gsap.killTweensOf(proxy);
 
@@ -1091,13 +1030,9 @@ function ProductPreview() {
     };
 
     const beginDemo = () => {
-      if (demoPhaseRef.current !== "resting") return;
-
-      // Always replay the sequence from the top. The old firstRun branch
-
-      // jumped elapsed to DEMO_DURATION_MS on every re-entry, which is what
-
-      // made the six process cards appear all at once with no staging.
+      if (demoPhaseRef.current !== "resting") {
+        return;
+      }
 
       demoPlayedRef.current = true;
 
@@ -1123,7 +1058,11 @@ function ProductPreview() {
 
       openTweenRef.current?.kill();
 
-      openTweenRef.current = tweenVisual(1, DEMO_OPEN_DURATION_S);
+      openTweenRef.current = tweenVisual(
+        1,
+
+        DEMO_OPEN_DURATION_S,
+      );
     };
 
     const resetDemoToRest = () => {
@@ -1146,8 +1085,35 @@ function ProductPreview() {
       render(0);
     };
 
+    const syncReturnTimeline = (progress: number) => {
+      const returnProgress = smoothstep(
+        clamp01(
+          (progress - DEMO_RETURN_COMPLETE) /
+            (DEMO_RETURN_START - DEMO_RETURN_COMPLETE),
+        ),
+      );
+
+      visualProgressRef.current = returnProgress;
+
+      const nextElapsed = Math.max(
+        0,
+
+        Math.min(
+          returnStartElapsedRef.current * returnProgress,
+
+          DEMO_DURATION_MS,
+        ),
+      );
+
+      elapsedRef.current = nextElapsed;
+
+      setDemoElapsed(nextElapsed);
+    };
+
     const beginReturnToRest = (progress: number) => {
-      if (!demoPlayedRef.current) return;
+      if (!demoPlayedRef.current) {
+        return;
+      }
 
       if (progress <= DEMO_RETURN_COMPLETE) {
         resetDemoToRest();
@@ -1161,59 +1127,49 @@ function ProductPreview() {
 
       demoPhaseRef.current = "returning";
 
-      // The rAF loop stays alive here on purpose. The phase check inside it
+      returnStartElapsedRef.current =
+        clamp01(elapsedRef.current / DEMO_DURATION_MS) * DEMO_DURATION_MS;
 
-      // pauses the clock; keeping the loop mounted is what lets the sequence
+      syncReturnTimeline(progress);
 
-      // resume from its exact position if the user scrolls back down.
-
-      // Reverse is owned directly by scroll position. This prevents a large
-
-      // upward wheel/touch jump from skipping the cinematic return entirely.
-
-      visualProgressRef.current = smoothstep(
-        clamp01(
-          (progress - DEMO_RETURN_COMPLETE) /
-            (DEMO_RETURN_START - DEMO_RETURN_COMPLETE),
-        ),
-      );
+      setDemoActive(false);
     };
 
-    /*
+    // Deterministic hard resolve to the exact completion state already used
 
-     * Scroll orchestration is intentionally stateful:
+    // by the normal timed demo. This is also the state reached by an explicit
 
-     * resting -> running/complete -> returning -> resting
+    // user skip, so the hero never lands in a half-open visual state.
 
-     *
+    const snapToFinalState = () => {
+      openTweenRef.current?.kill();
 
-     * The previous implementation only called beginReturnToRest() on the
+      openTweenRef.current = null;
 
-     * first frame that crossed the threshold. A high-velocity scroll could
+      visualProgressRef.current = 1;
 
-     * cross both the "return" and "rest" thresholds in one browser frame,
+      elapsedRef.current = DEMO_DURATION_MS;
 
-     * leaving the cards painted while the window had already returned.
+      setDemoElapsed(DEMO_DURATION_MS);
 
-     *
+      setDemoActive(false);
 
-     * Here every frame reconciles the phase against the current scroll
+      demoPlayedRef.current = true;
 
-     * position. The page can therefore skip any number of intermediate
+      demoPhaseRef.current = "complete";
 
-     * scroll positions without getting visually stuck.
+      window.dispatchEvent(new Event("querypilot-demo-complete"));
 
-     */
+      render(1);
+    };
 
     const onScroll = () => {
-      if (rafRef.current !== null) return;
+      if (rafRef.current !== null) {
+        return;
+      }
 
       rafRef.current = window.requestAnimationFrame(() => {
         rafRef.current = null;
-
-        // Hero off-screen: no layout reads, no GSAP writes, nothing at all.
-
-        // This is the frame budget the pinned feature scene needs.
 
         if (!heroOnScreenRef.current) {
           lastScrollYRef.current = window.scrollY;
@@ -1248,10 +1204,6 @@ function ProductPreview() {
           demoPhaseRef.current === "returning" &&
           p > DEMO_RETURN_COMPLETE
         ) {
-          // Resume an unfinished sequence instead of forcing "complete",
-
-          // which used to strand the clock wherever it paused.
-
           if (elapsedRef.current >= DEMO_DURATION_MS) {
             demoPhaseRef.current = "complete";
           } else {
@@ -1261,6 +1213,12 @@ function ProductPreview() {
           }
 
           tweenVisual(1, 0.52);
+        }
+
+        // Fast-scroll safety net.
+
+        if (isMovingDown && p >= 0.995 && demoPhaseRef.current !== "complete") {
+          snapToFinalState();
         }
 
         if (isMovingUp && demoPlayedRef.current) {
@@ -1274,19 +1232,8 @@ function ProductPreview() {
           }
         }
 
-        // While returning, continuously bind the visual state to the current
-
-        // scroll progress so rapid upward movement still reveals the cards and
-
-        // closes the main window in a deterministic way.
-
         if (demoPhaseRef.current === "returning" && p > DEMO_RETURN_COMPLETE) {
-          visualProgressRef.current = smoothstep(
-            clamp01(
-              (p - DEMO_RETURN_COMPLETE) /
-                (DEMO_RETURN_START - DEMO_RETURN_COMPLETE),
-            ),
-          );
+          syncReturnTimeline(p);
         }
 
         smoothProgressRef.current = p;
@@ -1299,38 +1246,167 @@ function ProductPreview() {
       userScrollIntentRef.current = true;
     };
 
-    const onKeyDown = (event: KeyboardEvent) => {
+    const finishWheelBurst = () => {
+      wheelBurstActiveRef.current = false;
+
+      consumeWheelBurstRef.current = false;
+
+      wheelBurstTimerRef.current = null;
+    };
+
+    const onWheel = (event: WheelEvent) => {
+      const deltaY = event.deltaY;
+
+      if (Math.abs(deltaY) < 4) {
+        return;
+      }
+
+      armUserScrollIntent();
+
+      const wasAlreadyInBurst = wheelBurstActiveRef.current;
+
+      wheelBurstActiveRef.current = true;
+
+      if (wheelBurstTimerRef.current !== null) {
+        window.clearTimeout(wheelBurstTimerRef.current);
+      }
+
+      wheelBurstTimerRef.current = window.setTimeout(
+        finishWheelBurst,
+
+        260,
+      );
+
+      const isDown = deltaY > 0;
+
+      if (!isDown || !heroOnScreenRef.current) {
+        return;
+      }
+
+      if (consumeWheelBurstRef.current) {
+        event.preventDefault();
+
+        return;
+      }
+
+      const phase = demoPhaseRef.current;
+
+      const progress = getProgress();
+
       if (
-        event.key === "ArrowDown" ||
-        event.key === "PageDown" ||
-        event.key === " " ||
-        event.key === "Home" ||
-        event.key === "End"
+        !wasAlreadyInBurst &&
+        phase === "resting" &&
+        progress >= DEMO_OPEN_START
       ) {
-        armUserScrollIntent();
+        beginDemo();
+
+        return;
+      }
+
+      if (
+        !wasAlreadyInBurst &&
+        (phase === "running" || phase === "returning")
+      ) {
+        snapToFinalState();
+
+        consumeWheelBurstRef.current = true;
+
+        event.preventDefault();
+      }
+    };
+
+    const isEditableTarget = (target: EventTarget | null) => {
+      const element = target instanceof HTMLElement ? target : null;
+
+      if (!element) {
+        return false;
+      }
+
+      return (
+        element.isContentEditable ||
+        element.tagName === "INPUT" ||
+        element.tagName === "TEXTAREA" ||
+        element.tagName === "SELECT"
+      );
+    };
+
+    const isDownNavigationKey = (key: string) =>
+      key === "ArrowDown" || key === "PageDown" || key === " " || key === "End";
+
+    const isUpNavigationKey = (key: string) =>
+      key === "ArrowUp" || key === "PageUp" || key === "Home";
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (isEditableTarget(event.target)) {
+        return;
+      }
+
+      if (!isDownNavigationKey(event.key) && !isUpNavigationKey(event.key)) {
+        return;
+      }
+
+      armUserScrollIntent();
+
+      if (!heroOnScreenRef.current) {
+        return;
+      }
+
+      if (isUpNavigationKey(event.key)) {
+        keyboardIntentConsumedRef.current = false;
+
+        return;
+      }
+
+      if (keyboardIntentConsumedRef.current) {
+        event.preventDefault();
+
+        return;
+      }
+
+      const progress = getProgress();
+
+      const phase = demoPhaseRef.current;
+
+      if (phase === "running" || phase === "returning") {
+        snapToFinalState();
+
+        keyboardIntentConsumedRef.current = true;
+
+        event.preventDefault();
+
+        return;
+      }
+
+      if (phase === "resting" && progress >= DEMO_OPEN_START) {
+        beginDemo();
+      }
+    };
+
+    const onKeyUp = (event: KeyboardEvent) => {
+      if (isDownNavigationKey(event.key)) {
+        keyboardIntentConsumedRef.current = false;
       }
     };
 
     const onResize = () => {
       resetDrag();
 
-      if (!heroOnScreenRef.current) return;
+      if (!heroOnScreenRef.current) {
+        return;
+      }
 
       render(getProgress());
     };
 
-    // Visibility gate. The margin re-arms the hero slightly before it is
-
-    // actually on screen, so its first visible frame is already correct.
-
     const visibilityObserver = new IntersectionObserver(
-
       (entries) => {
         const entry = entries[0];
 
         const onScreen = entry ? entry.isIntersecting : true;
 
-        if (heroOnScreenRef.current === onScreen) return;
+        if (heroOnScreenRef.current === onScreen) {
+          return;
+        }
 
         heroOnScreenRef.current = onScreen;
 
@@ -1342,11 +1418,18 @@ function ProductPreview() {
           smoothProgressRef.current = getProgress();
 
           render(smoothProgressRef.current);
+        } else {
+          const p = getProgress();
+
+          if (p >= 0.99 && demoPhaseRef.current !== "complete") {
+            snapToFinalState();
+          }
         }
       },
 
-      { rootMargin: "160px 0px 160px 0px" },
-
+      {
+        rootMargin: "160px 0px 160px 0px",
+      },
     );
 
     visibilityObserver.observe(section);
@@ -1355,88 +1438,45 @@ function ProductPreview() {
       "[data-hero-title-line]",
     );
 
-    // Establish the true entrance state before the initial render.
+    // The hero opens in its finished resting state. This removes the
+    // intermediate hidden/blank frame that could briefly expose the demo
+    // internals before the client animation system takes over.
+    restingIntroCompleteRef.current = true;
+    restingBackgroundReadyRef.current = true;
+    setShowRestingBackgroundImage(true);
 
-    // The browser must never paint the completed hero and then hide it.
+    gsap.set(restingBackground, {
+      opacity: 1,
+      visibility: "visible",
+      clearProps: "transform",
+    });
 
-    restingIntroCompleteRef.current =
-      reduceMotion || heroTitleLines.length === 0;
+    gsap.set(restingEntry, {
+      opacity: 1,
+      y: 0,
+      scale: 1,
+      visibility: "visible",
+      clearProps: "filter",
+    });
 
-    if (!restingIntroCompleteRef.current) {
-      gsap.set(restingBackground, {
-        opacity: 0,
+    gsap.set(heroTitleLines, {
+      opacity: 1,
+      y: 0,
+      filter: "none",
+      visibility: "visible",
+    });
 
-        visibility: "hidden",
-      });
+    gsap.set(heroParagraph, {
+      opacity: 1,
+      y: 0,
+      visibility: "visible",
+    });
 
-      gsap.set(restingEntry, {
-        opacity: 0,
-
-        y: 16,
-
-        scale: 0.985,
-      });
-
-      gsap.set(heroTitleLines, {
-        opacity: 0,
-
-        y: 14,
-
-        filter: "blur(14px)",
-      });
-
-      gsap.set(heroParagraph, {
-        opacity: 0,
-
-        y: 10,
-      });
-
-      gsap.set(heroActions, {
-        opacity: 0,
-
-        y: 8,
-      });
-    } else {
-      setShowRestingBackgroundImage(true);
-
-      restingBackgroundReadyRef.current = true;
-
-      restingIntroCompleteRef.current = true;
-
-      gsap.set(restingBackground, {
-        opacity: 1,
-
-        visibility: "visible",
-      });
-
-      gsap.set(restingEntry, {
-        opacity: 1,
-
-        y: 0,
-
-        scale: 1,
-      });
-
-      gsap.set(heroTitleLines, {
-        opacity: 1,
-
-        y: 0,
-
-        filter: "blur(0px)",
-      });
-
-      gsap.set(heroParagraph, {
-        opacity: 1,
-
-        y: 0,
-      });
-
-      gsap.set(heroActions, {
-        opacity: 1,
-
-        y: 0,
-      });
-    }
+    gsap.set(heroActions, {
+      opacity: 1,
+      y: 0,
+      visibility: "visible",
+    });
 
     visualProgressRef.current = 0;
 
@@ -1446,88 +1486,106 @@ function ProductPreview() {
 
     render(smoothProgressRef.current);
 
-    if (!reduceMotion && heroTitleLines.length > 0) {
-      // First-load/reload entrance only. Isolated from the scroll/demo timeline.
-      // It owns the text/card choreography and signals the deferred background
-      // mount only after the product card has completely settled.
+    // No load-time intro animation: the first painted frame is already the final resting hero.
 
-      const restingIntro = gsap.timeline({
-        defaults: {
-          ease: "power3.out",
-        },
-      });
+    window.addEventListener(
+      "wheel",
 
-      // Exact first-load sequence:
-      // title (blur -> focus) -> description -> buttons -> product card -> background mount.
-      // The background image is intentionally the LAST thing to enter —
-      // it doesn't even mount into the DOM until this call() fires below,
-      // and it then waits for its own load event before fading in.
-      restingIntro.to(heroTitleLines, {
-        opacity: 1,
-        y: 0,
-        filter: "blur(0px)",
-        duration: 0.9,
-        stagger: 0.1,
-        ease: "power2.out",
-      });
+      onWheel,
 
-      restingIntro.to(heroParagraph, {
-        opacity: 1,
-        y: 0,
-        duration: 0.38,
-      });
+      { passive: false },
+    );
 
-      restingIntro.to(heroActions, {
-        opacity: 1,
-        y: 0,
-        duration: 0.34,
-      });
+    window.addEventListener(
+      "touchstart",
 
-      restingIntro.to(restingEntry, {
-        opacity: 1,
-        y: 0,
-        scale: 1,
-        duration: 0.5,
-      });
+      armUserScrollIntent,
 
-      // Only now does the background image enter the DOM. It is the final
-      // step in the sequence and fades in on its own once loaded (see the
-      // showRestingBackgroundImage effect below) — never before the card.
-      restingIntro.call(() => {
-        setShowRestingBackgroundImage(true);
-      });
-    }
+      { passive: true },
+    );
 
-    window.addEventListener("wheel", armUserScrollIntent, { passive: true });
+    window.addEventListener(
+      "touchmove",
 
-    window.addEventListener("touchstart", armUserScrollIntent, {
-      passive: true,
-    });
+      armUserScrollIntent,
 
-    window.addEventListener("touchmove", armUserScrollIntent, {
-      passive: true,
-    });
+      { passive: true },
+    );
 
-    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener(
+      "keydown",
 
-    window.addEventListener("scroll", onScroll, { passive: true });
+      onKeyDown,
+    );
 
-    window.addEventListener("resize", onResize);
+    window.addEventListener(
+      "keyup",
+
+      onKeyUp,
+    );
+
+    window.addEventListener(
+      "scroll",
+
+      onScroll,
+
+      { passive: true },
+    );
+
+    window.addEventListener(
+      "resize",
+
+      onResize,
+    );
 
     return () => {
       visibilityObserver.disconnect();
 
-      window.removeEventListener("wheel", armUserScrollIntent);
+      window.removeEventListener(
+        "wheel",
 
-      window.removeEventListener("touchstart", armUserScrollIntent);
+        onWheel,
+      );
 
-      window.removeEventListener("touchmove", armUserScrollIntent);
+      window.removeEventListener(
+        "touchstart",
 
-      window.removeEventListener("keydown", onKeyDown);
+        armUserScrollIntent,
+      );
 
-      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener(
+        "touchmove",
 
-      window.removeEventListener("resize", onResize);
+        armUserScrollIntent,
+      );
+
+      window.removeEventListener(
+        "keydown",
+
+        onKeyDown,
+      );
+
+      window.removeEventListener(
+        "keyup",
+
+        onKeyUp,
+      );
+
+      if (wheelBurstTimerRef.current !== null) {
+        window.clearTimeout(wheelBurstTimerRef.current);
+      }
+
+      window.removeEventListener(
+        "scroll",
+
+        onScroll,
+      );
+
+      window.removeEventListener(
+        "resize",
+
+        onResize,
+      );
 
       if (rafRef.current !== null) {
         window.cancelAnimationFrame(rafRef.current);
@@ -1536,7 +1594,6 @@ function ProductPreview() {
       openTweenRef.current?.kill();
 
       gsap.killTweensOf([
-
         heroCopy,
 
         mainWindow,
@@ -1552,53 +1609,74 @@ function ProductPreview() {
         heroParagraph,
 
         heroActions,
-
       ]);
 
       gsap.killTweensOf(heroTitleLines);
     };
   }, []);
 
-  // Deferred backdrop reveal. The image is mounted only after the card
-  // entrance. Wait for load/cache completion before fading it in so the user
-  // never sees an unloaded or half-painted background.
   useLayoutEffect(() => {
-    if (!showRestingBackgroundImage) return;
+    if (!showRestingBackgroundImage) {
+      return;
+    }
 
     const background = restingBackgroundRef.current;
-    if (!background) return;
+
+    if (!background) {
+      return;
+    }
 
     const image = background.querySelector("img");
-    if (!image) return;
+
+    if (!image) {
+      return;
+    }
 
     let cancelled = false;
 
     const reveal = () => {
-      if (cancelled) return;
+      if (cancelled) {
+        return;
+      }
 
       restingBackgroundReadyRef.current = true;
+
       gsap.killTweensOf(background);
 
       if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-        gsap.set(background, {
-          opacity: 1,
-          visibility: "visible",
-        });
+        gsap.set(
+          background,
+
+          {
+            opacity: 1,
+
+            visibility: "visible",
+          },
+        );
+
         restingIntroCompleteRef.current = true;
+
         return;
       }
 
       gsap.fromTo(
         background,
+
         {
           opacity: 0,
+
           visibility: "visible",
         },
+
         {
           opacity: 1,
+
           duration: 0.55,
+
           ease: "power2.out",
+
           overwrite: true,
+
           onComplete: () => {
             if (!cancelled) {
               restingIntroCompleteRef.current = true;
@@ -1610,19 +1688,45 @@ function ProductPreview() {
 
     if (image.complete) {
       reveal();
+
       return () => {
         cancelled = true;
+
         gsap.killTweensOf(background);
       };
     }
 
-    image.addEventListener("load", reveal, { once: true });
-    image.addEventListener("error", reveal, { once: true });
+    image.addEventListener(
+      "load",
+
+      reveal,
+
+      { once: true },
+    );
+
+    image.addEventListener(
+      "error",
+
+      reveal,
+
+      { once: true },
+    );
 
     return () => {
       cancelled = true;
-      image.removeEventListener("load", reveal);
-      image.removeEventListener("error", reveal);
+
+      image.removeEventListener(
+        "load",
+
+        reveal,
+      );
+
+      image.removeEventListener(
+        "error",
+
+        reveal,
+      );
+
       gsap.killTweensOf(background);
     };
   }, [showRestingBackgroundImage]);
@@ -1630,15 +1734,23 @@ function ProductPreview() {
   const canDrag = () => {
     const section = sectionRef.current;
 
-    if (!section) return false;
+    if (!section) {
+      return false;
+    }
 
-    const distance = Math.max(section.offsetHeight - window.innerHeight, 1);
+    const distance = Math.max(
+      section.offsetHeight - window.innerHeight,
+
+      1,
+    );
 
     return clamp01(-section.getBoundingClientRect().top / distance) >= 0.9;
   };
 
   const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
-    if (event.button !== 0 || !canDrag()) return;
+    if (event.button !== 0 || !canDrag()) {
+      return;
+    }
 
     const drag = dragStateRef.current;
 
@@ -1654,30 +1766,52 @@ function ProductPreview() {
   const handlePointerMove = (event: PointerEvent<HTMLDivElement>) => {
     const drag = dragStateRef.current;
 
-    if (!drag.active) return;
+    if (!drag.active) {
+      return;
+    }
 
-    const maxX = Math.min(window.innerWidth * 0.11, 170);
+    const maxX = Math.min(
+      window.innerWidth * 0.11,
 
-    const maxY = Math.min(window.innerHeight * 0.075, 72);
+      170,
+    );
+
+    const maxY = Math.min(
+      window.innerHeight * 0.075,
+
+      72,
+    );
 
     drag.x = Math.max(
-
       -maxX,
 
-      Math.min(maxX, event.clientX - drag.pointerX),
+      Math.min(
+        maxX,
 
+        event.clientX - drag.pointerX,
+      ),
     );
 
     drag.y = Math.max(
-
       -maxY,
 
-      Math.min(maxY, event.clientY - drag.pointerY),
+      Math.min(
+        maxY,
 
+        event.clientY - drag.pointerY,
+      ),
     );
 
     if (sceneRef.current) {
-      gsap.set(sceneRef.current, { x: drag.x, y: drag.y });
+      gsap.set(
+        sceneRef.current,
+
+        {
+          x: drag.x,
+
+          y: drag.y,
+        },
+      );
     }
   };
 
@@ -1692,47 +1826,107 @@ function ProductPreview() {
   return (
     <section
       ref={sectionRef}
-      className="relative hidden h-[220vh] w-full bg-[#0A0A0A] min-[901px]:block"
+      className="relative hidden h-[220vh] w-full bg-white min-[901px]:block"
       aria-label="QueryPilot hero"
-      /*
-
-       * The hero scene uses z-50 / z-60 / z-75 / z-80 on overflow-visible
-
-       * containers. Without a stacking context on the section itself, those
-
-       * indices escape into the root. isolation:isolate confines the hero
-
-       * scene to its own stacking context while the fixed navbar still wins.
-
-       */
-
-      style={{ isolation: "isolate" }}
+      style={{
+        isolation: "isolate",
+      }}
     >
       <div className="sticky top-0 h-screen overflow-visible">
+        {/*
+          Blue pinstripe band anchored to the bottom of the screen. Height is
+          a share of the screen measured bottom -> up: 25% at rest, 40% while
+          the demo is open (driven from render() above). The box is laid out
+          at the 40% size and squashed with scaleY at rest, so the canvas
+          never resizes/repaints on scroll. Vertical lines keep their width
+          under a scaleY, so the pattern looks identical, just shorter.
+
+          At rest the centre is covered, so only the left/right edges show
+          (the scenic image sits in the middle anyway). When the demo opens
+          the cover fades out and the strokes fill the full width instead of
+          leaving a white gap around/below the demo window.
+        */}
+
+        <div
+          ref={strokesRef}
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 bottom-0 z-0 overflow-hidden"
+          style={{
+            height: `${STROKES_DEMO_HEIGHT * 100}%`,
+
+            opacity: 0.68,
+
+            transformOrigin: "50% 100%",
+
+            transform: `scaleY(${STROKES_REST_HEIGHT / STROKES_DEMO_HEIGHT})`,
+
+            WebkitMaskImage:
+              "linear-gradient(to top, #000 0%, #000 62%, transparent 100%)",
+
+            maskImage:
+              "linear-gradient(to top, #000 0%, #000 62%, transparent 100%)",
+          }}
+        >
+          <SkyBlueBackground
+            fullScreen={false}
+            mode="vertical"
+            doubleLines={true}
+            strokeSpacing={6}
+            skyBlueDepth={0.54}
+            colorIntensity={0.88}
+            fadeToWhite={true}
+            opacity={0.72}
+            theme="cerulean"
+            className="h-full w-full"
+          />
+
+          <div
+            ref={strokesCenterCoverRef}
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 z-[30]"
+            style={{
+              background:
+                "linear-gradient(to right, rgba(255,255,255,0) 0%, rgba(255,255,255,0) 10%, #fff 24%, #fff 76%, rgba(255,255,255,0) 90%, rgba(255,255,255,0) 100%)",
+            }}
+          />
+        </div>
+
         <div
           className="relative mx-auto h-full w-[70vw] overflow-visible"
-          style={{ marginLeft: "15vw", marginRight: "15vw" }}
+          style={{
+            marginLeft: "15vw",
+
+            marginRight: "15vw",
+          }}
         >
           <div
             ref={restingBackgroundRef}
             aria-hidden="true"
-            className="qp-hero-entrance-hidden pointer-events-none absolute left-0 top-[34vh] z-0 h-[71vh] w-full overflow-hidden rounded-[30px] border border-white/10 bg-[#0a0a0a]"
+            className="pointer-events-none absolute left-0 top-[34vh] z-[1] h-[71vh] w-full overflow-hidden rounded-[30px] border border-black/10 bg-white opacity-100"
           >
             {showRestingBackgroundImage ? (
               <img
                 src="/bg-img.png"
                 alt=""
                 aria-hidden="true"
+                fetchPriority="high"
+                loading="eager"
+                decoding="async"
                 className="h-full w-full object-cover object-center"
               />
             ) : null}
 
-            <div className="absolute inset-0 bg-black/20" />
+            <div className="absolute inset-0 bg-gradient-to-b from-white/5 via-white/10 to-white/25" />
           </div>
 
           <div
+            className="absolute right-0 top-[13vh] z-[75] hidden w-[min(30%,300px)] min-[1101px]:block"
+            aria-hidden="true"
+          ></div>
+
+          <div
             ref={heroCopyRef}
-            className="hero-copy absolute left-0 top-[12vh] z-[80] flex w-[min(44%,520px)] max-w-[520px] flex-col items-start px-0 text-left will-change-[transform,opacity]"
+            className="hero-copy absolute left-0 top-[12vh] z-[80] flex w-[min(47%,540px)] max-w-[540px] flex-col items-start px-0 text-left will-change-[transform,opacity]"
           >
             <div className="w-full max-w-[500px]">
               <div className="flex justify-start overflow-visible">
@@ -1741,31 +1935,33 @@ function ProductPreview() {
 
               <p
                 ref={heroParagraphRef}
-                className="qp-hero-entrance-hidden mt-3 max-w-[410px] text-pretty text-[14px] leading-5.5 text-white/55"
+                className="mt-4 max-w-[470px] text-pretty text-[16px] leading-6 text-black/70 opacity-100"
               >
-                QueryPilot works across documents and structured data. Ask your
-                question and it finds the right source for you.
+                QueryPilot connects documents and structured data, then finds
+                the right sources and returns a grounded answer.
               </p>
 
               <div
                 ref={heroActionsRef}
-                className="qp-hero-entrance-hidden mt-4 flex items-center justify-start gap-2.5"
+                className="mt-5 flex items-center justify-start gap-2.5 opacity-100"
               >
+                <PixelDissolveButton
+                  label="Try QueryPilot"
+                  href="/login"
+                  color="#0A0A0A"
+                  dissolveColor="#3A3A3A"
+                  cellSize={5}
+                  className="!min-h-10 !rounded-[11px] !px-[18px] !text-sm !font-medium !normal-case !tracking-normal hover:!bg-[#1A1A1A]"
+                />
+
                 <PixelDissolveButton
                   label="Read engineering docs"
                   href="/engineering"
-                  color="#ffffff"
-                  dissolveColor="#808080"
+                  color="#E7E8E5"
+                  dissolveColor="#8FBF98"
                   cellSize={5}
-                  className="!min-h-10 !rounded-[11px] !px-4 !text-sm !font-medium !normal-case !tracking-normal !bg-white !text-black"
+                  className="!min-h-10 !rounded-[11px] !border !border-black/12 !px-4 !text-sm !font-medium !normal-case !tracking-normal !bg-[#E7E8E5] !text-black hover:!bg-[#EEF0EC]"
                 />
-
-                <a
-                  href="/login"
-                  className="rounded-[11px] border border-white/20 px-4 py-2.5 text-sm font-normal text-white transition-colors hover:bg-white/10"
-                >
-                  Try QueryPilot
-                </a>
               </div>
             </div>
           </div>
@@ -1780,16 +1976,8 @@ function ProductPreview() {
             >
               <div
                 ref={restingEntryRef}
-                className="querypilot-resting-entry qp-hero-entrance-hidden relative z-10 h-full w-full"
+                className="querypilot-resting-entry relative z-10 h-full w-full opacity-100"
               >
-                {/*
-
-                  Subtle neutral halo behind the window so the white product
-
-                  surface separates cleanly from the black hero background.
-
-                */}
-
                 <div
                   aria-hidden="true"
                   className="pointer-events-none absolute -inset-x-8 -inset-y-10 -z-10 rounded-[48px] bg-[radial-gradient(closest-side,rgba(255,255,255,0.16),rgba(255,255,255,0.07)_45%,rgba(255,255,255,0)_75%)] blur-2xl"
@@ -1803,14 +1991,6 @@ function ProductPreview() {
                     <QueryPilotApp elapsed={demoElapsed} />
                   </DemoWindowChrome>
                 </div>
-
-                {/*
-
-                  Soft neutral reflection so the window feels grounded against
-
-                  the black surface rather than pasted on top of it.
-
-                */}
 
                 <div
                   aria-hidden="true"
@@ -1828,7 +2008,7 @@ function ProductPreview() {
 
                 <div
                   ref={processCardsRef}
-                  className="absolute inset-0 z-[60] pointer-events-none will-change-[transform,opacity]"
+                  className="absolute inset-0 z-[60] pointer-events-none opacity-0 invisible will-change-[transform,opacity]"
                 >
                   <QueryPilotProcessCards
                     elapsed={demoElapsed}
@@ -1843,38 +2023,6 @@ function ProductPreview() {
         </div>
       </div>
 
-      {/*
-
-        This block is intentionally `jsx global`, not scoped `jsx`.
-
-        `.qp-hero-entrance-hidden` is also used on the title-line spans,
-
-        which live inside StaticHeroHeading — a separate component — so a
-
-        scoped style tag (which only stamps elements returned by *this*
-
-        component) would silently fail to hide them. Global CSS is also
-
-        what makes this safe against the reload flash in the first place:
-
-        it ships inside the server-rendered HTML and is parsed by the
-
-        browser before first paint, unlike anything driven by
-
-        useLayoutEffect/GSAP, which only runs after hydration. GSAP writes
-
-        opacity as an inline style once it takes over, and inline style
-
-        always wins over this class, so there's no fight between the two.
-
-        `.qp-hero-title-blur-hidden` is the same idea but scoped to just the
-
-        headline lines, which additionally start out-of-focus (blur) rather
-
-        than only invisible, to match the reference blur-to-focus reveal.
-
-      */}
-
       <style jsx global>{`
         .querypilot-resting-entry {
           transform: none;
@@ -1884,29 +2032,8 @@ function ProductPreview() {
           will-change: auto;
         }
 
-        .qp-hero-entrance-hidden {
-          opacity: 0;
-        }
-
-        .qp-hero-title-blur-hidden {
-          opacity: 0;
-
-          filter: blur(14px);
-
-          will-change: opacity, filter, transform;
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-          .qp-hero-entrance-hidden {
-            opacity: 1;
-          }
-
-          .qp-hero-title-blur-hidden {
-            opacity: 1;
-
-            filter: none;
-          }
-        }
+        /* The resting hero is painted in its final state. The demo process cards
+           stay hidden until the scroll-driven demo actually begins. */
       `}</style>
     </section>
   );
@@ -1915,20 +2042,33 @@ function ProductPreview() {
 function HeroMobile() {
   const [demoStarted, setDemoStarted] = useState(false);
 
-  const [demoElapsed, setDemoElapsed] = useState(0);
+  // Match desktop: show the finished answer in the resting frame, then let
+  // the existing first-scroll interaction replay the demo from the start.
+  const [demoElapsed, setDemoElapsed] = useState(DEMO_DURATION_MS);
 
   useEffect(() => {
     if (demoStarted) return;
 
     const onFirstScroll = () => setDemoStarted(true);
 
-    window.addEventListener("scroll", onFirstScroll, {
-      once: true,
+    window.addEventListener(
+      "scroll",
 
-      passive: true,
-    });
+      onFirstScroll,
 
-    return () => window.removeEventListener("scroll", onFirstScroll);
+      {
+        once: true,
+
+        passive: true,
+      },
+    );
+
+    return () =>
+      window.removeEventListener(
+        "scroll",
+
+        onFirstScroll,
+      );
   }, [demoStarted]);
 
   useEffect(() => {
@@ -1940,18 +2080,27 @@ function HeroMobile() {
 
     let raf = 0;
 
-    // BUGFIX (perf): setInterval fires on its own clock regardless of
-
-    // whether the browser is ready to paint, which can pile up work on
-
-    // slower devices. requestAnimationFrame ties the update to the
-
-    // browser's own paint cadence instead, so it never over-schedules.
+    let lastStateFlush = 0;
 
     const tick = () => {
-      const elapsed = Math.min(performance.now() - started, duration);
+      const now = performance.now();
 
-      setDemoElapsed(elapsed);
+      const elapsed = Math.min(
+        now - started,
+
+        duration,
+      );
+
+      // Same throttle as the desktop hero - the mobile demo doesn't need a
+      // React re-render on every single animation frame either.
+      if (
+        elapsed >= duration ||
+        now - lastStateFlush >= DEMO_STATE_UPDATE_INTERVAL_MS
+      ) {
+        lastStateFlush = now;
+
+        setDemoElapsed(elapsed);
+      }
 
       if (elapsed < duration) {
         raf = window.requestAnimationFrame(tick);
@@ -1964,49 +2113,53 @@ function HeroMobile() {
   }, [demoStarted]);
 
   return (
-    <section className="relative w-full overflow-hidden bg-[#0A0A0A] px-5 pb-[15vh] pt-[15vh] text-white min-[901px]:hidden">
+    <section className="relative w-full overflow-hidden bg-white px-5 pb-[15vh] pt-[15vh] text-black min-[901px]:hidden">
       <div className="relative z-10 mx-auto w-full max-w-[720px] text-center">
-        <h1 className="mx-auto max-w-[660px] text-[clamp(36px,9vw,58px)] font-normal leading-[1.02] tracking-[-0.045em] text-white">
-          Don&apos;t just search your data.
-          <span className="block">Understand it.</span>
+        <h1 className="mx-auto max-w-[660px] text-[clamp(36px,9vw,58px)] font-normal leading-[1.02] tracking-[-0.045em] text-black">
+          Ask your business data.
+          <span className="block">Get the answer.</span>
         </h1>
 
-        <p className="mx-auto mt-6 max-w-[520px] text-[16px] leading-6 text-white/55">
-          Ask about your documents or business data without knowing which source
-          has the answer.
+        <p className="mx-auto mt-6 max-w-[560px] text-[17px] leading-7 text-black/68">
+          Ask across documents and structured data without knowing which source
+          contains the answer.
         </p>
 
-        <div className="relative mt-9 overflow-hidden rounded-[22px] border border-white/15 bg-[#090909] p-[2.6%] shadow-[0_24px_70px_rgba(0,0,0,0.22)]">
+        <div className="relative mt-9 overflow-hidden rounded-[22px] border border-black/10 bg-white p-[2.6%] shadow-[0_24px_70px_rgba(0,0,0,0.10)]">
           <img
             src="/bg-img.png"
             alt=""
             aria-hidden="true"
+            fetchPriority="high"
+            decoding="async"
             className="pointer-events-none absolute inset-0 h-full w-full object-cover object-center"
           />
 
-          <div className="pointer-events-none absolute inset-0 bg-black/25" />
+          <div className="pointer-events-none absolute inset-0 bg-transparent" />
 
-          <div className="relative aspect-[4/3] w-full overflow-hidden rounded-[16px] border border-white/15 bg-white sm:aspect-video">
+          <div className="relative aspect-[4/3] w-full overflow-hidden rounded-[16px] border border-black/10 bg-white sm:aspect-video">
             <QueryPilotApp elapsed={demoElapsed} />
           </div>
         </div>
 
         <div className="mt-7 flex flex-wrap items-center justify-center gap-2.5">
           <PixelDissolveButton
-            label="Read engineering docs"
-            href="/engineering"
-            color="#ffffff"
-            dissolveColor="#808080"
+            label="Try QueryPilot"
+            href="/login"
+            color="#0A0A0A"
+            dissolveColor="#3A3A3A"
             cellSize={5}
-            className="!min-h-10 !rounded-[11px] !px-4 !text-sm !font-medium !normal-case !tracking-normal !bg-white !text-black"
+            className="!min-h-10 !rounded-[11px] !px-[18px] !text-sm !font-medium !normal-case !tracking-normal hover:!bg-[#1A1A1A]"
           />
 
-          <a
-            href="/login"
-            className="rounded-[11px] border border-white/20 px-4 py-2.5 text-sm font-medium text-white"
-          >
-            Login
-          </a>
+          <PixelDissolveButton
+            label="Read engineering docs"
+            href="/engineering"
+            color="#E7E8E5"
+            dissolveColor="#8FBF98"
+            cellSize={5}
+            className="!min-h-10 !rounded-[11px] !border !border-black/12 !px-4 !text-sm !font-medium !normal-case !tracking-normal !bg-[#E7E8E5] !text-black hover:!bg-[#EEF0EC]"
+          />
         </div>
       </div>
     </section>
@@ -2014,7 +2167,217 @@ function HeroMobile() {
 }
 
 /* ============================================================
+
+   Features
+
+   ============================================================ */
+
+const FEATURE_ITEMS = [
+  {
+    number: "01",
+
+    title: "Planner Agent",
+
+    description:
+      "An agent which interprets the user's request, resolves referenced resources and entities, and constructs the execution plan required to answer it. It can coordinate document search, structured queries, metadata lookup, memory, and multi-source execution before evidence is validated.",
+
+    cta: "Learn about planner agents",
+
+    Demo: PlannerAgentDemo,
+  },
+
+  {
+    number: "02",
+
+    title: "Async Ingestion Pipeline",
+
+    description:
+      "Handles document ingestion asynchronously through background workers so parsing and indexing do not block the request lifecycle. Uploaded files are validated, parsed, chunked, embedded, indexed, and persisted before their ingestion status is updated and the content becomes searchable.",
+
+    cta: "Learn about document processing",
+
+    Demo: AsyncIngestionDemo,
+  },
+
+  {
+    number: "03",
+
+    title: "Conversation Memory",
+
+    description:
+      "Maintains workspace-scoped conversation context so previous questions, answers, and referenced entities remain available across turns. This enables follow-up queries, pronoun resolution, and contextual references without requiring users to repeat earlier information.",
+
+    cta: "Learn about conversation memory",
+
+    Demo: ConversationMemoryDemo,
+  },
+
+  {
+    number: "04",
+
+    title: "Real-Time SSE Streaming",
+
+    description:
+      "Streams assistant responses from the Django backend to the frontend over Server-Sent Events as execution progresses. Incremental answer_delta events update a single response in real time, followed by a complete event containing the final answer, sources, and execution state.",
+
+    cta: "Learn about real-time streaming",
+
+    Demo: SSEStreamingDemo,
+  },
+
+  {
+    number: "05",
+
+    title: "Structured Data Pipeline",
+
+    description:
+      "Processes XLSX and CSV sources into workspace-scoped SQLite tables with inferred schemas and registered metadata. Natural-language requests are translated into safe, read-only SQL to return structured rows, aggregates, and evidence for the final answer.",
+
+    cta: "Learn about structured data",
+
+    Demo: StructuredDataDemo,
+  },
+
+  {
+    number: "06",
+
+    title: "Workspace Isolation",
+
+    description:
+      "Enforces workspace boundaries across documents, tables, retrieval, conversations, and execution so data cannot leak across workspaces. Authorization and workspace-scoped resource access ensure every query operates only against resources the current user is permitted to access.",
+
+    cta: "Learn about workspace isolation",
+
+    Demo: WorkspaceIsolationDemo,
+  },
+] as const;
+
+function FeatureRow({
+  feature,
+
+  index,
+}: {
+  feature: (typeof FEATURE_ITEMS)[number];
+
+  index: number;
+}) {
+  const Demo = feature.Demo;
+
+  const reversed = index % 2 === 1;
+
+  return (
+    <article
+      className={[
+        "grid grid-cols-1 gap-10 py-16 sm:py-20",
+
+        "min-[901px]:grid-cols-12 min-[901px]:items-center min-[901px]:gap-x-10 min-[901px]:gap-y-14 min-[901px]:py-24",
+
+        index > 0 ? "border-t border-white/10" : "",
+      ].join(" ")}
+    >
+      <div
+        className={[
+          "flex flex-col justify-center",
+
+          "min-[901px]:col-span-5",
+
+          reversed
+            ? "min-[901px]:order-2 min-[901px]:col-start-8 min-[901px]:justify-self-end"
+            : "min-[901px]:order-1 min-[901px]:col-start-1",
+        ].join(" ")}
+      >
+        <div className="flex items-center gap-3 font-mono text-[10px] uppercase tracking-[0.16em] text-white/50">
+          <span>{feature.number}</span>
+
+          <span aria-hidden="true" className="h-px w-8 bg-white/15" />
+        </div>
+
+        <h2 className="mt-5 max-w-[480px] text-[clamp(1.65rem,2.6vw,2.65rem)] font-normal leading-[1.05] tracking-[-0.04em] text-white">
+          {feature.title}
+        </h2>
+
+        <p className="mt-5 max-w-[440px] text-[15px] leading-[1.625rem] text-white/68 sm:text-[16px] sm:leading-7">
+          {feature.description}
+        </p>
+
+        <Link
+          href="/engineering"
+          className="group mt-6 inline-flex w-fit items-center gap-2 text-sm font-medium text-[#D9822B] transition-colors duration-200 hover:text-[#E39135]"
+        >
+          <span>{feature.cta}</span>
+
+          <ArrowRight
+            size={14}
+            className="transition-transform duration-200 group-hover:translate-x-0.5"
+          />
+        </Link>
+      </div>
+
+      <div
+        className={[
+          "w-full min-w-0",
+
+          "min-[901px]:col-span-7",
+
+          reversed
+            ? "min-[901px]:order-1 min-[901px]:col-start-1"
+            : "min-[901px]:order-2 min-[901px]:col-start-6",
+        ].join(" ")}
+      >
+        {/*
+
+          Every feature receives the exact same 7-column desktop slot. The
+
+          demo component remains the owner of its own DemoWindow, chrome,
+
+          internal padding, animation, and calibrated height. This layer only
+
+          standardizes placement and available width, so all six demos line up
+
+          without a second border, forced 620px viewport, or internal scaling.
+
+        */}
+
+        <div className="flex w-full min-w-0 items-stretch">
+          <Demo className="w-full" />
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function FeaturesSection() {
+  return (
+    <section
+      id="features"
+      aria-label="QueryPilot features"
+      className="relative w-full bg-[#0A0A0A] text-white"
+    >
+      <div className="border-t border-white/10" />
+
+      <div className="mx-auto w-full px-5 sm:px-8 min-[901px]:ml-[15vw] min-[901px]:mr-[15vw] min-[901px]:w-[70vw] min-[901px]:px-0">
+        <div className="min-[901px]:border-x min-[901px]:border-white/10">
+          <div className="pb-2 pt-14 min-[901px]:px-12 min-[901px]:pt-16">
+            <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-white/35">
+              Features
+            </span>
+          </div>
+
+          <div className="min-[901px]:px-12">
+            {FEATURE_ITEMS.map((feature, index) => (
+              <FeatureRow key={feature.title} feature={feature} index={index} />
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ============================================================
+
    LANDING PAGE
+
    ============================================================ */
 
 export function LandingPage() {
@@ -2035,13 +2398,11 @@ export function LandingPage() {
 
     const forceTop = () => {
       window.scrollTo({
-
         top: 0,
 
         left: 0,
 
         behavior: "auto",
-
       });
     };
 
@@ -2053,7 +2414,11 @@ export function LandingPage() {
       window.requestAnimationFrame(forceTop);
     });
 
-    const delayed = window.setTimeout(forceTop, 120);
+    const delayed = window.setTimeout(
+      forceTop,
+
+      120,
+    );
 
     return () => {
       window.cancelAnimationFrame(frame);
@@ -2065,11 +2430,11 @@ export function LandingPage() {
   }, []);
 
   return (
-    <div className="querypilot-public-site min-h-screen bg-[#0A0A0A] text-white">
+    <div className="querypilot-public-site min-h-screen bg-white text-black">
       <style jsx global>{`
         html,
         body {
-          background-color: #0a0a0a;
+          background-color: #ffffff;
 
           overscroll-behavior-y: none;
 
@@ -2102,13 +2467,16 @@ export function LandingPage() {
         <ProductPreview />
 
         <HeroMobile />
+        <FeaturesSection />
       </main>
     </div>
   );
 }
 
 /* ============================================================
+
    Engineering Page
+
    ============================================================ */
 
 function Logo({ dark = false }: { dark?: boolean }) {
@@ -2177,7 +2545,7 @@ export function EngineeringPage() {
 
             <Link
               href="/login"
-              className="rounded-lg bg-gradient-to-br from-[#007D51] to-[#007D51] px-3.5 py-2.5 text-xs font-medium text-white"
+              className="rounded-lg bg-white px-3.5 py-2.5 text-xs font-medium text-black transition-colors duration-200 hover:bg-white/85"
             >
               Open QueryPilot
             </Link>
@@ -2187,7 +2555,7 @@ export function EngineeringPage() {
 
       <main className="mx-auto max-w-7xl px-5 py-20 lg:px-8 lg:py-32">
         <div className="max-w-3xl">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#007D51]">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/45">
             Engineering, system architecture
           </p>
 
@@ -2205,7 +2573,7 @@ export function EngineeringPage() {
 
         <div className="mt-24 border border-white/15">
           <div className="flex items-center justify-between border-b border-white/15 px-5 py-4">
-            <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#007D51]">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/45">
               Request lifecycle
             </span>
 
@@ -2215,45 +2583,35 @@ export function EngineeringPage() {
           </div>
 
           <div className="grid md:grid-cols-5">
-            {nodes.map(
+            {nodes.map((node, i) => (
+              <div
+                key={node.title}
+                className="relative border-b border-white/15 p-5 md:border-b-0 md:border-r md:last:border-r-0"
+              >
+                <span className="font-mono text-[10px] text-white/45">
+                  0{i + 1}
+                </span>
 
-              (
+                <h2 className="mt-10 text-sm font-medium">{node.title}</h2>
 
-                node,
+                <p className="mt-2 text-xs leading-5 text-white/50">
+                  {node.copy}
+                </p>
 
-                i,
-
-              ) => (
-                <div
-                  key={node.title}
-                  className="relative border-b border-white/15 p-5 md:border-b-0 md:border-r md:last:border-r-0"
-                >
-                  <span className="font-mono text-[10px] text-[#007D51]">
-                    0{i + 1}
-                  </span>
-
-                  <h2 className="mt-10 text-sm font-medium">{node.title}</h2>
-
-                  <p className="mt-2 text-xs leading-5 text-white/50">
-                    {node.copy}
-                  </p>
-
-                  {i < 4 && (
-                    <ArrowRight
-                      className="absolute right-3 top-1/2 hidden text-[#007D51]/70 md:block"
-                      size={15}
-                    />
-                  )}
-                </div>
-              ),
-
-            )}
+                {i < 4 && (
+                  <ArrowRight
+                    className="absolute right-3 top-1/2 hidden text-white/20 md:block"
+                    size={15}
+                  />
+                )}
+              </div>
+            ))}
           </div>
         </div>
 
         <div className="mt-24 grid gap-12 border-t border-white/15 pt-12 lg:grid-cols-3">
           <div>
-            <p className="font-mono text-xs text-[#007D51]">01 / SCOPE</p>
+            <p className="font-mono text-xs text-white/45">01 / SCOPE</p>
 
             <h2 className="mt-4 text-xl font-medium">
               Workspace context is the boundary.
@@ -2266,7 +2624,7 @@ export function EngineeringPage() {
           </div>
 
           <div>
-            <p className="font-mono text-xs text-[#007D51]">02 / GROUNDING</p>
+            <p className="font-mono text-xs text-white/45">02 / GROUNDING</p>
 
             <h2 className="mt-4 text-xl font-medium">
               Evidence is a first-class output.
@@ -2279,7 +2637,7 @@ export function EngineeringPage() {
           </div>
 
           <div>
-            <p className="font-mono text-xs text-[#007D51]">03 / STREAMING</p>
+            <p className="font-mono text-xs text-white/45">03 / STREAMING</p>
 
             <h2 className="mt-4 text-xl font-medium">
               Useful before complete.
@@ -2300,7 +2658,7 @@ export function EngineeringPage() {
 
           <Link
             href="/signup"
-            className="inline-flex w-fit items-center gap-2 rounded-lg bg-gradient-to-br from-[#007D51] to-[#007D51] px-4 py-3 text-sm font-medium text-white"
+            className="inline-flex w-fit items-center gap-2 rounded-lg bg-white px-4 py-3 text-sm font-medium text-black transition-colors duration-200 hover:bg-white/85"
           >
             Try the product
             <ArrowRight size={15} />

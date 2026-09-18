@@ -167,7 +167,7 @@ export function CheckRow({
   return (
     <RevealRow show={show} className={`flex items-center gap-1.5 ${className}`}>
       <Check className="h-3 w-3 shrink-0 text-[#3FB984]" strokeWidth={2.75} />
-      <span className="text-[11.5px] text-[#3B404B]">{label}</span>
+      <span className="text-[11.5px] text-[#D7D2C7]">{label}</span>
     </RevealRow>
   );
 }
@@ -204,7 +204,7 @@ export function ProgressIndicator({
   accent?: string;
 }) {
   return (
-    <div className="relative h-[3px] overflow-hidden rounded-full bg-[#EEF0F3]">
+    <div className="relative h-[3px] overflow-hidden rounded-full bg-[#302C25]">
       {done ? (
         <div className="absolute inset-0 rounded-full bg-[#3FB984]" />
       ) : active ? (
@@ -223,7 +223,7 @@ export function ProgressIndicator({
 export function SourceChip({ show, label }: { show: boolean; label: string }) {
   return (
     <span
-      className="inline-flex rounded-md border border-[#DCE4F4] bg-[#F4F6FF] px-2 py-1 text-[10.5px] font-medium text-[#687184] transition-all duration-300"
+      className="inline-flex rounded-md border border-[#302C25] bg-[#1C1914] px-2 py-1 text-[10.5px] font-medium text-[#A7A29A] transition-all duration-300"
       style={{
         opacity: show ? 1 : 0,
         transform: show ? "translateY(0)" : "translateY(5px)",
@@ -251,7 +251,7 @@ export function ProcessCard({
 }) {
   return (
     <div
-      className={`relative w-full max-w-[330px] overflow-hidden rounded-[20px] border border-[#DDE3F1] bg-[linear-gradient(145deg,#FFFFFF_0%,#FAFBFF_50%,#F1EEFF_100%)] p-3.5 shadow-[0_20px_54px_rgba(63,66,110,0.16)] will-change-[transform,opacity] ${className}`}
+      className={`relative w-full max-w-[330px] overflow-hidden rounded-[20px] border border-[#302C25] bg-[#15130F] p-3.5 shadow-[0_20px_54px_rgba(0,0,0,0.6)] will-change-[transform,opacity] ${className}`}
       style={{
         opacity: visible ? 1 : 0,
         transform: visible ? "translate3d(0,0,0) scale(1)" : "translate3d(0,18px,0) scale(.94)",
@@ -259,19 +259,8 @@ export function ProcessCard({
     >
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute -right-12 -top-12 h-32 w-32 rounded-full transition-[background] duration-500"
-        style={{ background: `radial-gradient(circle, ${accent}33 0%, ${accent}00 72%)` }}
-      />
-
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute -bottom-14 -left-10 h-28 w-28 rounded-full bg-[radial-gradient(circle,rgba(63,185,132,0.14)_0%,rgba(63,185,132,0)_72%)]"
-      />
-
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 top-0 h-[2px] transition-[background] duration-500"
-        style={{ background: `linear-gradient(90deg, ${accent}00, ${accent}99, ${accent}00)` }}
+        className="pointer-events-none absolute inset-x-0 top-0 h-px transition-[background] duration-500"
+        style={{ background: `linear-gradient(90deg, ${accent}00, ${accent}55, ${accent}00)` }}
       />
 
       <div className="relative z-10">{children}</div>
@@ -303,7 +292,7 @@ export function CardHeader({
       ? "bg-[#3FB984]/12 text-[#3FB984]"
       : status === "processing"
         ? ""
-        : "bg-[#F4F5F7] text-[#9AA1AF]";
+        : "bg-[#1C1914] text-[#6F6A61]";
 
   const iconChipStyle =
     status === "processing" ? { backgroundColor: `${accent}1F`, color: accent } : undefined;
@@ -317,7 +306,7 @@ export function CardHeader({
           </span>
         ) : status === "processing" ? (
           <>
-            <span className="absolute inset-0 rounded-full border-2 border-[#EEF0F3]" />
+            <span className="absolute inset-0 rounded-full border-2 border-[#302C25]" />
             <span
               className="absolute inset-0 rounded-full border-2 border-transparent"
               style={{ borderTopColor: accent, animation: "querypilot-spinner .8s linear infinite" }}
@@ -327,7 +316,7 @@ export function CardHeader({
             </span>
           </>
         ) : (
-          <span className="flex h-[22px] w-[22px] items-center justify-center rounded-full border-2 border-[#E5E7EB] text-[9.5px] font-semibold text-[#9AA1AF]">
+          <span className="flex h-[22px] w-[22px] items-center justify-center rounded-full border-2 border-[#302C25] text-[9.5px] font-semibold text-[#6F6A61]">
             {index ?? ""}
           </span>
         )}
@@ -339,8 +328,8 @@ export function CardHeader({
         </span>
 
         <div className="min-w-0">
-          <p className="truncate text-[11px] font-semibold tracking-[0.06em] text-[#111318]">{title}</p>
-          <p className="text-[9.5px] font-medium tracking-[0.05em] text-[#9AA1AF]">{kicker}</p>
+          <p className="truncate text-[11px] font-semibold tracking-[0.06em] text-[#F3F0E8]">{title}</p>
+          <p className="text-[9.5px] font-medium tracking-[0.05em] text-[#6F6A61]">{kicker}</p>
         </div>
       </div>
     </div>
@@ -374,21 +363,21 @@ export function QueryUnderstandingCard({ visible = true, active = false, complet
       />
 
       <div className="mt-2 space-y-2">
-        <p className="text-[11px] text-[#687184]">Analyzing question...</p>
+        <p className="text-[11px] text-[#A7A29A]">Analyzing question...</p>
 
         <ProgressIndicator active={active && !completed} done={completed} accent={accent} />
 
         <RevealRow show={step >= 1}>
-          <p className="text-[9.5px] font-medium tracking-[0.05em] text-[#9AA1AF]">INTENT</p>
-          <p className="mt-1 text-[11.5px] text-[#111318]">Calculate salary deduction</p>
+          <p className="text-[9.5px] font-medium tracking-[0.05em] text-[#6F6A61]">INTENT</p>
+          <p className="mt-1 text-[11.5px] text-[#F3F0E8]">Calculate salary deduction</p>
         </RevealRow>
 
         <div>
-          <p className="text-[9.5px] font-medium tracking-[0.05em] text-[#9AA1AF]">ENTITIES</p>
+          <p className="text-[9.5px] font-medium tracking-[0.05em] text-[#6F6A61]">ENTITIES</p>
           <div className="mt-1 flex flex-wrap gap-1.5">
             {entities.map((entity, i) => (
               <RevealRow key={entity} show={step >= 2 + i} className="inline-block">
-                <span className="inline-flex rounded-md border border-[#DCE4F4] bg-[#F4F6FF] px-2 py-1 text-[10px] text-[#3B404B]">
+                <span className="inline-flex rounded-md border border-[#302C25] bg-[#1C1914] px-2 py-1 text-[10px] text-[#D7D2C7]">
                   {entity}
                 </span>
               </RevealRow>
@@ -397,11 +386,11 @@ export function QueryUnderstandingCard({ visible = true, active = false, complet
         </div>
 
         <div>
-          <p className="text-[9.5px] font-medium tracking-[0.05em] text-[#9AA1AF]">SOURCES</p>
+          <p className="text-[9.5px] font-medium tracking-[0.05em] text-[#6F6A61]">SOURCES</p>
           <div className="mt-1 space-y-1">
             {sources.map((source, i) => (
               <RevealRow key={source} show={step >= 2 + entities.length + i}>
-                <p className="text-[11px] text-[#3B404B]">{source}</p>
+                <p className="text-[11px] text-[#D7D2C7]">{source}</p>
               </RevealRow>
             ))}
           </div>
@@ -436,33 +425,33 @@ export function ExecutionPlanningCard({ visible = true, active = false, complete
       />
 
       <div className="mt-2 space-y-2">
-        <p className="text-[11px] text-[#687184]">Mixed query detected</p>
+        <p className="text-[11px] text-[#A7A29A]">Mixed query detected</p>
 
         <div className="grid grid-cols-2 gap-1.5">
           <RevealRow show={step >= 1}>
-            <div className="rounded-md border border-[#E1E6F0] bg-[#F8FAFD] px-2 py-1.5">
-              <p className="text-[8.5px] font-semibold tracking-[0.06em] text-[#9AA1AF]">TABLE QUERY</p>
-              <p className="mt-1 text-[10px] text-[#3B404B]">Employee salary</p>
-              <p className="text-[10px] text-[#3B404B]">Leave taken</p>
+            <div className="rounded-md border border-[#302C25] bg-[#0D0C0A] px-2 py-1.5">
+              <p className="text-[8.5px] font-semibold tracking-[0.06em] text-[#6F6A61]">TABLE QUERY</p>
+              <p className="mt-1 text-[10px] text-[#D7D2C7]">Employee salary</p>
+              <p className="text-[10px] text-[#D7D2C7]">Leave taken</p>
             </div>
           </RevealRow>
 
           <RevealRow show={step >= 2}>
-            <div className="rounded-md border border-[#E1E6F0] bg-[#F8FAFD] px-2 py-1.5">
-              <p className="text-[8.5px] font-semibold tracking-[0.06em] text-[#9AA1AF]">DOCUMENT SEARCH</p>
-              <p className="mt-1 text-[10px] text-[#3B404B]">Salary rules</p>
+            <div className="rounded-md border border-[#302C25] bg-[#0D0C0A] px-2 py-1.5">
+              <p className="text-[8.5px] font-semibold tracking-[0.06em] text-[#6F6A61]">DOCUMENT SEARCH</p>
+              <p className="mt-1 text-[10px] text-[#D7D2C7]">Salary rules</p>
             </div>
           </RevealRow>
         </div>
 
         <div>
-          <p className="mb-1.5 text-[9.5px] font-medium tracking-[0.05em] text-[#9AA1AF]">PLAN</p>
+          <p className="mb-1.5 text-[9.5px] font-medium tracking-[0.05em] text-[#6F6A61]">PLAN</p>
           <div className="space-y-1.5">
             {sequence.map((item, i) => (
               <RevealRow key={item} show={step >= i + 1}>
                 <div className="flex items-center gap-2">
-                  <span className="font-mono text-[8.5px] text-[#C4C9D2]">{String(i + 1).padStart(2, "0")}</span>
-                  <span className="text-[10.5px] text-[#3B404B]">{item}</span>
+                  <span className="font-mono text-[8.5px] text-[#6F6A61]">{String(i + 1).padStart(2, "0")}</span>
+                  <span className="text-[10.5px] text-[#D7D2C7]">{item}</span>
                 </div>
               </RevealRow>
             ))}
@@ -505,15 +494,15 @@ LIMIT 1;`;
       />
 
       <div className="mt-2">
-        <p className="mb-1.5 text-[10px] text-[#9AA1AF]">Actual SQL:</p>
+        <p className="mb-1.5 text-[10px] text-[#6F6A61]">Actual SQL:</p>
 
-        <div className="rounded-lg border border-[#23262c] bg-[#0D0F12] p-2.5">
+        <div className="rounded-lg border border-[#302C25] bg-[#0D0C0A] p-2.5">
           <pre className="whitespace-pre-wrap font-mono text-[9.5px] leading-[1.55] text-white/75">{displayed}</pre>
         </div>
 
         {!completed && active && displayed.length < sql.length ? (
           <span
-            className="mt-1 inline-block h-3 w-[5px] bg-[#0D0F12]/70"
+            className="mt-1 inline-block h-3 w-[5px] bg-[#0D0C0A]/70"
             style={{ animation: "querypilot-caret .9s step-end infinite" }}
           />
         ) : null}
@@ -548,29 +537,29 @@ export function DocumentRetrievalCard({ visible = true, active = false, complete
       />
 
       <div className="mt-2 space-y-2">
-        <p className="text-[11px] text-[#687184]">Searching salary rules...</p>
+        <p className="text-[11px] text-[#A7A29A]">Searching salary rules...</p>
 
-        <div className="relative overflow-hidden rounded-lg border border-[#E1E6F0] bg-[#F8FAFD] p-2.5">
+        <div className="relative overflow-hidden rounded-lg border border-[#302C25] bg-[#0D0C0A] p-2.5">
           <ScanLine active={active && !completed} accent={accent} />
 
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <span className="text-[10.5px] text-[#3B404B]">Dense Search</span>
-              <Check className={`h-3 w-3 ${step >= 1 ? "text-[#3FB984]" : "text-[#D8DBE1]"}`} />
+              <span className="text-[10.5px] text-[#D7D2C7]">Dense Search</span>
+              <Check className={`h-3 w-3 ${step >= 1 ? "text-[#3FB984]" : "text-[#40392F]"}`} />
             </div>
 
             <div className="flex items-center justify-between">
-              <span className="text-[10.5px] text-[#3B404B]">BM25 Search</span>
-              <Check className={`h-3 w-3 ${step >= 2 ? "text-[#3FB984]" : "text-[#D8DBE1]"}`} />
+              <span className="text-[10.5px] text-[#D7D2C7]">BM25 Search</span>
+              <Check className={`h-3 w-3 ${step >= 2 ? "text-[#3FB984]" : "text-[#40392F]"}`} />
             </div>
           </div>
         </div>
 
         <RevealRow show={step >= 3}>
-          <div className="rounded-lg border border-[#E1E6F0] bg-[#F8FAFD] px-2.5 py-2.5">
-            <p className="text-[11px] font-medium text-[#111318]">salary.pdf</p>
-            <p className="mt-1 text-[10px] text-[#9AA1AF]">Relevant rule found</p>
-            <p className="mt-1 text-[10px] text-[#3B404B]">Leave within entitlement = no deduction</p>
+          <div className="rounded-lg border border-[#302C25] bg-[#0D0C0A] px-2.5 py-2.5">
+            <p className="text-[11px] font-medium text-[#F3F0E8]">salary.pdf</p>
+            <p className="mt-1 text-[10px] text-[#6F6A61]">Relevant rule found</p>
+            <p className="mt-1 text-[10px] text-[#D7D2C7]">Leave within entitlement = no deduction</p>
           </div>
         </RevealRow>
 
