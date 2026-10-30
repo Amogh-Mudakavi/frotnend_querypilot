@@ -7,9 +7,15 @@ const geist = Geist({ subsets: ['latin'], variable: '--font-geist' })
 const geistMono = Geist_Mono({ subsets: ['latin'], variable: '--font-geist-mono' })
 
 export const metadata: Metadata = {
-  title: 'QueryPilot — Knowledge, with evidence',
-  description: 'Ask questions across your workspace and get grounded answers with sources.',
+  title: 'QueryPilot-Understand Your Data',
+  description:
+    'Bring scattered information together, uncover meaningful insights, and get answers grounded in your documents.',
   generator: 'QueryPilot',
+  icons: {
+    icon: '/querypilot-logo.svg',
+    shortcut: '/querypilot-logo.svg',
+    apple: '/querypilot-logo.svg',
+  },
 }
 
 export const viewport: Viewport = { colorScheme: 'light', themeColor: '#ffffff', userScalable: false }
