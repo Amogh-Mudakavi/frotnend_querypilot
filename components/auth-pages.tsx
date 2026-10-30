@@ -1267,7 +1267,7 @@ export function AuthPage({ mode }: { mode: Mode }) {
                       autoComplete="email"
                       inputMode="email"
                       className={inputClasses}
-                      placeholder="you@ speed.com"
+                      placeholder="amogh@gmail.com"
                       {...invalidProps("email")}
                     />
                   </Field>
