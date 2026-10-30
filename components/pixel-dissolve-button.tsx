@@ -1,10 +1,12 @@
 "use client";
 
+import Link from "next/link";
 import {
   useEffect,
   useRef,
   useState,
   type CSSProperties,
+  type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
 } from "react";
 
@@ -35,11 +37,25 @@ export type PixelDissolveButtonProps = {
   dissolveColor?: string;
 
   /**
-   * Kept for backwards compatibility.
+   * Optional label/arrow color. Applied inline so it always wins
+   * over the default white text (no class-order surprises).
+   */
+  textColor?: string;
+
+  /**
+   * Kept for backwards compatibility. Not used.
    */
   baseColor?: string;
 
   href?: string;
+
+  /**
+   * Only used together with href. Internal links ("/..." or "#...")
+   * go through next/link, everything else is a normal <a>.
+   */
+  target?: string;
+
+  rel?: string;
 
   onClick?: () => void;
 
@@ -152,9 +168,13 @@ export function PixelDissolveButton({
 
   dissolveColor,
 
-  baseColor: _baseColor,
+  textColor,
 
   href,
+
+  target,
+
+  rel,
 
   onClick,
 
@@ -188,10 +208,37 @@ export function PixelDissolveButton({
 
   const [hovered, setHovered] = useState(false);
 
+  const [reduceMotion, setReduceMotion] = useState(false);
+
   /*
    * Used only when dissolveColor isn't provided.
    */
   const luminanceRef = useRef(0.35);
+
+  /*
+   * Reduced motion turns the dissolve off completely.
+   */
+  const animationOff = disableAnimation || reduceMotion;
+
+  /* ==========================================================
+     REDUCED MOTION
+     ========================================================== */
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.matchMedia) {
+      return;
+    }
+
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+
+    const update = () => setReduceMotion(media.matches);
+
+    update();
+
+    media.addEventListener("change", update);
+
+    return () => media.removeEventListener("change", update);
+  }, []);
 
   /* ==========================================================
      DETERMINE FALLBACK EFFECT COLOR
@@ -210,7 +257,7 @@ export function PixelDissolveButton({
   useEffect(() => {
     const canvas = canvasRef.current;
 
-    if (!canvas || disableAnimation) {
+    if (!canvas || animationOff) {
       return;
     }
 
@@ -291,9 +338,10 @@ export function PixelDissolveButton({
 
     resize();
 
-    const observer = new ResizeObserver(resize);
+    const observer =
+      typeof ResizeObserver !== "undefined" ? new ResizeObserver(resize) : null;
 
-    observer.observe(parent);
+    observer?.observe(parent);
 
     /* ========================================================
        DRAW
@@ -437,16 +485,16 @@ export function PixelDissolveButton({
 
     return () => {
       stop();
-      observer.disconnect();
+      observer?.disconnect();
     };
-  }, [hovered, disableAnimation, cellSize, color, dissolveColor]);
+  }, [hovered, animationOff, cellSize, color, dissolveColor]);
 
   /* ==========================================================
-     HOVER
+     HOVER (pointer only, so touch taps never leave it stuck)
      ========================================================== */
 
   const handleEnter = () => {
-    if (disabled || disableAnimation) {
+    if (disabled || animationOff) {
       return;
     }
 
@@ -490,11 +538,27 @@ export function PixelDissolveButton({
   };
 
   /* ==========================================================
+     LINK CLICK
+     ========================================================== */
+
+  const handleLinkClick = (event: ReactMouseEvent<HTMLAnchorElement>) => {
+    if (disabled) {
+      event.preventDefault();
+
+      return;
+    }
+
+    onClick?.();
+  };
+
+  /* ==========================================================
      BASE BUTTON STYLE
      ========================================================== */
 
   const style: CSSProperties = {
     background: gradient ?? color,
+
+    ...(textColor ? { color: textColor } : null),
   };
 
   /* ==========================================================
@@ -506,11 +570,13 @@ export function PixelDissolveButton({
     "relative",
     "isolate",
     "inline-flex",
+    "max-w-full",
     "items-center",
     "justify-between",
     "gap-3",
     "overflow-hidden",
-    "px-7",
+    "px-5",
+    "sm:px-7",
     "py-0",
     "min-h-12",
 
@@ -539,7 +605,7 @@ export function PixelDissolveButton({
      ========================================================== */
 
   const arrowStyle: CSSProperties = {
-    transition: "transform 200ms ease-out",
+    transition: reduceMotion ? "none" : "transform 200ms ease-out",
 
     transform: hovered ? "rotate(-45deg)" : "rotate(0deg)",
   };
@@ -549,7 +615,7 @@ export function PixelDissolveButton({
      ========================================================== */
 
   const canvasStyle: CSSProperties = {
-    opacity: disableAnimation ? 0 : hovered ? 1 : 0,
+    opacity: animationOff ? 0 : hovered ? 1 : 0,
 
     transition: "opacity 100ms ease-out",
 
@@ -575,7 +641,7 @@ export function PixelDissolveButton({
     <>
       {/* Label */}
 
-      <span className="relative z-10 whitespace-nowrap">{label}</span>
+      <span className="relative z-10 min-w-0 truncate">{label}</span>
 
       {/* Arrow */}
 
@@ -622,16 +688,34 @@ export function PixelDissolveButton({
      ========================================================== */
 
   if (href) {
+    const isInternal =
+      !target && (href.startsWith("/") || href.startsWith("#"));
+
+    const linkProps = {
+      className: baseClassName,
+      style,
+      onClick: handleLinkClick,
+      onPointerEnter: handlePointerEnter,
+      onPointerLeave: handleLeave,
+      onPointerCancel: handleLeave,
+      "aria-disabled": disabled ? true : undefined,
+      tabIndex: disabled ? -1 : undefined,
+    };
+
+    if (isInternal) {
+      return (
+        <Link href={href} {...linkProps}>
+          {content}
+        </Link>
+      );
+    }
+
     return (
       <a
         href={href}
-        className={baseClassName}
-        style={style}
-        onMouseEnter={handleEnter}
-        onMouseLeave={handleLeave}
-        onPointerEnter={handlePointerEnter}
-        onPointerLeave={handleLeave}
-        aria-disabled={disabled ? true : undefined}
+        target={target}
+        rel={rel ?? (target === "_blank" ? "noopener noreferrer" : undefined)}
+        {...linkProps}
       >
         {content}
       </a>
@@ -650,10 +734,9 @@ export function PixelDissolveButton({
       className={baseClassName}
       style={style}
       onClick={onClick}
-      onMouseEnter={handleEnter}
-      onMouseLeave={handleLeave}
       onPointerEnter={handlePointerEnter}
       onPointerLeave={handleLeave}
+      onPointerCancel={handleLeave}
     >
       {content}
     </button>

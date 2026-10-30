@@ -1,2164 +1,388 @@
 "use client";
 
 import Link from "next/link";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent, ReactNode } from "react";
+import { FileSpreadsheet, FileText, Menu, PanelRight, Plus, Waypoints, X } from "lucide-react";
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
-
-import type { PointerEvent } from "react";
-
-import { ArrowRight } from "lucide-react";
-
-import gsap from "gsap";
-
+import { authApi } from "@/lib/django-api";
 import { PixelDissolveButton } from "@/components/pixel-dissolve-button";
+import { QueryPilotDemo } from "@/components/hero/querypilot-demo";
+import { AgentTrace, MONO, QP, SANS, alpha, type TraceRun } from "@/components/hero/agent-trace-demo";
+import FinalCTASection from "@/components/hero/component_last_cta";
+import EngineeringPreview from "@/components/hero/engineering-preview";
+import { FeaturesSection } from "@/components/demos/features-showcase";
 
-import { QueryPilotApp } from "@/components/hero/query-pilot-app";
+/* ============================================================================
+ * QueryPilot public site. Dark only.
+ * Tokens: canvas #0A0A0A, hairline white/10, primary #3A44A8.
+ * ========================================================================== */
 
-import { DemoWindowChrome } from "@/components/hero/demo-window-chrome";
+/** The one page frame. Nav, hero, demo and every section share it so edges line up. */
+const FRAME = "w-[var(--qp-frame,min(92vw,1120px))]";
+const BRAND_BLUE = "#3a44a8";
+const BRAND_DISSOLVE_BLUE = "#2a3282";
+const GITHUB_URL = "https://github.com/Amogh-Mudakavi/QueryPilot_backend";
+// Relative on purpose: resolves to localhost:3000/engineering in dev and to your own domain in production.
+const ENGINEERING_HREF = "/engineering";
+// Where a signed-in person lands (same place the auth page sends them after login).
+const APP_HREF = "/workspaces";
 
-import { QueryPilotProcessCards } from "@/components/hero/process-cards";
+const focusRing =
+  "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/60";
 
-import { SkyBlueBackground } from "@/components/hero/SkyBlueBackground";
+/** Shared look for the small pill buttons (nav, menu, ghost). Same overrides the auth page uses. */
+const PD_PILL = "!rounded-full !min-h-0 !px-4 !text-[13px] !font-medium !normal-case !tracking-normal";
+/** Tighter on very small phones so the nav row never overflows. */
+const PD_TINY = "max-[399px]:!gap-1.5 max-[399px]:!px-3";
+/** Outlined, see-through button. Pair with textColor / dissolveColor below. */
+const PD_GHOST_BORDER = "border !border-white/15";
+const GHOST_TEXT = "rgba(255,255,255,0.8)";
+const GHOST_DISSOLVE = "#4A4A4A";
+/** The white pill (sign up / open). */
+const WHITE_DISSOLVE = "#BDBDBD";
+const WHITE_TEXT = "#0A0A0A";
 
-import {
-  PlannerAgentDemo,
-  AsyncIngestionDemo,
-  ConversationMemoryDemo,
-  SSEStreamingDemo,
-  StructuredDataDemo,
-  WorkspaceIsolationDemo,
-} from "@/components/demos";
+const useIsoLayoutEffect = typeof window !== "undefined" ? useLayoutEffect : useEffect;
 
-// Prevent the browser from painting a previous scroll position during a hard reload.
+/* ------------------------------------------------------------------ nav -- */
 
-// This runs as soon as the client module evaluates, before the first React layout pass.
+const NAV_LINKS = [
+  { label: "Features", href: "/#features" },
+  { label: "How it works", href: "/#engineering" },
+  { label: "Engineering", href: ENGINEERING_HREF },
+] as const;
 
-if (typeof window !== "undefined") {
-  const navigation = performance.getEntriesByType("navigation")[0] as
-    | PerformanceNavigationTiming
-    | undefined;
+function GithubIcon({ className = "size-[14px]" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className={className}>
+      <path d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.604-3.369-1.34-3.369-1.34-.455-1.157-1.11-1.466-1.11-1.466-.908-.62.069-.607.069-.607 1.004.07 1.532 1.03 1.532 1.03.892 1.529 2.341 1.087 2.91.831.091-.646.349-1.087.635-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.269.098-2.647 0 0 .839-.269 2.75 1.025A9.564 9.564 0 0 1 12 6.844c.85.004 1.705.115 2.504.337 1.909-1.294 2.746-1.025 2.746-1.025.546 1.378.202 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.843-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48A10.001 10.001 0 0 0 22 12c0-5.523-4.477-10-10-10Z" />
+    </svg>
+  );
+}
 
-  if (navigation?.type === "reload") {
+/**
+ * Header sizes in the wild: 56 to 64px is the norm for product sites, marketing sites run 64 to 72px.
+ * Here it is 64px, 72px on large screens (the `--qp-nav-h` variable below), with 14px links and a 24px mark.
+ * Transparent at the top of the page, a blurred bar with a hairline once you scroll.
+ */
+const navLink = `rounded-md px-3 py-1.5 text-[14px] text-white/65 transition-colors hover:bg-white/[0.06] hover:text-white ${focusRing}`;
+
+/** Props kept so existing call sites compile; the bar is dark only. */
+export function PublicNav(_props: { initialTheme?: "light" | "dark"; autoTheme?: boolean; showProgress?: boolean }) {
+  const [open, setOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  // null while we have not looked yet, so signed-out buttons never flash for a signed-in person.
+  const [authed, setAuthed] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  // Signed in? A saved token shows "Open QueryPilot" straight away, then we confirm with the server.
+  useEffect(() => {
+    let cancelled = false;
+    let hasToken = false;
+
     try {
-      history.scrollRestoration = "manual";
+      hasToken = authApi.hasAccess();
     } catch {
-      // Ignore browsers that do not expose scrollRestoration.
+      hasToken = false;
     }
 
-    window.scrollTo(0, 0);
-  }
-}
+    if (!hasToken) {
+      setAuthed(false);
+      return;
+    }
 
-/* ---------------------------------------------------------------------------
+    setAuthed(true);
 
- * Shared palette
-
- * ---------------------------------------------------------------------------
-
- * Single source of truth for the warm beige used across the public site
-
- * (hero, mobile hero, page background, builder-section card grid, and now
-
- * the features section). Kept as a plain constant rather than a Tailwind
-
- * theme token so it can be dropped straight into arbitrary-value classes
-
- * and inline gradients without a config change.
-
- * --------------------------------------------------------------------------- */
-
-const PAGE_BEIGE = "#F4EFE4";
-
-/* ------------------------------------------------------------------------
-
- * Navbar theme detection
-
- * ------------------------------------------------------------------------ */
-
-const NAV_SAMPLE_EPSILON_PX = 32;
-
-function parseRgbColor(color: string): [number, number, number, number] | null {
-  const match = color.match(
-    /rgba?\s*\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*(?:,\s*([\d.]+)\s*)?\)/,
-  );
-
-  if (!match) return null;
-
-  return [
-    Number(match[1]),
-    Number(match[2]),
-    Number(match[3]),
-    match[4] !== undefined ? Number(match[4]) : 1,
-  ];
-}
-
-function relativeLuminance(r: number, g: number, b: number) {
-  const channel = (value: number) => {
-    const c = value / 255;
-
-    return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
-  };
-
-  return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
-}
-
-export function PublicNav() {
-  const [darkTheme, setDarkTheme] = useState(false);
-
-  useLayoutEffect(() => {
-    let ticking = false;
-    let lastSampleY = Number.NEGATIVE_INFINITY;
-
-    const detectTheme = (force = false) => {
-      ticking = false;
-
-      const scrollY = window.scrollY;
-
-      if (scrollY < window.innerHeight * 0.92) {
-        lastSampleY = scrollY;
-        setDarkTheme(false);
-        return;
-      }
-
-      if (
-        !force &&
-        Math.abs(scrollY - lastSampleY) < NAV_SAMPLE_EPSILON_PX
-      ) {
-        return;
-      }
-
-      lastSampleY = scrollY;
-
-      const nav = document.querySelector(
-        "[data-querypilot-nav]",
-      ) as HTMLElement | null;
-
-      if (!nav) return;
-
-      const navRect = nav.getBoundingClientRect();
-
-      const sampleX = navRect.left + navRect.width / 2;
-      const sampleY = navRect.bottom + 8;
-
-      const element = document.elementFromPoint(
-        sampleX,
-        sampleY,
-      ) as HTMLElement | null;
-
-      if (!element) return;
-
-      let current: HTMLElement | null = element;
-
-      while (current) {
-        const background = window.getComputedStyle(current).backgroundColor;
-        const parsed = parseRgbColor(background);
-
-        if (parsed) {
-          const [r, g, b, a] = parsed;
-
-          if (a > 0.35) {
-            const luminance = relativeLuminance(r, g, b);
-
-            setDarkTheme(luminance < 0.5);
-            return;
-          }
-        }
-
-        current = current.parentElement;
-      }
-
-      setDarkTheme(false);
-    };
-
-    const onScroll = () => {
-      if (ticking) return;
-
-      ticking = true;
-
-      window.requestAnimationFrame(() => {
-        detectTheme();
-      });
-    };
-
-    const onResize = () => {
-      lastSampleY = Number.NEGATIVE_INFINITY;
-
-      if (ticking) return;
-
-      ticking = true;
-
-      window.requestAnimationFrame(() => {
-        detectTheme(true);
-      });
-    };
-
-    detectTheme(true);
-
-    window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", onResize);
+    authApi.me().catch(() => {
+      if (!cancelled) setAuthed(false);
+    });
 
     return () => {
-      window.removeEventListener("scroll", onScroll);
-      window.removeEventListener("resize", onResize);
+      cancelled = true;
     };
   }, []);
 
-  const textClass = darkTheme ? "text-white" : "text-black";
+  useEffect(() => {
+    if (!open) return;
 
-  const mutedTextClass = darkTheme
-    ? "text-white/70 hover:text-white"
-    : "text-black/60 hover:text-black";
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
 
-  const backgroundClass = darkTheme
-    ? "bg-[#080808]/72"
-    : "bg-white/72";
+    // If the window grows to desktop width while the menu is open, close it.
+    const wide = window.matchMedia("(min-width: 1000px)");
 
-  const signupClass = darkTheme
-    ? "bg-white text-black hover:bg-white/90"
-    : "bg-black text-white hover:bg-black/90";
+    const onWide = () => {
+      if (wide.matches) setOpen(false);
+    };
+
+    window.addEventListener("keydown", onKey);
+    wide.addEventListener("change", onWide);
+
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      wide.removeEventListener("change", onWide);
+      document.body.style.overflow = prev;
+    };
+  }, [open]);
+
+  const solid = scrolled || open;
+  const checking = authed === null;
 
   return (
     <header
       data-querypilot-nav
-      className="
-        fixed
-        top-3
-        left-[4vw]
-        right-[4vw]
-        z-[60]
-        min-[901px]:left-[15vw]
-        min-[901px]:right-[15vw]
-      "
+      className={`fixed inset-x-0 top-0 z-[60] border-b transition-[background-color,border-color] duration-300 ${
+        solid
+          ? "border-white/10 bg-[#0A0A0A]/80 backdrop-blur-xl"
+          : "border-transparent bg-transparent"
+      }`}
     >
-      <nav
-        aria-label="Main navigation"
-        className={`
-          grid
-          h-[58px]
-          w-full
-          grid-cols-[1fr_auto_1fr]
-          items-center
-          ${backgroundClass}
-          px-1
-          sm:px-2
-          backdrop-blur-md
-          transition-colors
-          duration-300
-        `}
+      <div
+        className={`mx-auto grid grid-cols-[1fr_auto] items-center gap-4 min-[1000px]:grid-cols-[1fr_auto_1fr] ${FRAME}`}
+        style={{ height: "var(--qp-nav-h, 64px)" }}
       >
-        {/* LEFT ------------------------------------------------------ */}
-        <div className="flex min-w-0 items-center justify-self-start">
+        {/* Brand + GitHub */}
+        <div className="inline-flex items-center gap-3 justify-self-start">
+
           <Link
             href="/"
             aria-label="QueryPilot home"
-            className={`
-              inline-flex
-              items-center
-              gap-2.5
-              whitespace-nowrap
-              text-[18px]
-              sm:text-[19px]
-              font-normal
-              leading-none
-              tracking-[-0.035em]
-              transition-colors
-              duration-200
-              ${textClass}
-            `}
+            className={`inline-flex items-center gap-2.5 rounded-md text-[16px] font-semibold tracking-[-0.02em] text-white ${focusRing}`}
           >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/querypilot-logo.svg"
               alt=""
               aria-hidden="true"
-              className="h-[23px] w-[23px] shrink-0 object-contain"
+              className="size-6 object-contain"
             />
-
-            <span>QueryPilot</span>
+            QueryPilot
           </Link>
 
-          <span
-            aria-hidden="true"
-            className={`
-              mx-4
-              h-5
-              w-px
-              ${darkTheme ? "bg-white/10" : "bg-black/10"}
-            `}
-          />
-
           <a
-            href="https://github.com/Amogh-Mudakavi/QueryPilot_backend"
+            href={GITHUB_URL}
             target="_blank"
             rel="noopener noreferrer"
-            aria-label="QueryPilot GitHub"
-            className={`
-              inline-flex
-              items-center
-              justify-center
-              ${mutedTextClass}
-              transition-colors
-              duration-200
-            `}
+            aria-label="QueryPilot on GitHub"
+            title="GitHub"
+            className={`inline-flex size-9 items-center justify-center rounded-md text-white/80 transition-colors hover:bg-white/[0.06] hover:text-white ${focusRing}`}
           >
-            <svg
-              viewBox="0 0 24 24"
-              fill="currentColor"
-              aria-hidden="true"
-              className="h-[19px] w-[19px]"
-            >
-              <path d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.604-3.369-1.34-3.369-1.34-.455-1.157-1.11-1.466-1.11-1.466-.908-.62.069-.607.069-.607 1.004.07 1.532 1.03 1.532 1.03.892 1.529 2.341 1.087 2.91.831.091-.646.349-1.087.635-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.269.098-2.647 0 0 .839-.269 2.75 1.025A9.564 9.564 0 0 1 12 6.844c.85.004 1.705.115 2.504.337 1.909-1.294 2.746-1.025 2.746-1.025.546 1.378.202 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.843-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48A10.001 10.001 0 0 0 22 12c0-5.523-4.477-10-10-10Z" />
-            </svg>
-          </a>
-        </div>
-
-        {/* CENTER ---------------------------------------------------- */}
-        <div
-          className="
-            hidden
-            items-center
-            gap-7
-            min-[901px]:flex
-            justify-self-center
-          "
-        >
-          <a
-            href="#use-cases"
-            className={`
-              text-[15px]
-              sm:text-[16px]
-              font-normal
-              leading-none
-              tracking-[-0.015em]
-              transition-colors
-              duration-200
-              ${mutedTextClass}
-            `}
-          >
-            Engineering
+            <GithubIcon className="size-6" />
           </a>
 
-          <Link
-            href="/technical-challenges"
-            className={`
-              text-[15px]
-              sm:text-[16px]
-              font-normal
-              leading-none
-              tracking-[-0.015em]
-              transition-colors
-              duration-200
-              ${mutedTextClass}
-            `}
-          >
-            Technical challenges
-          </Link>
         </div>
 
-        {/* RIGHT ----------------------------------------------------- */}
-        <div
-          className="
-            flex
-            items-center
-            gap-3
-            sm:gap-4
-            justify-self-end
-          "
+        {/* Desktop navigation */}
+        <nav
+          aria-label="Main navigation"
+          className="hidden items-center gap-1 min-[1000px]:flex"
         >
-          <Link
-            href="/login"
-            className={`
-              text-[14px]
-              sm:text-[15px]
-              font-normal
-              leading-none
-              tracking-[-0.015em]
-              ${mutedTextClass}
-              transition-colors
-              duration-200
-            `}
-          >
-            Log in
-          </Link>
+          {NAV_LINKS.map((l) => (
+            <Link key={l.label} href={l.href} className={navLink}>
+              {l.label}
+            </Link>
+          ))}
+        </nav>
 
-          <Link
-            href="/signup"
-            className={`
-              inline-flex
-              h-9
-              items-center
-              justify-center
-              rounded-[10px]
-              px-3.5
-              text-[14px]
-              font-medium
-              leading-none
-              tracking-[-0.02em]
-              shadow-[0_3px_14px_rgba(0,0,0,0.08)]
-              transition-all
-              duration-200
-              ${signupClass}
-            `}
+        {/* Right-side actions */}
+        <div className="flex items-center gap-1 justify-self-end">
+
+          <div
+            className={`flex items-center gap-1 ${checking ? "invisible" : ""}`}
+            aria-hidden={checking ? true : undefined}
           >
-            Sign up
-          </Link>
+            {authed ? (
+              <PixelDissolveButton
+                label="Open QueryPilot"
+                href={APP_HREF}
+                color="#ffffff"
+                textColor={WHITE_TEXT}
+                dissolveColor={WHITE_DISSOLVE}
+                cellSize={4}
+                className={`ml-1 ${PD_PILL} ${PD_TINY} !h-9`}
+              />
+            ) : (
+              <>
+                <PixelDissolveButton
+                  label="Log in"
+                  href="/login"
+                  color="transparent"
+                  textColor={GHOST_TEXT}
+                  dissolveColor={GHOST_DISSOLVE}
+                  cellSize={4}
+                  className={`${PD_PILL} ${PD_GHOST_BORDER} !h-9 max-[519px]:!hidden`}
+                />
+
+                <PixelDissolveButton
+                  label="Sign up"
+                  href="/signup"
+                  color="#ffffff"
+                  textColor={WHITE_TEXT}
+                  dissolveColor={WHITE_DISSOLVE}
+                  cellSize={4}
+                  className={`ml-1 ${PD_PILL} ${PD_TINY} !h-9`}
+                />
+              </>
+            )}
+          </div>
+
+          {/* Mobile menu toggle */}
+          <button
+            type="button"
+            aria-label={open ? "Close menu" : "Open menu"}
+            aria-expanded={open}
+            aria-controls="qp-mobile-menu"
+            onClick={() => setOpen((o) => !o)}
+            className={`ml-1 inline-flex size-9 items-center justify-center rounded-md text-white/80 hover:bg-white/[0.06] min-[1000px]:hidden ${focusRing}`}
+          >
+            {open ? <X size={18} /> : <Menu size={18} />}
+          </button>
+
         </div>
-      </nav>
+      </div>
+
+      {/* Mobile navigation */}
+      {open ? (
+        <div
+          id="qp-mobile-menu"
+          className="absolute inset-x-0 top-full overflow-y-auto border-t border-white/10 bg-[#0A0A0A] min-[1000px]:hidden"
+          style={{ height: "calc(100svh - var(--qp-nav-h, 64px))" }}
+        >
+          <ul className={`mx-auto flex flex-col pt-2 ${FRAME}`}>
+            {[...NAV_LINKS, { label: "GitHub", href: GITHUB_URL }].map((l) => (
+              <li key={l.label} className="border-b border-white/[0.08]">
+                {l.href.startsWith("http") ? (
+                  <a
+                    href={l.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block py-4 text-[18px] text-white/85"
+                  >
+                    {l.label}
+                  </a>
+                ) : (
+                  <Link
+                    href={l.href}
+                    onClick={() => setOpen(false)}
+                    className="block py-4 text-[18px] text-white/85"
+                  >
+                    {l.label}
+                  </Link>
+                )}
+              </li>
+            ))}
+          </ul>
+
+          <div className={`mx-auto flex flex-col gap-3 py-6 ${FRAME}`}>
+            {authed ? (
+              <PixelDissolveButton
+                label="Open QueryPilot"
+                href={APP_HREF}
+                onClick={() => setOpen(false)}
+                color="#ffffff"
+                textColor={WHITE_TEXT}
+                dissolveColor={WHITE_DISSOLVE}
+                cellSize={5}
+                className={`${PD_PILL} !h-11 !w-full !text-[15px]`}
+              />
+            ) : (
+              <>
+                <PixelDissolveButton
+                  label="Log in"
+                  href="/login"
+                  onClick={() => setOpen(false)}
+                  color="transparent"
+                  textColor={GHOST_TEXT}
+                  dissolveColor={GHOST_DISSOLVE}
+                  cellSize={5}
+                  className={`${PD_PILL} ${PD_GHOST_BORDER} !h-11 !w-full !text-[15px]`}
+                />
+
+                <PixelDissolveButton
+                  label="Sign up"
+                  href="/signup"
+                  onClick={() => setOpen(false)}
+                  color="#ffffff"
+                  textColor={WHITE_TEXT}
+                  dissolveColor={WHITE_DISSOLVE}
+                  cellSize={5}
+                  className={`${PD_PILL} !h-11 !w-full !text-[15px]`}
+                />
+              </>
+            )}
+          </div>
+        </div>
+      ) : null}
     </header>
   );
 }
 
-/* ============================================================
+/* ----------------------------------------------------------------- hero -- */
 
-   ProductPreview / Hero
+/**
+ * Hero copy lives here; the layout does not depend on the words.
+ * Same idea, other voices, if you want to try them:
+ *   "Don't just search your data. Understand it."
+ *   "Search finds files. QueryPilot finds answers."
+ *   "Your data has answers, not just matches."
+ */
+const HERO = {
+  line1: "Stop searching your data.",
+  line2: "Start understanding it.",
+  pitch: "QueryPilot searches across your documents, brings scattered pieces of evidence together, and shows you exactly where the answer comes from.",
+} as const;
 
-   ============================================================ */
+const DOTS: CSSProperties = {
+  backgroundImage: "radial-gradient(rgba(255,255,255,.1) 1px, transparent 1px)",
+  backgroundSize: "18px 18px",
+  WebkitMaskImage: "radial-gradient(ellipse 70% 95% at 88% 0%, #000 0%, transparent 72%)",
+  maskImage: "radial-gradient(ellipse 70% 95% at 88% 0%, #000 0%, transparent 72%)",
+};
 
-function clamp01(value: number) {
-  return Math.min(1, Math.max(0, value));
-}
-
-function easeOutCubic(value: number) {
-  return 1 - Math.pow(1 - value, 3);
-}
-
-function smoothstep(value: number) {
-  return value * value * (3 - 2 * value);
-}
-
-function lerp(from: number, to: number, amount: number) {
-  return from + (to - from) * amount;
-}
-
-const MAIN_WINDOW_ASPECT = 16 / 8;
-
-const PAGE_FRAME_WIDTH_VW = 70;
-
-const RESTING_DEMO_WIDTH_VW = 92;
-
-const RESTING_DEMO_MIN_WIDTH = 780;
-
-const RESTING_DEMO_MAX_WIDTH = 1500;
-
-const DEMO_WIDTH_VW = 54;
-
-const DEMO_MIN_WIDTH = 700;
-
-const DEMO_MAX_WIDTH = 960;
-
-const DEMO_DURATION_MS = 30000;
-
-// Cap how often the demo timer pushes a React state update. The visible
-// content (typing text, process cards) reads fine at 15 updates/sec -
-// there is no reason to re-render React at a full 60fps for 30 seconds
-// straight. This alone cuts re-render volume by ~4x during the demo.
-const DEMO_STATE_UPDATE_INTERVAL_MS = 66;
-
-const DEMO_OPEN_START = 0.02;
-
-// Height of the blue pinstripe band as a share of the screen, measured from
-// the bottom edge upward: 25% while the hero is resting, 40% once the demo
-// is open. The band is always laid out at the taller (demo) size and squashed
-// with scaleY at rest, so nothing is resized or repainted while scrolling.
-const STROKES_REST_HEIGHT = 0.75;
-
-const STROKES_DEMO_HEIGHT = 0.65;
-
-const DEMO_RETURN_COMPLETE = 0.02;
-
-const DEMO_RETURN_START = 0.74;
-
-const DEMO_OPEN_DURATION_S = 0.82;
-
-const EXPANDED_WINDOW_ASPECT = 27 / 20;
-
-function StaticHeroHeading() {
+function Hero() {
   return (
-    <h1 className="w-full text-[clamp(2.05rem,2.35vw,2.65rem)] font-normal leading-[1.04] tracking-[-0.045em] text-black">
-      <span data-hero-title-line className="block whitespace-nowrap">
-        Don't Search Your Data.
-      </span>
-
-      <span data-hero-title-line className="block">
-        Understand It.
-      </span>
-    </h1>
-  );
-}
-
-function ProductPreview() {
-  const sectionRef = useRef<HTMLElement | null>(null);
-
-  const heroCopyRef = useRef<HTMLDivElement | null>(null);
-
-  const sceneRef = useRef<HTMLDivElement | null>(null);
-
-  const mainWindowRef = useRef<HTMLDivElement | null>(null);
-
-  const centerWindowRef = useRef<HTMLDivElement | null>(null);
-
-  const processCardsRef = useRef<HTMLDivElement | null>(null);
-
-  const restingBackgroundRef = useRef<HTMLDivElement | null>(null);
-
-  const restingEntryRef = useRef<HTMLDivElement | null>(null);
-
-  const heroParagraphRef = useRef<HTMLParagraphElement | null>(null);
-
-  const heroActionsRef = useRef<HTMLDivElement | null>(null);
-
-  const strokesRef = useRef<HTMLDivElement | null>(null);
-
-  const strokesCenterCoverRef = useRef<HTMLDivElement | null>(null);
-
-  const restingIntroCompleteRef = useRef(false);
-
-  const dragStateRef = useRef({
-    active: false,
-
-    pointerX: 0,
-
-    pointerY: 0,
-
-    x: 0,
-
-    y: 0,
-  });
-
-  const rafRef = useRef<number | null>(null);
-
-  const smoothProgressRef = useRef(0);
-
-  const demoPhaseRef = useRef<"resting" | "running" | "complete" | "returning">(
-    "resting",
-  );
-
-  const demoPlayedRef = useRef(false);
-
-  const visualProgressRef = useRef(0);
-
-  const openTweenRef = useRef<gsap.core.Tween | null>(null);
-
-  const lastScrollYRef = useRef(0);
-
-  const userScrollIntentRef = useRef(false);
-
-  // A wheel/trackpad gesture is a burst of wheel events, not one intent per
-
-  // event. These refs let the hero consume one whole burst when a running
-
-  // demo is skipped, preventing the same momentum from entering Features.
-
-  const wheelBurstActiveRef = useRef(false);
-
-  const wheelBurstTimerRef = useRef<number | null>(null);
-
-  const consumeWheelBurstRef = useRef(false);
-
-  const returnStartElapsedRef = useRef(0);
-
-  const keyboardIntentConsumedRef = useRef(false);
-
-  const heroOnScreenRef = useRef(true);
-
-  const [heroOnScreen, setHeroOnScreen] = useState(true);
-
-  const elapsedRef = useRef(DEMO_DURATION_MS);
-
-  const [demoActive, setDemoActive] = useState(false);
-
-  // Keep the resting hero on the finished answer state so the first frame
-  // communicates product value. The existing scroll interaction still calls
-  // beginDemo(), which resets the timeline to 0 and plays the demo normally.
-  const [demoElapsed, setDemoElapsed] = useState(DEMO_DURATION_MS);
-
-  const [showRestingBackgroundImage, setShowRestingBackgroundImage] =
-    useState(true);
-
-  const restingBackgroundReadyRef = useRef(true);
-
-  useEffect(() => {
-    if (!demoActive || !heroOnScreen) return;
-
-    let raf = 0;
-
-    let last = performance.now();
-
-    let lastStateFlush = 0;
-
-    const tick = (now: number) => {
-      const delta = Math.min(now - last, 100);
-
-      last = now;
-
-      if (demoPhaseRef.current === "running") {
-        const next = Math.min(
-          elapsedRef.current + delta,
-
-          DEMO_DURATION_MS,
-        );
-
-        elapsedRef.current = next;
-
-        const isDone = next >= DEMO_DURATION_MS;
-
-        // Throttle the React state flush instead of pushing a re-render on
-        // every animation frame. The ref above always holds the true value
-        // for the imperative/GSAP side; the state below only needs to be
-        // "fresh enough" for what's actually rendered on screen.
-        if (isDone || now - lastStateFlush >= DEMO_STATE_UPDATE_INTERVAL_MS) {
-          lastStateFlush = now;
-
-          setDemoElapsed(next);
-        }
-
-        if (isDone) {
-          demoPhaseRef.current = "complete";
-
-          window.dispatchEvent(new Event("querypilot-demo-complete"));
-
-          setDemoElapsed(DEMO_DURATION_MS);
-
-          setDemoActive(false);
-
-          return;
-        }
-      }
-
-      raf = window.requestAnimationFrame(tick);
-    };
-
-    raf = window.requestAnimationFrame(tick);
-
-    return () => window.cancelAnimationFrame(raf);
-  }, [demoActive, heroOnScreen]);
-
-  useLayoutEffect(() => {
-    const section = sectionRef.current;
-
-    const heroCopy = heroCopyRef.current;
-
-    const scene = sceneRef.current;
-
-    const mainWindow = mainWindowRef.current;
-
-    const processCards = processCardsRef.current;
-
-    const restingBackground = restingBackgroundRef.current;
-
-    const restingEntry = restingEntryRef.current;
-
-    const heroParagraph = heroParagraphRef.current;
-
-    const heroActions = heroActionsRef.current;
-
-    const strokes = strokesRef.current;
-
-    const strokesCenterCover = strokesCenterCoverRef.current;
-
-    if (
-      !section ||
-      !heroCopy ||
-      !scene ||
-      !mainWindow ||
-      !processCards ||
-      !restingBackground ||
-      !restingEntry ||
-      !heroParagraph ||
-      !heroActions
-    ) {
-      return;
-    }
-
-    const reduceMotion = window.matchMedia(
-      "(prefers-reduced-motion: reduce)",
-    ).matches;
-
-    const setDrag = () => {
-      const { x, y } = dragStateRef.current;
-
-      gsap.set(scene, { x, y });
-    };
-
-    const resetDrag = () => {
-      dragStateRef.current.active = false;
-
-      dragStateRef.current.pointerX = 0;
-
-      dragStateRef.current.pointerY = 0;
-
-      dragStateRef.current.x = 0;
-
-      dragStateRef.current.y = 0;
-
-      setDrag();
-    };
-
-    const getProgress = () => {
-      const rect = section.getBoundingClientRect();
-
-      const distance = Math.max(
-        section.offsetHeight - window.innerHeight,
-
-        1,
-      );
-
-      return clamp01(-rect.top / distance);
-    };
-
-    const getGeometry = () => {
-      const viewportHeight = window.innerHeight;
-
-      const frameWidth = window.innerWidth * (PAGE_FRAME_WIDTH_VW / 100);
-
-      const desiredRestWidth = Math.min(
-        frameWidth * (RESTING_DEMO_WIDTH_VW / 100),
-
-        RESTING_DEMO_MAX_WIDTH,
-      );
-
-      const restWidth = Math.max(
-        Math.min(desiredRestWidth, frameWidth),
-
-        Math.min(RESTING_DEMO_MIN_WIDTH, frameWidth),
-      );
-
-      const restLeft = Math.max(
-        (frameWidth - restWidth) / 2,
-
-        0,
-      );
-
-      const demoWidth = Math.min(
-        Math.max(
-          window.innerWidth * (DEMO_WIDTH_VW / 100),
-
-          DEMO_MIN_WIDTH,
-        ),
-
-        DEMO_MAX_WIDTH,
-      );
-
-      const finalHeightFromWidth = demoWidth / EXPANDED_WINDOW_ASPECT;
-
-      const finalDemoHeight = Math.min(
-        finalHeightFromWidth,
-
-        viewportHeight * 0.78,
-      );
-
-      const finalWidth = demoWidth;
-
-      const finalLeft = (frameWidth - finalWidth) / 2;
-
-      const restHeight = restWidth / MAIN_WINDOW_ASPECT;
-
-      const restTop = viewportHeight - restHeight;
-
-      return {
-        restWidth,
-
-        restLeft,
-
-        finalWidth,
-
-        finalLeft,
-
-        restTop,
-
-        finalDemoHeight,
-
-        finalTop: Math.max(
-          108,
-
-          (viewportHeight - finalDemoHeight) / 2,
-        ),
-      };
-    };
-
-    const render = (progress = smoothProgressRef.current) => {
-      const p = clamp01(progress);
-
-      const {
-        restWidth,
-
-        restLeft,
-
-        finalWidth,
-
-        finalLeft,
-
-        restTop,
-
-        finalTop,
-
-        finalDemoHeight,
-      } = getGeometry();
-
-      const phase = demoPhaseRef.current;
-
-      const visual =
-        phase === "returning" || phase === "complete" || phase === "running"
-          ? visualProgressRef.current
-          : 0;
-
-      const widthVisual = lerp(
-        restWidth,
-
-        finalWidth,
-
-        visual,
-      );
-
-      const heightVisual = lerp(
-        restWidth / MAIN_WINDOW_ASPECT,
-
-        finalDemoHeight,
-
-        visual,
-      );
-
-      const topVisual = lerp(
-        restTop,
-
-        finalTop,
-
-        visual,
-      );
-
-      const leftVisual = lerp(
-        restLeft,
-
-        finalLeft,
-
-        visual,
-      );
-
-      const backgroundVisibility =
-        phase === "resting"
-          ? restingIntroCompleteRef.current
-            ? 1
-            : 0
-          : phase === "returning"
-            ? smoothstep(1 - visual)
-            : 1 - smoothstep(clamp01((visual - 0.05) / 0.5));
-
-      if (
-        restingBackgroundReadyRef.current &&
-        (restingIntroCompleteRef.current || phase !== "resting")
-      ) {
-        gsap.set(restingBackground, {
-          opacity: backgroundVisibility,
-
-          visibility: backgroundVisibility > 0.001 ? "visible" : "hidden",
-
-          force3D: true,
-        });
-      } else if (!restingBackgroundReadyRef.current) {
-        gsap.set(restingBackground, {
-          opacity: 0,
-
-          visibility: "hidden",
-
-          force3D: true,
-        });
-      }
-
-      gsap.set(mainWindow, {
-        left: leftVisual,
-
-        top: topVisual,
-
-        xPercent: 0,
-
-        yPercent: 0,
-
-        width: widthVisual,
-
-        height: heightVisual,
-
-        scale: 1,
-
-        transformOrigin: "50% 50%",
-
-        visibility: "visible",
-
-        force3D: true,
-      });
-
-      // Blue pinstripe band: grows from 25% to 40% of the screen height as
-      // the demo opens (and shrinks back on the way out). The centre cover
-      // fades away at the same time so the strokes run edge to edge instead
-      // of leaving a white gap around/below the demo window.
-      if (strokes) {
-        gsap.set(strokes, {
-          scaleY: lerp(
-            STROKES_REST_HEIGHT / STROKES_DEMO_HEIGHT,
-
-            1,
-
-            clamp01(visual),
-          ),
-
-          transformOrigin: "50% 100%",
-
-          force3D: true,
-        });
-      }
-
-      if (strokesCenterCover) {
-        gsap.set(strokesCenterCover, {
-          opacity: 1 - smoothstep(clamp01(visual)),
-        });
-      }
-
-      const copyReveal =
-        phase === "resting"
-          ? 1
-          : phase === "returning"
-            ? smoothstep(1 - visual)
-            : 1 - smoothstep(visual);
-
-      // NOTE: no `filter: blur()` here anymore. Blur can't be composited on
-      // the GPU, so animating it every scroll frame forced a full repaint of
-      // this block on every tick - that was the single biggest cause of
-      // scroll jank. Opacity + scale give a near-identical "focus" feel and
-      // are compositor-only (cheap).
-      gsap.set(heroCopy, {
-        opacity: copyReveal,
-
-        y: 0,
-
-        scale: lerp(
-          1,
-
-          0.985,
-
-          1 - copyReveal,
-        ),
-
-        force3D: true,
-      });
-
-      // The process-card component already receives the exact demo timeline
-
-      // through `elapsed`. Keep this parent wrapper as a simple lifecycle gate
-
-      // instead of applying a second, unrelated scroll-position animation on
-
-      // top of it. That lets the same cards play forward and reverse naturally.
-
-      const cardsInDemoPhase =
-        demoPhaseRef.current === "running" ||
-        demoPhaseRef.current === "complete" ||
-        demoPhaseRef.current === "returning";
-
-      const cardVisibility =
-        !demoPlayedRef.current || !cardsInDemoPhase || elapsedRef.current <= 0.5
-          ? 0
-          : 1;
-
-      // Same fix here: dropped the animated `filter: blur()` in favor of
-      // opacity/scale/translate, which the compositor can handle without
-      // repainting the cards every frame.
-      gsap.set(processCards, {
-        opacity: cardVisibility,
-
-        visibility: cardVisibility > 0.001 ? "visible" : "hidden",
-
-        scale: lerp(
-          0.985,
-
-          1,
-
-          cardVisibility,
-        ),
-
-        y: lerp(
-          -8,
-
-          0,
-
-          cardVisibility,
-        ),
-
-        transformOrigin: "50% 50%",
-
-        force3D: true,
-      });
-
-      if (!dragStateRef.current.active) {
-        setDrag();
-      }
-    };
-
-    const tweenVisual = (
-      to: number,
-
-      duration: number,
-
-      onComplete?: () => void,
-    ) => {
-      const proxy = {
-        value: visualProgressRef.current,
-      };
-
-      gsap.killTweensOf(proxy);
-
-      return gsap.to(proxy, {
-        value: to,
-
-        duration,
-
-        ease: to > visualProgressRef.current ? "power3.out" : "power3.inOut",
-
-        overwrite: true,
-
-        onUpdate: () => {
-          visualProgressRef.current = proxy.value;
-
-          render();
-        },
-
-        onComplete: () => {
-          visualProgressRef.current = to;
-
-          render();
-
-          onComplete?.();
-        },
-      });
-    };
-
-    const beginDemo = () => {
-      if (demoPhaseRef.current !== "resting") {
-        return;
-      }
-
-      demoPlayedRef.current = true;
-
-      demoPhaseRef.current = "running";
-
-      visualProgressRef.current = 0;
-
-      elapsedRef.current = 0;
-
-      setDemoElapsed(0);
-
-      setDemoActive(true);
-
-      window.dispatchEvent(new Event("querypilot-demo-start"));
-
-      if (reduceMotion) {
-        visualProgressRef.current = 1;
-
-        render();
-
-        return;
-      }
-
-      openTweenRef.current?.kill();
-
-      openTweenRef.current = tweenVisual(
-        1,
-
-        DEMO_OPEN_DURATION_S,
-      );
-    };
-
-    const resetDemoToRest = () => {
-      openTweenRef.current?.kill();
-
-      openTweenRef.current = null;
-
-      demoPhaseRef.current = "resting";
-
-      visualProgressRef.current = 0;
-
-      elapsedRef.current = 0;
-
-      setDemoActive(false);
-
-      setDemoElapsed(0);
-
-      window.dispatchEvent(new Event("querypilot-demo-reset"));
-
-      render(0);
-    };
-
-    const syncReturnTimeline = (progress: number) => {
-      const returnProgress = smoothstep(
-        clamp01(
-          (progress - DEMO_RETURN_COMPLETE) /
-            (DEMO_RETURN_START - DEMO_RETURN_COMPLETE),
-        ),
-      );
-
-      visualProgressRef.current = returnProgress;
-
-      const nextElapsed = Math.max(
-        0,
-
-        Math.min(
-          returnStartElapsedRef.current * returnProgress,
-
-          DEMO_DURATION_MS,
-        ),
-      );
-
-      elapsedRef.current = nextElapsed;
-
-      setDemoElapsed(nextElapsed);
-    };
-
-    const beginReturnToRest = (progress: number) => {
-      if (!demoPlayedRef.current) {
-        return;
-      }
-
-      if (progress <= DEMO_RETURN_COMPLETE) {
-        resetDemoToRest();
-
-        return;
-      }
-
-      openTweenRef.current?.kill();
-
-      openTweenRef.current = null;
-
-      demoPhaseRef.current = "returning";
-
-      returnStartElapsedRef.current =
-        clamp01(elapsedRef.current / DEMO_DURATION_MS) * DEMO_DURATION_MS;
-
-      syncReturnTimeline(progress);
-
-      setDemoActive(false);
-    };
-
-    // Deterministic hard resolve to the exact completion state already used
-
-    // by the normal timed demo. This is also the state reached by an explicit
-
-    // user skip, so the hero never lands in a half-open visual state.
-
-    const snapToFinalState = () => {
-      openTweenRef.current?.kill();
-
-      openTweenRef.current = null;
-
-      visualProgressRef.current = 1;
-
-      elapsedRef.current = DEMO_DURATION_MS;
-
-      setDemoElapsed(DEMO_DURATION_MS);
-
-      setDemoActive(false);
-
-      demoPlayedRef.current = true;
-
-      demoPhaseRef.current = "complete";
-
-      window.dispatchEvent(new Event("querypilot-demo-complete"));
-
-      render(1);
-    };
-
-    const onScroll = () => {
-      if (rafRef.current !== null) {
-        return;
-      }
-
-      rafRef.current = window.requestAnimationFrame(() => {
-        rafRef.current = null;
-
-        if (!heroOnScreenRef.current) {
-          lastScrollYRef.current = window.scrollY;
-
-          return;
-        }
-
-        const p = getProgress();
-
-        const scrollY = window.scrollY;
-
-        const deltaY = scrollY - lastScrollYRef.current;
-
-        lastScrollYRef.current = scrollY;
-
-        const isMovingUp = deltaY < -0.5;
-
-        const isMovingDown = deltaY > 0.5;
-
-        if (
-          isMovingDown &&
-          p >= DEMO_OPEN_START &&
-          demoPhaseRef.current === "resting" &&
-          userScrollIntentRef.current
-        ) {
-          beginDemo();
-        }
-
-        if (
-          isMovingDown &&
-          demoPlayedRef.current &&
-          demoPhaseRef.current === "returning" &&
-          p > DEMO_RETURN_COMPLETE
-        ) {
-          if (elapsedRef.current >= DEMO_DURATION_MS) {
-            demoPhaseRef.current = "complete";
-          } else {
-            demoPhaseRef.current = "running";
-
-            setDemoActive(true);
-          }
-
-          tweenVisual(1, 0.52);
-        }
-
-        // Fast-scroll safety net.
-
-        if (isMovingDown && p >= 0.995 && demoPhaseRef.current !== "complete") {
-          snapToFinalState();
-        }
-
-        if (isMovingUp && demoPlayedRef.current) {
-          if (p <= DEMO_RETURN_COMPLETE) {
-            resetDemoToRest();
-          } else if (
-            p < DEMO_RETURN_START &&
-            demoPhaseRef.current !== "resting"
-          ) {
-            beginReturnToRest(p);
-          }
-        }
-
-        if (demoPhaseRef.current === "returning" && p > DEMO_RETURN_COMPLETE) {
-          syncReturnTimeline(p);
-        }
-
-        smoothProgressRef.current = p;
-
-        render(p);
-      });
-    };
-
-    const armUserScrollIntent = () => {
-      userScrollIntentRef.current = true;
-    };
-
-    const finishWheelBurst = () => {
-      wheelBurstActiveRef.current = false;
-
-      consumeWheelBurstRef.current = false;
-
-      wheelBurstTimerRef.current = null;
-    };
-
-    const onWheel = (event: WheelEvent) => {
-      const deltaY = event.deltaY;
-
-      if (Math.abs(deltaY) < 4) {
-        return;
-      }
-
-      armUserScrollIntent();
-
-      const wasAlreadyInBurst = wheelBurstActiveRef.current;
-
-      wheelBurstActiveRef.current = true;
-
-      if (wheelBurstTimerRef.current !== null) {
-        window.clearTimeout(wheelBurstTimerRef.current);
-      }
-
-      wheelBurstTimerRef.current = window.setTimeout(
-        finishWheelBurst,
-
-        260,
-      );
-
-      const isDown = deltaY > 0;
-
-      if (!isDown || !heroOnScreenRef.current) {
-        return;
-      }
-
-      if (consumeWheelBurstRef.current) {
-        event.preventDefault();
-
-        return;
-      }
-
-      const phase = demoPhaseRef.current;
-
-      const progress = getProgress();
-
-      if (
-        !wasAlreadyInBurst &&
-        phase === "resting" &&
-        progress >= DEMO_OPEN_START
-      ) {
-        beginDemo();
-
-        return;
-      }
-
-      if (
-        !wasAlreadyInBurst &&
-        (phase === "running" || phase === "returning")
-      ) {
-        snapToFinalState();
-
-        consumeWheelBurstRef.current = true;
-
-        event.preventDefault();
-      }
-    };
-
-    const isEditableTarget = (target: EventTarget | null) => {
-      const element = target instanceof HTMLElement ? target : null;
-
-      if (!element) {
-        return false;
-      }
-
-      return (
-        element.isContentEditable ||
-        element.tagName === "INPUT" ||
-        element.tagName === "TEXTAREA" ||
-        element.tagName === "SELECT"
-      );
-    };
-
-    const isDownNavigationKey = (key: string) =>
-      key === "ArrowDown" || key === "PageDown" || key === " " || key === "End";
-
-    const isUpNavigationKey = (key: string) =>
-      key === "ArrowUp" || key === "PageUp" || key === "Home";
-
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (isEditableTarget(event.target)) {
-        return;
-      }
-
-      if (!isDownNavigationKey(event.key) && !isUpNavigationKey(event.key)) {
-        return;
-      }
-
-      armUserScrollIntent();
-
-      if (!heroOnScreenRef.current) {
-        return;
-      }
-
-      if (isUpNavigationKey(event.key)) {
-        keyboardIntentConsumedRef.current = false;
-
-        return;
-      }
-
-      if (keyboardIntentConsumedRef.current) {
-        event.preventDefault();
-
-        return;
-      }
-
-      const progress = getProgress();
-
-      const phase = demoPhaseRef.current;
-
-      if (phase === "running" || phase === "returning") {
-        snapToFinalState();
-
-        keyboardIntentConsumedRef.current = true;
-
-        event.preventDefault();
-
-        return;
-      }
-
-      if (phase === "resting" && progress >= DEMO_OPEN_START) {
-        beginDemo();
-      }
-    };
-
-    const onKeyUp = (event: KeyboardEvent) => {
-      if (isDownNavigationKey(event.key)) {
-        keyboardIntentConsumedRef.current = false;
-      }
-    };
-
-    const onResize = () => {
-      resetDrag();
-
-      if (!heroOnScreenRef.current) {
-        return;
-      }
-
-      render(getProgress());
-    };
-
-    const visibilityObserver = new IntersectionObserver(
-      (entries) => {
-        const entry = entries[0];
-
-        const onScreen = entry ? entry.isIntersecting : true;
-
-        if (heroOnScreenRef.current === onScreen) {
-          return;
-        }
-
-        heroOnScreenRef.current = onScreen;
-
-        setHeroOnScreen(onScreen);
-
-        if (onScreen) {
-          lastScrollYRef.current = window.scrollY;
-
-          smoothProgressRef.current = getProgress();
-
-          render(smoothProgressRef.current);
-        } else {
-          const p = getProgress();
-
-          if (p >= 0.99 && demoPhaseRef.current !== "complete") {
-            snapToFinalState();
-          }
-        }
-      },
-
-      {
-        rootMargin: "160px 0px 160px 0px",
-      },
-    );
-
-    visibilityObserver.observe(section);
-
-    const heroTitleLines = heroCopy.querySelectorAll<HTMLElement>(
-      "[data-hero-title-line]",
-    );
-
-    // The hero opens in its finished resting state. This removes the
-    // intermediate hidden/blank frame that could briefly expose the demo
-    // internals before the client animation system takes over.
-    restingIntroCompleteRef.current = true;
-    restingBackgroundReadyRef.current = true;
-    setShowRestingBackgroundImage(true);
-
-    gsap.set(restingBackground, {
-      opacity: 1,
-      visibility: "visible",
-      clearProps: "transform",
-    });
-
-    gsap.set(restingEntry, {
-      opacity: 1,
-      y: 0,
-      scale: 1,
-      visibility: "visible",
-      clearProps: "filter",
-    });
-
-    gsap.set(heroTitleLines, {
-      opacity: 1,
-      y: 0,
-      filter: "none",
-      visibility: "visible",
-    });
-
-    gsap.set(heroParagraph, {
-      opacity: 1,
-      y: 0,
-      visibility: "visible",
-    });
-
-    gsap.set(heroActions, {
-      opacity: 1,
-      y: 0,
-      visibility: "visible",
-    });
-
-    visualProgressRef.current = 0;
-
-    smoothProgressRef.current = getProgress();
-
-    lastScrollYRef.current = window.scrollY;
-
-    render(smoothProgressRef.current);
-
-    // No load-time intro animation: the first painted frame is already the final resting hero.
-
-    window.addEventListener(
-      "wheel",
-
-      onWheel,
-
-      { passive: false },
-    );
-
-    window.addEventListener(
-      "touchstart",
-
-      armUserScrollIntent,
-
-      { passive: true },
-    );
-
-    window.addEventListener(
-      "touchmove",
-
-      armUserScrollIntent,
-
-      { passive: true },
-    );
-
-    window.addEventListener(
-      "keydown",
-
-      onKeyDown,
-    );
-
-    window.addEventListener(
-      "keyup",
-
-      onKeyUp,
-    );
-
-    window.addEventListener(
-      "scroll",
-
-      onScroll,
-
-      { passive: true },
-    );
-
-    window.addEventListener(
-      "resize",
-
-      onResize,
-    );
-
-    return () => {
-      visibilityObserver.disconnect();
-
-      window.removeEventListener(
-        "wheel",
-
-        onWheel,
-      );
-
-      window.removeEventListener(
-        "touchstart",
-
-        armUserScrollIntent,
-      );
-
-      window.removeEventListener(
-        "touchmove",
-
-        armUserScrollIntent,
-      );
-
-      window.removeEventListener(
-        "keydown",
-
-        onKeyDown,
-      );
-
-      window.removeEventListener(
-        "keyup",
-
-        onKeyUp,
-      );
-
-      if (wheelBurstTimerRef.current !== null) {
-        window.clearTimeout(wheelBurstTimerRef.current);
-      }
-
-      window.removeEventListener(
-        "scroll",
-
-        onScroll,
-      );
-
-      window.removeEventListener(
-        "resize",
-
-        onResize,
-      );
-
-      if (rafRef.current !== null) {
-        window.cancelAnimationFrame(rafRef.current);
-      }
-
-      openTweenRef.current?.kill();
-
-      gsap.killTweensOf([
-        heroCopy,
-
-        mainWindow,
-
-        scene,
-
-        processCards,
-
-        restingBackground,
-
-        restingEntry,
-
-        heroParagraph,
-
-        heroActions,
-      ]);
-
-      gsap.killTweensOf(heroTitleLines);
-    };
-  }, []);
-
-  useLayoutEffect(() => {
-    if (!showRestingBackgroundImage) {
-      return;
-    }
-
-    const background = restingBackgroundRef.current;
-
-    if (!background) {
-      return;
-    }
-
-    const image = background.querySelector("img");
-
-    if (!image) {
-      return;
-    }
-
-    let cancelled = false;
-
-    const reveal = () => {
-      if (cancelled) {
-        return;
-      }
-
-      restingBackgroundReadyRef.current = true;
-
-      gsap.killTweensOf(background);
-
-      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-        gsap.set(
-          background,
-
-          {
-            opacity: 1,
-
-            visibility: "visible",
-          },
-        );
-
-        restingIntroCompleteRef.current = true;
-
-        return;
-      }
-
-      gsap.fromTo(
-        background,
-
-        {
-          opacity: 0,
-
-          visibility: "visible",
-        },
-
-        {
-          opacity: 1,
-
-          duration: 0.55,
-
-          ease: "power2.out",
-
-          overwrite: true,
-
-          onComplete: () => {
-            if (!cancelled) {
-              restingIntroCompleteRef.current = true;
-            }
-          },
-        },
-      );
-    };
-
-    if (image.complete) {
-      reveal();
-
-      return () => {
-        cancelled = true;
-
-        gsap.killTweensOf(background);
-      };
-    }
-
-    image.addEventListener(
-      "load",
-
-      reveal,
-
-      { once: true },
-    );
-
-    image.addEventListener(
-      "error",
-
-      reveal,
-
-      { once: true },
-    );
-
-    return () => {
-      cancelled = true;
-
-      image.removeEventListener(
-        "load",
-
-        reveal,
-      );
-
-      image.removeEventListener(
-        "error",
-
-        reveal,
-      );
-
-      gsap.killTweensOf(background);
-    };
-  }, [showRestingBackgroundImage]);
-
-  const canDrag = () => {
-    const section = sectionRef.current;
-
-    if (!section) {
-      return false;
-    }
-
-    const distance = Math.max(
-      section.offsetHeight - window.innerHeight,
-
-      1,
-    );
-
-    return clamp01(-section.getBoundingClientRect().top / distance) >= 0.9;
-  };
-
-  const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
-    if (event.button !== 0 || !canDrag()) {
-      return;
-    }
-
-    const drag = dragStateRef.current;
-
-    drag.active = true;
-
-    drag.pointerX = event.clientX;
-
-    drag.pointerY = event.clientY;
-
-    event.currentTarget.setPointerCapture(event.pointerId);
-  };
-
-  const handlePointerMove = (event: PointerEvent<HTMLDivElement>) => {
-    const drag = dragStateRef.current;
-
-    if (!drag.active) {
-      return;
-    }
-
-    const maxX = Math.min(
-      window.innerWidth * 0.11,
-
-      170,
-    );
-
-    const maxY = Math.min(
-      window.innerHeight * 0.075,
-
-      72,
-    );
-
-    drag.x = Math.max(
-      -maxX,
-
-      Math.min(
-        maxX,
-
-        event.clientX - drag.pointerX,
-      ),
-    );
-
-    drag.y = Math.max(
-      -maxY,
-
-      Math.min(
-        maxY,
-
-        event.clientY - drag.pointerY,
-      ),
-    );
-
-    if (sceneRef.current) {
-      gsap.set(
-        sceneRef.current,
-
-        {
-          x: drag.x,
-
-          y: drag.y,
-        },
-      );
-    }
-  };
-
-  const handlePointerUp = (event: PointerEvent<HTMLDivElement>) => {
-    dragStateRef.current.active = false;
-
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-      event.currentTarget.releasePointerCapture(event.pointerId);
-    }
-  };
-
-  return (
-    <section
-      ref={sectionRef}
-      className="relative hidden h-[220vh] w-full bg-white min-[901px]:block"
-      aria-label="QueryPilot hero"
-      style={{
-        isolation: "isolate",
-      }}
-    >
-      <div className="sticky top-0 h-screen overflow-visible">
-        {/*
-          Blue pinstripe band anchored to the bottom of the screen. Height is
-          a share of the screen measured bottom -> up: 25% at rest, 40% while
-          the demo is open (driven from render() above). The box is laid out
-          at the 40% size and squashed with scaleY at rest, so the canvas
-          never resizes/repaints on scroll. Vertical lines keep their width
-          under a scaleY, so the pattern looks identical, just shorter.
-
-          At rest the centre is covered, so only the left/right edges show
-          (the scenic image sits in the middle anyway). When the demo opens
-          the cover fades out and the strokes fill the full width instead of
-          leaving a white gap around/below the demo window.
-        */}
-
-        <div
-          ref={strokesRef}
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-x-0 bottom-0 z-0 overflow-hidden"
-          style={{
-            height: `${STROKES_DEMO_HEIGHT * 100}%`,
-
-            opacity: 0.68,
-
-            transformOrigin: "50% 100%",
-
-            transform: `scaleY(${STROKES_REST_HEIGHT / STROKES_DEMO_HEIGHT})`,
-
-            WebkitMaskImage:
-              "linear-gradient(to top, #000 0%, #000 62%, transparent 100%)",
-
-            maskImage:
-              "linear-gradient(to top, #000 0%, #000 62%, transparent 100%)",
-          }}
-        >
-          <SkyBlueBackground
-            fullScreen={false}
-            mode="vertical"
-            doubleLines={true}
-            strokeSpacing={6}
-            skyBlueDepth={0.54}
-            colorIntensity={0.88}
-            fadeToWhite={true}
-            opacity={0.72}
-            theme="cerulean"
-            className="h-full w-full"
-          />
-
-          <div
-            ref={strokesCenterCoverRef}
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-0 z-[30]"
-            style={{
-              background:
-                "linear-gradient(to right, rgba(255,255,255,0) 0%, rgba(255,255,255,0) 10%, #fff 24%, #fff 76%, rgba(255,255,255,0) 90%, rgba(255,255,255,0) 100%)",
-            }}
-          />
-        </div>
-
-        <div
-          className="relative mx-auto h-full w-[70vw] overflow-visible"
-          style={{
-            marginLeft: "15vw",
-
-            marginRight: "15vw",
-          }}
-        >
-          <div
-            ref={restingBackgroundRef}
-            aria-hidden="true"
-            className="pointer-events-none absolute left-0 top-[34vh] z-[1] h-[71vh] w-full overflow-hidden rounded-[30px] border border-black/10 bg-white opacity-100"
-          >
-            {showRestingBackgroundImage ? (
-              <img
-                src="/bg-img.png"
-                alt=""
-                aria-hidden="true"
-                fetchPriority="high"
-                loading="eager"
-                decoding="async"
-                className="h-full w-full object-cover object-center"
-              />
-            ) : null}
-
-            <div className="absolute inset-0 bg-gradient-to-b from-white/5 via-white/10 to-white/25" />
-          </div>
-
-          <div
-            className="absolute right-0 top-[13vh] z-[75] hidden w-[min(30%,300px)] min-[1101px]:block"
-            aria-hidden="true"
-          ></div>
-
-          <div
-            ref={heroCopyRef}
-            className="hero-copy absolute left-0 top-[12vh] z-[80] flex w-[min(47%,540px)] max-w-[540px] flex-col items-start px-0 text-left will-change-[transform,opacity]"
-          >
-            <div className="w-full max-w-[500px]">
-              <div className="flex justify-start overflow-visible">
-                <StaticHeroHeading />
-              </div>
-
-              <p
-                ref={heroParagraphRef}
-                className="mt-4 max-w-[470px] text-pretty text-[16px] leading-6 text-black/70 opacity-100"
-              >
-                QueryPilot connects documents and structured data, then finds
-                the right sources and returns a grounded answer.
-              </p>
-
-              <div
-                ref={heroActionsRef}
-                className="mt-5 flex items-center justify-start gap-2.5 opacity-100"
-              >
-                <PixelDissolveButton
-                  label="Try QueryPilot"
-                  href="/login"
-                  color="#0A0A0A"
-                  dissolveColor="#3A3A3A"
-                  cellSize={5}
-                  className="!min-h-10 !rounded-[11px] !px-[18px] !text-sm !font-medium !normal-case !tracking-normal hover:!bg-[#1A1A1A]"
-                />
-
-                <PixelDissolveButton
-                  label="Read engineering docs"
-                  href="/engineering"
-                  color="#E7E8E5"
-                  dissolveColor="#8FBF98"
-                  cellSize={5}
-                  className="!min-h-10 !rounded-[11px] !border !border-black/12 !px-4 !text-sm !font-medium !normal-case !tracking-normal !bg-[#E7E8E5] !text-black hover:!bg-[#EEF0EC]"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div
-            ref={sceneRef}
-            className="absolute inset-0 z-10 overflow-visible will-change-transform"
-          >
-            <div
-              ref={mainWindowRef}
-              className="visible absolute left-1/2 top-0 z-[50] aspect-auto w-full -translate-x-1/2 will-change-[width,height,top,opacity]"
-            >
-              <div
-                ref={restingEntryRef}
-                className="querypilot-resting-entry relative z-10 h-full w-full opacity-100"
-              >
-                <div
-                  aria-hidden="true"
-                  className="pointer-events-none absolute -inset-x-8 -inset-y-10 -z-10 rounded-[48px] bg-[radial-gradient(closest-side,rgba(255,255,255,0.16),rgba(255,255,255,0.07)_45%,rgba(255,255,255,0)_75%)] blur-2xl"
-                />
-
-                <div
-                  ref={centerWindowRef}
-                  className="absolute inset-[1.5%] z-10 overflow-hidden rounded-[22px]"
-                >
-                  <DemoWindowChrome label="QueryPilot, live demo" radius={18}>
-                    <QueryPilotApp elapsed={demoElapsed} />
-                  </DemoWindowChrome>
-                </div>
-
-                <div
-                  aria-hidden="true"
-                  className="pointer-events-none absolute -bottom-7 left-1/2 h-14 w-[72%] -translate-x-1/2 rounded-full bg-[radial-gradient(closest-side,rgba(255,255,255,0.10),rgba(255,255,255,0)_72%)] blur-xl"
-                />
-
-                <div
-                  aria-hidden="true"
-                  className="absolute inset-x-0 top-0 z-[70] h-10 cursor-grab touch-none active:cursor-grabbing"
-                  onPointerDown={handlePointerDown}
-                  onPointerMove={handlePointerMove}
-                  onPointerUp={handlePointerUp}
-                  onPointerCancel={handlePointerUp}
-                />
-
-                <div
-                  ref={processCardsRef}
-                  className="absolute inset-0 z-[60] pointer-events-none opacity-0 invisible will-change-[transform,opacity]"
-                >
-                  <QueryPilotProcessCards
-                    elapsed={demoElapsed}
-                    show
-                    containerRef={processCardsRef}
-                    mainWindowRef={centerWindowRef}
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <style jsx global>{`
-        .querypilot-resting-entry {
-          transform: none;
-
-          transform-origin: 50% 50%;
-
-          will-change: auto;
-        }
-
-        /* The resting hero is painted in its final state. The demo process cards
-           stay hidden until the scroll-driven demo actually begins. */
-      `}</style>
-    </section>
-  );
-}
-
-function HeroMobile() {
-  const [demoStarted, setDemoStarted] = useState(false);
-
-  // Match desktop: show the finished answer in the resting frame, then let
-  // the existing first-scroll interaction replay the demo from the start.
-  const [demoElapsed, setDemoElapsed] = useState(DEMO_DURATION_MS);
-
-  useEffect(() => {
-    if (demoStarted) return;
-
-    const onFirstScroll = () => setDemoStarted(true);
-
-    window.addEventListener(
-      "scroll",
-
-      onFirstScroll,
-
-      {
-        once: true,
-
-        passive: true,
-      },
-    );
-
-    return () =>
-      window.removeEventListener(
-        "scroll",
-
-        onFirstScroll,
-      );
-  }, [demoStarted]);
-
-  useEffect(() => {
-    if (!demoStarted) return;
-
-    const started = performance.now();
-
-    const duration = 30000;
-
-    let raf = 0;
-
-    let lastStateFlush = 0;
-
-    const tick = () => {
-      const now = performance.now();
-
-      const elapsed = Math.min(
-        now - started,
-
-        duration,
-      );
-
-      // Same throttle as the desktop hero - the mobile demo doesn't need a
-      // React re-render on every single animation frame either.
-      if (
-        elapsed >= duration ||
-        now - lastStateFlush >= DEMO_STATE_UPDATE_INTERVAL_MS
-      ) {
-        lastStateFlush = now;
-
-        setDemoElapsed(elapsed);
-      }
-
-      if (elapsed < duration) {
-        raf = window.requestAnimationFrame(tick);
-      }
-    };
-
-    raf = window.requestAnimationFrame(tick);
-
-    return () => window.cancelAnimationFrame(raf);
-  }, [demoStarted]);
-
-  return (
-    <section className="relative w-full overflow-hidden bg-white px-5 pb-[15vh] pt-[15vh] text-black min-[901px]:hidden">
-      <div className="relative z-10 mx-auto w-full max-w-[720px] text-center">
-        <h1 className="mx-auto max-w-[660px] text-[clamp(36px,9vw,58px)] font-normal leading-[1.02] tracking-[-0.045em] text-black">
-          Ask your business data.
-          <span className="block">Get the answer.</span>
+    <section aria-labelledby="hero-heading" className="relative overflow-hidden bg-[#0A0A0A] text-white">
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0" style={DOTS} />
+
+      <div className={`relative mx-auto pb-5 ${FRAME}`} style={{ paddingTop: "calc(var(--qp-nav-h, 64px) + clamp(1.25rem, 3svh, 2.25rem))" }}>
+        {/* Size: 26px on phones, scales with the viewport, and caps at 48px on large screens. */}
+        <h1 id="hero-heading" className="text-[clamp(18px,2.0vw,40px)] font-medium leading-[1.1] tracking-[-0.03em]">
+          <span className="qp-rise block text-white/50">{HERO.line1}</span>
+          <span className="qp-rise block" style={{ animationDelay: "160ms" }}>
+            {HERO.line2}
+          </span>
         </h1>
 
-        <p className="mx-auto mt-6 max-w-[560px] text-[17px] leading-7 text-black/68">
-          Ask across documents and structured data without knowing which source
-          contains the answer.
+        <p className="qp-rise mt-3 max-w-[40rem] text-[clamp(14px,0.99vw,16px)] leading-[1.55] text-white/60" style={{ animationDelay: "340ms" }}>
+          {HERO.pitch}
         </p>
 
-        <div className="relative mt-9 overflow-hidden rounded-[22px] border border-black/10 bg-white p-[2.6%] shadow-[0_24px_70px_rgba(0,0,0,0.10)]">
-          <img
-            src="/bg-img.png"
-            alt=""
-            aria-hidden="true"
-            fetchPriority="high"
-            decoding="async"
-            className="pointer-events-none absolute inset-0 h-full w-full object-cover object-center"
-          />
-
-          <div className="pointer-events-none absolute inset-0 bg-transparent" />
-
-          <div className="relative aspect-[4/3] w-full overflow-hidden rounded-[16px] border border-black/10 bg-white sm:aspect-video">
-            <QueryPilotApp elapsed={demoElapsed} />
-          </div>
-        </div>
-
-        <div className="mt-7 flex flex-wrap items-center justify-center gap-2.5">
+        <div className="qp-rise mt-4 flex flex-wrap items-center gap-3" style={{ animationDelay: "520ms" }}>
           <PixelDissolveButton
             label="Try QueryPilot"
             href="/login"
-            color="#0A0A0A"
-            dissolveColor="#3A3A3A"
+            color={BRAND_BLUE}
+            dissolveColor={BRAND_DISSOLVE_BLUE}
             cellSize={5}
-            className="!min-h-10 !rounded-[11px] !px-[18px] !text-sm !font-medium !normal-case !tracking-normal hover:!bg-[#1A1A1A]"
+            className="!rounded-full overflow-hidden"
           />
-
           <PixelDissolveButton
-            label="Read engineering docs"
-            href="/engineering"
-            color="#E7E8E5"
-            dissolveColor="#8FBF98"
+            label="Read the engineering docs"
+            href={ENGINEERING_HREF}
+            color="transparent"
+            textColor={GHOST_TEXT}
+            dissolveColor={GHOST_DISSOLVE}
             cellSize={5}
-            className="!min-h-10 !rounded-[11px] !border !border-black/12 !px-4 !text-sm !font-medium !normal-case !tracking-normal !bg-[#E7E8E5] !text-black hover:!bg-[#EEF0EC]"
+            className={`${PD_PILL} ${PD_GHOST_BORDER} !h-[42px] !px-5 !text-[14px]`}
           />
         </div>
       </div>
@@ -2166,503 +390,647 @@ function HeroMobile() {
   );
 }
 
-/* ============================================================
+/* ------------------------------------------------------------ workspace -- */
 
-   Features
+/**
+ * The demo as a dark web app.
+ *
+ *   - The chat is the page. A slim sidebar sits on its left when there is room.
+ *   - The graph panel starts closed. The moment a run starts it slides open on the right and builds
+ *     step by step next to the chat.
+ *   - A new message opens it again. "View in graph" on an old answer opens it too.
+ *   - Close it with the X, or from the panel icon at the top right of the chat.
+ *   - Drag the edge between chat and graph to resize them (arrow keys work on it, double-click resets).
+ *   - Narrow screens: the sidebar hides and the graph opens below the chat instead of beside it.
+ *
+ * `QueryPilotDemo` and `AgentTrace` keep their own look; this only arranges them and wires them together.
+ */
 
-   ============================================================ */
+// Fills whatever is left of the first screen after the nav and the (now slightly larger) hero, so the demo is in view without scrolling.
+const DEMO_H = "clamp(560px, calc(100svh - 24rem), 880px)";
+const SIDE_W = 232;
+const SIDE_FROM = 1080; // frame width where the sidebar appears
+const SIDE_KEEP_OPEN_FROM = 1400; // below this the sidebar steps aside while the graph is open
+const STACK_BELOW = 900; // frame width where the graph moves under the chat
+const STACK_CHAT_H = 600;
+const STACK_PANEL_H = 580;
+const EASE = ".55s cubic-bezier(.22,.8,.2,1)";
+const MIN_PANEL = 380; // narrowest the graph panel can be dragged to
+const MIN_CHAT = 300; // narrowest the chat can be squeezed to
+const SPLIT_STEP = 24; // px per arrow-key press on the divider
 
-const FEATURE_ITEMS = [
-  {
-    number: "01",
+const clampN = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
+const ink = (a: number | string) => alpha(QP.ink, a);
 
-    title: "Planner Agent",
-
-    description:
-      "An agent which interprets the user's request, resolves referenced resources and entities, and constructs the execution plan required to answer it. It can coordinate document search, structured queries, metadata lookup, memory, and multi-source execution before evidence is validated.",
-
-    cta: "Learn about planner agents",
-
-    Demo: PlannerAgentDemo,
-  },
-
-  {
-    number: "02",
-
-    title: "Async Ingestion Pipeline",
-
-    description:
-      "Handles document ingestion asynchronously through background workers so parsing and indexing do not block the request lifecycle. Uploaded files are validated, parsed, chunked, embedded, indexed, and persisted before their ingestion status is updated and the content becomes searchable.",
-
-    cta: "Learn about document processing",
-
-    Demo: AsyncIngestionDemo,
-  },
-
-  {
-    number: "03",
-
-    title: "Conversation Memory",
-
-    description:
-      "Maintains workspace-scoped conversation context so previous questions, answers, and referenced entities remain available across turns. This enables follow-up queries, pronoun resolution, and contextual references without requiring users to repeat earlier information.",
-
-    cta: "Learn about conversation memory",
-
-    Demo: ConversationMemoryDemo,
-  },
-
-  {
-    number: "04",
-
-    title: "Real-Time SSE Streaming",
-
-    description:
-      "Streams assistant responses from the Django backend to the frontend over Server-Sent Events as execution progresses. Incremental answer_delta events update a single response in real time, followed by a complete event containing the final answer, sources, and execution state.",
-
-    cta: "Learn about real-time streaming",
-
-    Demo: SSEStreamingDemo,
-  },
-
-  {
-    number: "05",
-
-    title: "Structured Data Pipeline",
-
-    description:
-      "Processes XLSX and CSV sources into workspace-scoped SQLite tables with inferred schemas and registered metadata. Natural-language requests are translated into safe, read-only SQL to return structured rows, aggregates, and evidence for the final answer.",
-
-    cta: "Learn about structured data",
-
-    Demo: StructuredDataDemo,
-  },
-
-  {
-    number: "06",
-
-    title: "Workspace Isolation",
-
-    description:
-      "Enforces workspace boundaries across documents, tables, retrieval, conversations, and execution so data cannot leak across workspaces. Authorization and workspace-scoped resource access ensure every query operates only against resources the current user is permitted to access.",
-
-    cta: "Learn about workspace isolation",
-
-    Demo: WorkspaceIsolationDemo,
-  },
+/** The four sources the demo reads, with the one-line fact shown next to each. */
+const SOURCES = [
+  { file: "salary.xlsx", note: "10 rows", pdf: false },
+  { file: "leave.xlsx", note: "10 rows", pdf: false },
+  { file: "taxslabs.pdf", note: "7 slabs", pdf: true },
+  { file: "leavepolicy.pdf", note: "policy", pdf: true },
 ] as const;
 
-function FeatureRow({
-  feature,
+/*
+ * The button reset below is wrapped in :where() so it has zero specificity.
+ * A plain `.qpw button` rule beats single-class selectors such as `.qd-chip` and strips their borders,
+ * padding and background, which is what flattened the follow-up chips and the send button.
+ */
+const WORKSPACE_CSS = `
+.qpw, .qpw * { box-sizing: border-box; }
+.qpw {
+  position: relative; isolation: isolate; display: flex; width: 100%; min-width: 0; overflow: hidden;
+  border-radius: 8px; border: 1px solid rgba(255,255,255,.1); background: #050506;
+  color: ${QP.ink}; font-family: ${SANS}; color-scheme: dark;
+  box-shadow: 0 0 0 1px rgba(0,0,0,.7), 0 40px 90px -40px rgba(0,0,0,.95);
+}
+.qpw[data-stacked="1"] { flex-direction: column; }
+.qpw[data-drag="1"] { user-select: none; cursor: col-resize; }
+.qpw[data-drag="1"] .qpw-main, .qpw[data-drag="1"] .qpw-panel { pointer-events: none; }
 
-  index,
-}: {
-  feature: (typeof FEATURE_ITEMS)[number];
+/* draggable edge between chat and graph: zero layout width, a 12px hit area straddling the border */
+.qpw-split { position: relative; flex: none; width: 0; z-index: 5; }
+.qpw-hit { position: absolute; top: 0; bottom: 0; left: -6px; display: flex; align-items: center; justify-content: center; width: 12px; cursor: col-resize; touch-action: none; outline: none; }
+.qpw-hit::after { content: ""; width: 2px; height: 100%; background: transparent; transition: background .15s; }
+.qpw-hit i { position: absolute; top: 50%; width: 4px; height: 36px; margin-top: -18px; border-radius: 99px; background: rgba(255,255,255,.35); opacity: 0; transition: opacity .15s; pointer-events: none; }
+.qpw-hit:hover::after, .qpw-hit:focus-visible::after, .qpw[data-drag="1"] .qpw-hit::after { background: ${QP.hi}; }
+.qpw-hit:hover i, .qpw-hit:focus-visible i, .qpw[data-drag="1"] .qpw-hit i { opacity: 1; }
+:where(.qpw) button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.qpw button:focus-visible { outline: 2px solid rgba(236,233,222,.8); outline-offset: 2px; }
 
-  index: number;
-}) {
-  const Demo = feature.Demo;
+/* sidebar */
+.qpw-side { flex: none; overflow: hidden; background: #08080a; border-right: 1px solid rgba(255,255,255,.08); }
+.qpw-sin { display: flex; flex-direction: column; gap: 18px; width: ${SIDE_W}px; height: 100%; padding: 14px 10px; }
+.qpw-ws { display: flex; align-items: center; gap: 10px; padding: 2px 8px 4px; min-width: 0; }
+.qpw-mark { display: grid; place-items: center; flex: none; width: 28px; height: 28px; border-radius: 8px; border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.04); color: ${QP.hi}; }
+.qpw-wn { min-width: 0; line-height: 1.25; }
+.qpw-wn b { display: block; font-size: 14px; font-weight: 580; letter-spacing: -.01em; color: ${QP.ink}; }
+.qpw-wn span { display: block; font-size: 12px; color: ${ink(0.45)}; }
+.qpw-nav { display: grid; gap: 2px; }
+.qpw-row { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 34px; padding: 0 10px; border-radius: 9px; font-size: 14px; text-align: left; color: ${ink(0.72)}; transition: background .15s, color .15s; }
+.qpw-row:hover { background: rgba(255,255,255,.05); color: ${QP.ink}; }
+.qpw-row[data-on="1"] { background: rgba(255,255,255,.07); color: ${QP.ink}; }
+.qpw-row svg { flex: none; color: ${ink(0.5)}; }
+.qpw-row[data-on="1"] svg { color: ${QP.ink}; }
+.qpw-live { margin-left: auto; width: 6px; height: 6px; border-radius: 99px; background: ${QP.hi}; box-shadow: 0 0 0 3px ${alpha(QP.hi, 0.22)}; animation: qpw-pulse 1.1s ease-in-out infinite; }
+.qpw-lab { padding: 0 10px 6px; font-size: 12px; color: ${ink(0.42)}; }
+.qpw-src { display: flex; align-items: center; gap: 10px; min-height: 32px; padding: 0 10px; font-size: 13.5px; color: ${ink(0.72)}; }
+.qpw-src i { margin-left: auto; font-style: normal; font-family: ${MONO}; font-size: 11.5px; color: ${ink(0.4)}; }
 
-  const reversed = index % 2 === 1;
+/* chat column */
+.qpw-main { position: relative; flex: 1 1 0%; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+.qpw-bar { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 12px; height: 44px; padding: 0 12px 0 18px; font-size: 13px; color: ${ink(0.5)}; }
+.qpw-bar span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.qpw-tg { display: grid; place-items: center; flex: none; width: 30px; height: 30px; border-radius: 8px; color: ${ink(0.55)}; transition: background .15s, color .15s; }
+.qpw-tg:hover { background: rgba(255,255,255,.06); color: ${QP.ink}; }
+.qpw-tg[aria-pressed="true"] { background: rgba(255,255,255,.08); color: ${QP.ink}; }
+.qpw-body { position: relative; flex: 1 1 0%; min-height: 0; }
+/* the chat fills its slot; the window already draws the outer border and corners */
+.qpw-chat.qd { position: absolute; inset: 0; border: 0; border-radius: 0; box-shadow: none; }
+
+/* graph panel */
+.qpw-panel { position: relative; flex: none; overflow: hidden; background: ${QP.bg}; }
+.qpw-pin { display: flex; flex-direction: column; min-width: 0; }
+.qpw-ph { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 12px; height: 44px; padding: 0 10px; border-bottom: 1px solid rgba(255,255,255,.08); }
+.qpw-tab { display: inline-flex; align-items: center; gap: 8px; height: 30px; padding: 0 12px; border-radius: 8px; background: rgba(255,255,255,.07); font-size: 13px; color: ${QP.ink}; white-space: nowrap; }
+.qpw-tab svg { color: ${ink(0.6)}; }
+.qpw-ps { display: flex; align-items: center; gap: 8px; min-width: 0; margin-left: auto; font-family: ${MONO}; font-size: 12px; color: ${ink(0.55)}; }
+.qpw-ps span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.qpw-dot { flex: none; width: 7px; height: 7px; border-radius: 99px; }
+.qpw-dot[data-p="1"] { animation: qpw-pulse 1.3s ease-in-out infinite; }
+.qpw-x { display: grid; place-items: center; flex: none; width: 28px; height: 28px; border-radius: 8px; color: ${ink(0.55)}; transition: background .15s, color .15s; }
+.qpw-x:hover { background: rgba(255,255,255,.07); color: ${QP.ink}; }
+.qpw-trace { flex: 1 1 0%; min-height: 0; }
+
+@keyframes qpw-pulse { 0%, 100% { opacity: 1 } 50% { opacity: .35 } }
+@media (prefers-reduced-motion: reduce) {
+  .qpw, .qpw-panel, .qpw-side { transition: none !important; }
+  .qpw-live, .qpw-dot[data-p="1"] { animation: none; }
+}
+`;
+
+function runStatus(run: TraceRun | null): { label: string; ink: string; pulse: boolean } {
+  if (!run) return { label: "Standing by", ink: ink(0.35), pulse: false };
+  switch (run.status) {
+    case "running":
+      return { label: "Running", ink: QP.hi, pulse: true };
+    case "completed":
+      return { label: "Completed", ink: QP.ok, pulse: false };
+    case "blocked":
+      return { label: "Blocked by guard", ink: QP.bad, pulse: false };
+    default:
+      return { label: "Failed", ink: QP.bad, pulse: false };
+  }
+}
+
+function QueryPilotWorkspace({ title = "Payroll workspace" }: { title?: string }) {
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const lastRunId = useRef("");
+  const [box, setBox] = useState({ w: 0, h: 0 });
+  const [run, setRun] = useState<TraceRun | null>(null);
+  const [open, setOpen] = useState(false);
+  const [chatKey, setChatKey] = useState(0);
+  /** Graph panel width chosen by dragging, in px. `null` means "use the default share". */
+  const [userW, setUserW] = useState<number | null>(null);
+  const [dragging, setDragging] = useState(false);
+
+  // Measure the real frame, not the viewport, so the layout follows the site's constrained width.
+  useIsoLayoutEffect(() => {
+    const el = rootRef.current;
+    if (!el) return;
+    const measure = () => {
+      const r = el.getBoundingClientRect();
+      const bw = Math.round(r.width);
+      const bh = Math.round(r.height);
+      setBox((p) => (p.w === bw && p.h === bh ? p : { w: bw, h: bh }));
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  /** The chat reports every step of a run here. A run we have not seen before opens the graph. */
+  const onTraceChange = useCallback((next: TraceRun | null) => {
+    setRun(next);
+    if (!next) {
+      lastRunId.current = "";
+      setOpen(false);
+      return;
+    }
+    if (next.id !== lastRunId.current) {
+      lastRunId.current = next.id;
+      setOpen(true);
+    }
+  }, []);
+
+  const newChat = () => {
+    lastRunId.current = "";
+    setRun(null);
+    setOpen(false);
+    setChatKey((k) => k + 1);
+  };
+
+  const measured = box.w > 0;
+  const stacked = measured && box.w < STACK_BELOW;
+  const hasSide = measured && !stacked && box.w >= SIDE_FROM;
+  // With the graph open on a mid-size frame the sidebar steps aside, so the chat keeps a readable width.
+  const sideOn = hasSide && (!open || box.w >= SIDE_KEEP_OPEN_FROM);
+  const sideW = sideOn ? SIDE_W : 0;
+  // The graph keeps at least MIN_PANEL, the chat at least MIN_CHAT; inside that the person decides.
+  const defaultPanelW = clampN(Math.round((box.w - sideW) * 0.5), 420, 760);
+  const maxPanelW = Math.max(MIN_PANEL, box.w - sideW - MIN_CHAT);
+  const panelW = stacked ? box.w : clampN(userW ?? defaultPanelW, MIN_PANEL, maxPanelW);
+  const status = runStatus(run);
+  const running = run?.status === "running";
+
+  const onSplitDown = (e: ReactPointerEvent<HTMLDivElement>) => {
+    e.currentTarget.setPointerCapture(e.pointerId);
+    setDragging(true);
+  };
+  const onSplitMove = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (!dragging || !rootRef.current) return;
+    // The graph panel is the right-most column, so its width is the distance from the pointer to the frame's right edge.
+    const right = rootRef.current.getBoundingClientRect().right - 1;
+    setUserW(clampN(Math.round(right - e.clientX), MIN_PANEL, maxPanelW));
+  };
+  const onSplitUp = (e: ReactPointerEvent<HTMLDivElement>) => {
+    setDragging(false);
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId);
+  };
+  const onSplitKey = (e: ReactKeyboardEvent<HTMLDivElement>) => {
+    const step = e.shiftKey ? SPLIT_STEP * 3 : SPLIT_STEP;
+    if (e.key === "ArrowLeft") {
+      e.preventDefault();
+      setUserW(clampN(panelW + step, MIN_PANEL, maxPanelW));
+    } else if (e.key === "ArrowRight") {
+      e.preventDefault();
+      setUserW(clampN(panelW - step, MIN_PANEL, maxPanelW));
+    } else if (e.key === "Home") {
+      e.preventDefault();
+      setUserW(null);
+    }
+  };
+
+  const hide = (isOpen: boolean) => `visibility 0s linear ${isOpen ? "0s" : ".55s"}`;
+  const line = ink(0.08);
+  const panelStyle: CSSProperties = stacked
+    ? { width: "100%", height: open ? STACK_PANEL_H : 0, transition: `height ${EASE}, ${hide(open)}`, borderTop: `1px solid ${open ? line : "transparent"}`, visibility: open ? "visible" : "hidden" }
+    : {
+        width: open ? panelW : 0,
+        height: "100%",
+        // No width animation while dragging, so the panel follows the pointer exactly.
+        transition: dragging ? hide(open) : `width ${EASE}, ${hide(open)}`,
+        borderLeft: `1px solid ${open ? line : "transparent"}`,
+        visibility: open ? "visible" : "hidden",
+      };
 
   return (
-    <article
-      className={[
-        "grid grid-cols-1 gap-10 py-16 sm:py-20",
-
-        "min-[901px]:grid-cols-12 min-[901px]:items-center min-[901px]:gap-x-10 min-[901px]:gap-y-14 min-[901px]:py-24",
-
-        index > 0 ? "border-t border-white/10" : "",
-      ].join(" ")}
+    <div
+      ref={rootRef}
+      data-stacked={stacked ? "1" : "0"}
+      data-drag={dragging ? "1" : "0"}
+      className="qpw"
+      style={{ height: stacked ? (open ? STACK_CHAT_H + STACK_PANEL_H : STACK_CHAT_H) : DEMO_H, transition: stacked ? `height ${EASE}` : undefined }}
     >
-      <div
-        className={[
-          "flex flex-col justify-center",
+      <style>{WORKSPACE_CSS}</style>
 
-          "min-[901px]:col-span-5",
-
-          reversed
-            ? "min-[901px]:order-2 min-[901px]:col-start-8 min-[901px]:justify-self-end"
-            : "min-[901px]:order-1 min-[901px]:col-start-1",
-        ].join(" ")}
-      >
-        <div className="flex items-center gap-3 font-mono text-[10px] uppercase tracking-[0.16em] text-white/50">
-          <span>{feature.number}</span>
-
-          <span aria-hidden="true" className="h-px w-8 bg-white/15" />
-        </div>
-
-        <h2 className="mt-5 max-w-[480px] text-[clamp(1.65rem,2.6vw,2.65rem)] font-normal leading-[1.05] tracking-[-0.04em] text-white">
-          {feature.title}
-        </h2>
-
-        <p className="mt-5 max-w-[440px] text-[15px] leading-[1.625rem] text-white/68 sm:text-[16px] sm:leading-7">
-          {feature.description}
-        </p>
-
-        <Link
-          href="/engineering"
-          className="group mt-6 inline-flex w-fit items-center gap-2 text-sm font-medium text-[#D9822B] transition-colors duration-200 hover:text-[#E39135]"
+      {hasSide ? (
+        <aside
+          className="qpw-side"
+          aria-label="Workspace"
+          aria-hidden={!sideOn}
+          style={{ width: sideW, transition: `width ${EASE}, ${hide(sideOn)}`, visibility: sideOn ? "visible" : "hidden", borderRightColor: sideOn ? line : "transparent" }}
         >
-          <span>{feature.cta}</span>
+          <div className="qpw-sin">
+            <div className="qpw-ws">
+              <span className="qpw-mark" aria-hidden>
+                <Waypoints size={15} strokeWidth={2} />
+              </span>
+              <div className="qpw-wn">
+                <b>QueryPilot</b>
+                <span>{title}</span>
+              </div>
+            </div>
 
-          <ArrowRight
-            size={14}
-            className="transition-transform duration-200 group-hover:translate-x-0.5"
-          />
-        </Link>
-      </div>
+            <nav className="qpw-nav" aria-label="Actions">
+              <button type="button" className="qpw-row" data-on="1" onClick={newChat}>
+                <Plus size={15} strokeWidth={1.9} aria-hidden />
+                New chat
+              </button>
+              <button type="button" className="qpw-row" data-on={open ? "1" : "0"} onClick={() => setOpen((v) => !v)} aria-pressed={open}>
+                <Waypoints size={15} strokeWidth={1.9} aria-hidden />
+                Execution trace
+                {running ? <span className="qpw-live" aria-hidden /> : null}
+              </button>
+            </nav>
 
-      <div
-        className={[
-          "w-full min-w-0",
+            <div>
+              <div className="qpw-lab">Sources</div>
+              {SOURCES.map((s) => {
+                const Icon = s.pdf ? FileText : FileSpreadsheet;
+                return (
+                  <div key={s.file} className="qpw-src">
+                    <Icon size={15} strokeWidth={1.8} aria-hidden style={{ color: s.pdf ? QP.docs : QP.table }} />
+                    {s.file}
+                    <i>{s.note}</i>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </aside>
+      ) : null}
 
-          "min-[901px]:col-span-7",
-
-          reversed
-            ? "min-[901px]:order-1 min-[901px]:col-start-1"
-            : "min-[901px]:order-2 min-[901px]:col-start-6",
-        ].join(" ")}
-      >
-        {/*
-
-          Every feature receives the exact same 7-column desktop slot. The
-
-          demo component remains the owner of its own DemoWindow, chrome,
-
-          internal padding, animation, and calibrated height. This layer only
-
-          standardizes placement and available width, so all six demos line up
-
-          without a second border, forced 620px viewport, or internal scaling.
-
-        */}
-
-        <div className="flex w-full min-w-0 items-stretch">
-          <Demo className="w-full" />
+      <section className="qpw-main" aria-label="Chat">
+        <div className="qpw-bar">
+          <span>{hasSide ? "New chat" : `QueryPilot · ${title}`}</span>
+          <button
+            type="button"
+            className="qpw-tg"
+            onClick={() => setOpen((v) => !v)}
+            aria-pressed={open}
+            aria-label={open ? "Close the execution graph" : "Open the execution graph"}
+            title={open ? "Close graph" : "Open graph"}
+          >
+            <PanelRight size={16} strokeWidth={1.8} aria-hidden />
+          </button>
         </div>
-      </div>
-    </article>
+        <div className="qpw-body">
+          <QueryPilotDemo key={chatKey} className="qpw-chat" title={title} autoPlayFirst={chatKey === 0} onTraceChange={onTraceChange} />
+        </div>
+      </section>
+
+      {open && measured && !stacked ? (
+        <div className="qpw-split">
+          <div
+            role="separator"
+            aria-orientation="vertical"
+            aria-label="Resize chat and execution graph. Arrow keys resize, Home resets."
+            aria-valuemin={MIN_PANEL}
+            aria-valuemax={maxPanelW}
+            aria-valuenow={panelW}
+            tabIndex={0}
+            className="qpw-hit"
+            onPointerDown={onSplitDown}
+            onPointerMove={onSplitMove}
+            onPointerUp={onSplitUp}
+            onPointerCancel={onSplitUp}
+            onKeyDown={onSplitKey}
+            onDoubleClick={() => setUserW(null)}
+          >
+            <i aria-hidden />
+          </div>
+        </div>
+      ) : null}
+
+      {measured ? (
+        <aside className="qpw-panel" style={panelStyle} aria-label="Execution graph" aria-hidden={!open}>
+          <div className="qpw-pin" style={{ width: stacked ? "100%" : panelW, height: stacked ? STACK_PANEL_H : "100%" }}>
+            <div className="qpw-ph">
+              <span className="qpw-tab">
+                <Waypoints size={14} strokeWidth={1.9} aria-hidden />
+                Execution trace
+              </span>
+              <span className="qpw-ps font-mono">
+                <i className="qpw-dot" data-p={status.pulse ? "1" : "0"} style={{ background: status.ink }} aria-hidden />
+                <span>{run?.label ? `${status.label} · ${run.label}` : status.label}</span>
+              </span>
+              <button type="button" className="qpw-x" onClick={() => setOpen(false)} aria-label="Close the execution graph" title="Close graph">
+                <X size={15} strokeWidth={1.9} aria-hidden />
+              </button>
+            </div>
+            <AgentTrace run={run} className="qpw-trace" />
+          </div>
+        </aside>
+      ) : null}
+    </div>
   );
 }
 
-function FeaturesSection() {
+/** The first showcase starts when the chat scrolls into view, and the graph opens as soon as it does. */
+/** A soft cool-grey wash that shows only outside the card's left and right edges, fading in and out vertically. */
+const HUE_MASK = "linear-gradient(to bottom, transparent 0%, #000 22%, #000 70%, transparent 100%)";
+const HUE: CSSProperties = {
+  background:
+    "radial-gradient(ellipse 15% 58% at 10.9% 52%, rgba(160,172,240,.2), transparent 75%), radial-gradient(ellipse 15% 58% at 89.1% 52%, rgba(160,172,240,.2), transparent 75%)",
+  WebkitMaskImage: HUE_MASK,
+  maskImage: HUE_MASK,
+};
+
+function DemoSection() {
   return (
-    <section
-      id="features"
-      aria-label="QueryPilot features"
-      className="relative w-full bg-[#0A0A0A] text-white"
-    >
-      <div className="border-t border-white/10" />
-
-      <div className="mx-auto w-full px-5 sm:px-8 min-[901px]:ml-[15vw] min-[901px]:mr-[15vw] min-[901px]:w-[70vw] min-[901px]:px-0">
-        <div className="min-[901px]:border-x min-[901px]:border-white/10">
-          <div className="pb-2 pt-14 min-[901px]:px-12 min-[901px]:pt-16">
-            <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-white/35">
-              Features
-            </span>
-          </div>
-
-          <div className="min-[901px]:px-12">
-            {FEATURE_ITEMS.map((feature, index) => (
-              <FeatureRow key={feature.title} feature={feature} index={index} />
-            ))}
-          </div>
-        </div>
+    <section aria-label="QueryPilot product demo" className="bg-[#0A0A0A] pb-[clamp(2.5rem,5.5vh,3.5rem)]">
+      <div className={`qp-card relative isolate mx-auto ${FRAME}`}>
+        <div aria-hidden="true" className="qp-hue pointer-events-none absolute -inset-x-[14%] -bottom-[22%] -top-[8%] -z-10" style={HUE} />
+        <QueryPilotWorkspace />
       </div>
     </section>
   );
 }
 
-/* ============================================================
+/** Fades and lifts a section the first time it scrolls into view. Skipped for reduced motion (see the CSS). */
+function Reveal({ children }: { children: ReactNode }) {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const [seen, setSeen] = useState(false);
 
-   LANDING PAGE
-
-   ============================================================ */
-
-export function LandingPage() {
   useEffect(() => {
-    const isReload =
-      performance.getEntriesByType("navigation")[0] &&
-      (
-        performance.getEntriesByType(
-          "navigation",
-        )[0] as PerformanceNavigationTiming
-      ).type === "reload";
-
-    if (!isReload) return;
-
-    const previousScrollRestoration = history.scrollRestoration;
-
-    history.scrollRestoration = "manual";
-
-    const forceTop = () => {
-      window.scrollTo({
-        top: 0,
-
-        left: 0,
-
-        behavior: "auto",
-      });
-    };
-
-    forceTop();
-
-    const frame = window.requestAnimationFrame(() => {
-      forceTop();
-
-      window.requestAnimationFrame(forceTop);
-    });
-
-    const delayed = window.setTimeout(
-      forceTop,
-
-      120,
+    const el = ref.current;
+    if (!el) return;
+    if (typeof IntersectionObserver === "undefined") {
+      setSeen(true);
+      return;
+    }
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setSeen(true);
+          io.disconnect();
+        }
+      },
+      { rootMargin: "0px 0px -10% 0px" },
     );
-
-    return () => {
-      window.cancelAnimationFrame(frame);
-
-      window.clearTimeout(delayed);
-
-      history.scrollRestoration = previousScrollRestoration;
-    };
+    io.observe(el);
+    return () => io.disconnect();
   }, []);
 
   return (
-    <div className="querypilot-public-site min-h-screen bg-white text-black">
-      <style jsx global>{`
+    <div ref={ref} className="qp-reveal" data-seen={seen ? "1" : "0"}>
+      {children}
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------- engineering -- */
+
+// The animated cards live in components/hero/engineering-preview.tsx.
+// Re-exported so anything that imported this file's default export keeps working.
+export default EngineeringPreview;
+
+/* --------------------------------------------------------- landing page -- */
+
+const PAGE_CSS = `
+        :root {
+          --qp-nav-h: 64px; /* 56 to 64px is the norm; large screens get 72px */
+        }
+
+        @media (min-width: 1600px) {
+          :root {
+            --qp-nav-h: 72px;
+          }
+        }
+
         html,
         body {
-          background-color: #ffffff;
-
+          background-color: #0a0a0a;
           overscroll-behavior-y: none;
+        }
 
-          height: 100%;
+        html {
+          scroll-padding-top: calc(var(--qp-nav-h) + 16px);
+        }
+
+        @media (prefers-reduced-motion: no-preference) {
+          html {
+            scroll-behavior: smooth;
+          }
+        }
+
+        /* Motion. Until the page is ready only the bar is on screen. Then the hero text lifts in from below, the demo
+           card follows, a soft hue comes up beside it and fades away again, and later sections rise once as they
+           scroll into view. The hidden start state lives in this server-rendered CSS, so nothing flashes first. */
+        .qp-rise,
+        .qp-card,
+        .qp-hue {
+          opacity: 0;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .qp-rise,
+          .qp-card {
+            opacity: 1;
+          }
+        }
+        @media (prefers-reduced-motion: no-preference) {
+          [data-qp-ready="1"] .qp-rise {
+            animation: qp-rise 1.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+          }
+          [data-qp-ready="1"] .qp-card {
+            animation: qp-card 1.7s cubic-bezier(0.16, 1, 0.3, 1) 0.7s both;
+          }
+          [data-qp-ready="1"] .qp-hue {
+            animation: qp-hue 7s ease-in-out 1.1s both;
+          }
+          .qp-reveal[data-seen="0"] {
+            opacity: 0;
+            transform: translateY(24px);
+          }
+          .qp-reveal[data-seen="1"] {
+            opacity: 1;
+            transform: none;
+            transition: opacity 1.2s cubic-bezier(0.16, 1, 0.3, 1), transform 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+          }
+        }
+        @keyframes qp-rise {
+          from {
+            opacity: 0;
+            transform: translateY(16px);
+            filter: blur(6px);
+          }
+          to {
+            opacity: 1;
+            transform: none;
+            filter: none;
+          }
+        }
+        @keyframes qp-card {
+          from {
+            opacity: 0;
+            transform: translateY(32px);
+          }
+          to {
+            opacity: 1;
+            transform: none;
+          }
+        }
+        @keyframes qp-hue {
+          0% {
+            opacity: 0;
+          }
+          22% {
+            opacity: 1;
+          }
+          50% {
+            opacity: 1;
+          }
+          100% {
+            opacity: 0;
+          }
+        }
+
+        /* One frame for everything: 92vw on phones, 1120px on laptops, wider on big screens, up to 1560px on TVs. */
+        .querypilot-public-site {
+          --qp-frame: min(92vw, clamp(1120px, 68vw, 1560px));
+          overflow-x: clip;
         }
 
         .querypilot-public-site,
         .querypilot-public-site * {
-          font-family:
-            var(--font-sans),
-            ui-sans-serif,
-            system-ui,
-            -apple-system,
-            BlinkMacSystemFont,
-            "Segoe UI",
-            sans-serif;
+          font-family: var(--font-geist), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
         }
 
         .querypilot-public-site .font-mono,
-        .querypilot-public-site [class*="font-mono"] {
-          font-family:
-            var(--font-mono), ui-monospace, SFMono-Regular, Menlo, Monaco,
-            Consolas, "Liberation Mono", monospace;
+        .querypilot-public-site [class*="font-mono"],
+        .querypilot-public-site pre,
+        .querypilot-public-site code {
+          font-family: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace !important;
         }
-      `}</style>
+`;
+
+const ENGINEERING_CSS = `
+        .querypilot-engineering-page, .querypilot-engineering-page * { font-family: var(--font-geist), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important; }
+`;
+
+
+export function LandingPage() {
+  const [ready, setReady] = useState(false);
+
+  // Start the motion only after hydration, the first measurement of the demo and the fonts, so the page never
+  // paints a half-built state first. A short timeout keeps a slow font from holding the page back.
+  useEffect(() => {
+    let raf = 0;
+    let alive = true;
+    const go = () => {
+      raf = requestAnimationFrame(() => {
+        raf = requestAnimationFrame(() => alive && setReady(true));
+      });
+    };
+    const fonts = (document as Document & { fonts?: FontFaceSet }).fonts;
+    if (fonts?.ready) {
+      // `go` runs on failure too, so a font error can never leave the hero invisible.
+      Promise.race([fonts.ready, new Promise((r) => setTimeout(r, 500))]).then(go, go);
+    } else {
+      go();
+    }
+    return () => {
+      alive = false;
+      cancelAnimationFrame(raf);
+    };
+  }, []);
+
+  // After a hard reload, start at the top instead of restoring the old scroll.
+  useEffect(() => {
+    const nav = performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming | undefined;
+    if (nav?.type !== "reload") return;
+
+    const previous = history.scrollRestoration;
+    history.scrollRestoration = "manual";
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+
+    return () => {
+      history.scrollRestoration = previous;
+    };
+  }, []);
+
+  return (
+    <div data-qp-ready={ready ? "1" : "0"} className="querypilot-public-site min-h-screen bg-[#0A0A0A] text-white">
+      <style dangerouslySetInnerHTML={{ __html: PAGE_CSS }} />
+      <noscript>
+        <style>{".qp-rise,.qp-card{opacity:1!important}"}</style>
+      </noscript>
 
       <PublicNav />
 
       <main>
-        <ProductPreview />
-
-        <HeroMobile />
-        <FeaturesSection />
+        <Hero />
+        <DemoSection />
+        <Reveal>
+          <FeaturesSection />
+        </Reveal>
+        <Reveal>
+          <EngineeringPreview />
+        </Reveal>
+        <Reveal>
+          <FinalCTASection />
+        </Reveal>
       </main>
     </div>
   );
 }
 
-/* ============================================================
+/* ------------------------------------------------------ engineering page -- */
 
-   Engineering Page
-
-   ============================================================ */
-
-function Logo({ dark = false }: { dark?: boolean }) {
-  return (
-    <Link
-      href="/"
-      className={`flex items-center gap-2.5 ${dark ? "text-white" : ""}`}
-    >
-      <img
-        src="/querypilot-logo.svg"
-        alt=""
-        aria-hidden="true"
-        className="size-8 flex-none object-contain"
-      />
-
-      <span className="text-[15px] font-semibold tracking-[-0.03em]">
-        QueryPilot
-      </span>
-    </Link>
-  );
-}
-
+/** Placeholder while the full engineering page is being rebuilt. */
 export function EngineeringPage() {
-  const nodes = [
-    {
-      title: "Workspace scope",
-
-      copy: "Tenant, permissions, active sources",
-    },
-
-    {
-      title: "Question parser",
-
-      copy: "Intent, entities, time range",
-    },
-
-    {
-      title: "Retrieval layer",
-
-      copy: "Hybrid semantic and lexical search",
-    },
-
-    {
-      title: "Reasoning context",
-
-      copy: "Ranked passages and relationships",
-    },
-
-    {
-      title: "Evidence renderer",
-
-      copy: "Citations, snippets, confidence",
-    },
-  ];
-
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white">
-      <header className="sticky top-0 z-50 border-b border-white/10 bg-[#0a0a0a]/95 backdrop-blur-md">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 lg:px-8">
-          <Logo dark />
+    <div className="querypilot-engineering-page flex min-h-screen flex-col bg-[#0A0A0A] text-white">
+      <style dangerouslySetInnerHTML={{ __html: ENGINEERING_CSS }} />
 
-          <div className="flex items-center gap-4">
-            <Link href="/" className="text-xs text-white/60 hover:text-white">
-              Product
-            </Link>
-
-            <Link
-              href="/login"
-              className="rounded-lg bg-white px-3.5 py-2.5 text-xs font-medium text-black transition-colors duration-200 hover:bg-white/85"
-            >
-              Open QueryPilot
-            </Link>
-          </div>
+      <header className="border-b border-white/10">
+        <div className={`mx-auto flex items-center justify-between ${FRAME}`} style={{ height: "var(--qp-nav-h, 64px)" }}>
+          <Link href="/" className={`inline-flex items-center gap-2 rounded text-[14px] font-medium tracking-[-0.01em] ${focusRing}`}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/querypilot-logo.svg" alt="" aria-hidden="true" className="size-5 object-contain" />
+            QueryPilot
+          </Link>
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl px-5 py-20 lg:px-8 lg:py-32">
-        <div className="max-w-3xl">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/45">
-            Engineering, system architecture
-          </p>
-
-          <h1 className="mt-7 text-5xl font-semibold leading-[1.02] tracking-[-0.045em] sm:text-7xl">
-            A question becomes a path
-            <br />
-            through your workspace.
+      <main className="flex flex-1 items-center">
+        <div className={`mx-auto ${FRAME}`}>
+          <h1 className="max-w-[40rem] text-[clamp(26px,2.8vw,36px)] font-medium leading-[1.2] tracking-[-0.03em]">
+            The engineering write-up is being rebuilt.
           </h1>
-
-          <p className="mt-8 max-w-xl text-base leading-7 text-white/60">
-            QueryPilot follows a simple flow. Understand the request, find the
-            right data, check the evidence, then answer.
+          <p className="mt-4 max-w-[34rem] text-[15px] leading-[1.6] text-white/60">
+            The architecture, routing and evidence checks will be documented here shortly.
           </p>
-        </div>
-
-        <div className="mt-24 border border-white/15">
-          <div className="flex items-center justify-between border-b border-white/15 px-5 py-4">
-            <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/45">
-              Request lifecycle
-            </span>
-
-            <span className="font-mono text-[10px] text-white/40">
-              QP / PIPELINE / 01
-            </span>
-          </div>
-
-          <div className="grid md:grid-cols-5">
-            {nodes.map((node, i) => (
-              <div
-                key={node.title}
-                className="relative border-b border-white/15 p-5 md:border-b-0 md:border-r md:last:border-r-0"
-              >
-                <span className="font-mono text-[10px] text-white/45">
-                  0{i + 1}
-                </span>
-
-                <h2 className="mt-10 text-sm font-medium">{node.title}</h2>
-
-                <p className="mt-2 text-xs leading-5 text-white/50">
-                  {node.copy}
-                </p>
-
-                {i < 4 && (
-                  <ArrowRight
-                    className="absolute right-3 top-1/2 hidden text-white/20 md:block"
-                    size={15}
-                  />
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="mt-24 grid gap-12 border-t border-white/15 pt-12 lg:grid-cols-3">
-          <div>
-            <p className="font-mono text-xs text-white/45">01 / SCOPE</p>
-
-            <h2 className="mt-4 text-xl font-medium">
-              Workspace context is the boundary.
-            </h2>
-
-            <p className="mt-3 text-sm leading-6 text-white/55">
-              Every question inherits an active workspace, making permissions
-              and source selection explicit before retrieval begins.
-            </p>
-          </div>
-
-          <div>
-            <p className="font-mono text-xs text-white/45">02 / GROUNDING</p>
-
-            <h2 className="mt-4 text-xl font-medium">
-              Evidence is a first-class output.
-            </h2>
-
-            <p className="mt-3 text-sm leading-6 text-white/55">
-              Answers are streamed with source references, page anchors, and the
-              snippets that support each conclusion.
-            </p>
-          </div>
-
-          <div>
-            <p className="font-mono text-xs text-white/45">03 / STREAMING</p>
-
-            <h2 className="mt-4 text-xl font-medium">
-              Useful before complete.
-            </h2>
-
-            <p className="mt-3 text-sm leading-6 text-white/55">
-              The interface exposes progress through retrieval and reasoning so
-              users can follow a response as it forms.
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-24 flex flex-col gap-8 border-t border-white/15 pt-10 md:flex-row md:items-center md:justify-between">
-          <p className="max-w-xl text-2xl font-medium tracking-[-0.04em]">
-            The architecture stays invisible when it works. The evidence never
-            should.
-          </p>
-
-          <Link
-            href="/signup"
-            className="inline-flex w-fit items-center gap-2 rounded-lg bg-white px-4 py-3 text-sm font-medium text-black transition-colors duration-200 hover:bg-white/85"
-          >
-            Try the product
-            <ArrowRight size={15} />
-          </Link>
+          <PixelDissolveButton
+            label="Back to home"
+            href="/"
+            color="transparent"
+            textColor={GHOST_TEXT}
+            dissolveColor={GHOST_DISSOLVE}
+            cellSize={5}
+            className={`mt-8 ${PD_PILL} ${PD_GHOST_BORDER} !h-10`}
+          />
         </div>
       </main>
     </div>

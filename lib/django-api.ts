@@ -1,5 +1,5 @@
 const API_BASE_URL =
-  process.env.NEXT_PUBLIC_DJANGO_API_URL || 'http://127.0.0.1:8000'
+  process.env.NEXT_PUBLIC_DJANGO_API_URL || 'https://api.query-pilot.dev';
 
 export type AuthTokens = {
   access_token: string
@@ -36,6 +36,17 @@ export type Workspace = {
   updated_at: string
 }
 
+// Shape of GET /api/workspaces/<id>/settings/. Core fields are typed, anything
+// else your WorkspaceSettingsSerializer returns is listed automatically on the
+// settings page, so you do not need to touch the UI when you add fields.
+export type WorkspaceSettings = {
+  id?: number
+  title?: string
+  created_at?: string
+  updated_at?: string
+  [key: string]: unknown
+}
+
 export type Conversation = {
   id: number
   title: string
@@ -44,6 +55,18 @@ export type Conversation = {
   created_at: string
   updated_at: string
 }
+
+/** GET/PATCH /api/chat/conversations/<id>/settings/ */
+export type ConversationSettings = {
+  conversation: number
+  memory_enabled: boolean
+  citations_enabled: boolean
+  updated_at: string
+}
+
+export type ConversationSettingsPatch = Partial<
+  Pick<ConversationSettings, 'memory_enabled' | 'citations_enabled'>
+>
 
 export type ThoughtRecord = {
   event: string
@@ -153,31 +176,15 @@ const tokenStore = {
       return
     }
 
-    const access_token =
-      'access_token' in tokens
-        ? tokens.access_token
-        : tokens.access
-
-    const refresh_token =
-      'refresh_token' in tokens
-        ? tokens.refresh_token
-        : tokens.refresh
+    const access_token = 'access_token' in tokens ? tokens.access_token : tokens.access
+    const refresh_token = 'refresh_token' in tokens ? tokens.refresh_token : tokens.refresh
 
     if (!access_token || !refresh_token) {
-      throw new Error(
-        'Login succeeded but no usable JWT tokens were returned.',
-      )
+      throw new Error('Login succeeded but no usable JWT tokens were returned.')
     }
 
-    localStorage.setItem(
-      'querypilot_access_token',
-      access_token,
-    )
-
-    localStorage.setItem(
-      'querypilot_refresh_token',
-      refresh_token,
-    )
+    localStorage.setItem('querypilot_access_token', access_token)
+    localStorage.setItem('querypilot_refresh_token', refresh_token)
   },
 
   clear() {
@@ -187,8 +194,9 @@ const tokenStore = {
 
     localStorage.removeItem('querypilot_access_token')
     localStorage.removeItem('querypilot_refresh_token')
-    // Pending-email is short-lived, single-tab signup→OTP handoff data (set/read
-    // directly by auth-pages.tsx), not an auth token — it intentionally stays in
+
+    // Pending-email is short-lived, single-tab signup→OTP handoff data
+    // set/read directly by auth-pages.tsx. It intentionally stays in
     // sessionStorage and is unrelated to the cross-tab fix above.
     sessionStorage.removeItem('querypilot_pending_email')
   },
@@ -198,17 +206,12 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
-function collectMessages(
-  value: unknown,
-  messages: string[] = [],
-) {
+function collectMessages(value: unknown, messages: string[] = []) {
   if (typeof value === 'string') {
     const trimmed = value.trim()
-
     if (trimmed) {
       messages.push(trimmed)
     }
-
     return messages
   }
 
@@ -216,7 +219,6 @@ function collectMessages(
     for (const item of value) {
       collectMessages(item, messages)
     }
-
     return messages
   }
 
@@ -229,9 +231,7 @@ function collectMessages(
   return messages
 }
 
-function extractFieldErrors(
-  data: unknown,
-): Record<string, string[]> | undefined {
+function extractFieldErrors(data: unknown): Record<string, string[]> | undefined {
   if (!isRecord(data)) {
     return undefined
   }
@@ -246,44 +246,29 @@ function extractFieldErrors(
 
   for (const [field, value] of Object.entries(candidate)) {
     const messages = collectMessages(value)
-
     if (messages.length > 0) {
       fieldErrors[field] = messages
     }
   }
 
-  return Object.keys(fieldErrors).length > 0
-    ? fieldErrors
-    : undefined
+  return Object.keys(fieldErrors).length > 0 ? fieldErrors : undefined
 }
 
-function getErrorMessage(
-  data: unknown,
-  status: number,
-): string {
+function getErrorMessage(data: unknown, status: number): string {
   if (typeof data === 'string' && data.trim()) {
     return data.trim()
   }
 
   if (isRecord(data)) {
-    if (
-      typeof data.detail === 'string' &&
-      data.detail.trim()
-    ) {
+    if (typeof data.detail === 'string' && data.detail.trim()) {
       return data.detail.trim()
     }
 
-    if (
-      typeof data.message === 'string' &&
-      data.message.trim()
-    ) {
+    if (typeof data.message === 'string' && data.message.trim()) {
       return data.message.trim()
     }
 
-    if (
-      typeof data.error === 'string' &&
-      data.error.trim()
-    ) {
+    if (typeof data.error === 'string' && data.error.trim()) {
       return data.error.trim()
     }
 
@@ -291,7 +276,6 @@ function getErrorMessage(
 
     if (fieldErrors) {
       const messages = Object.values(fieldErrors).flat()
-
       if (messages.length > 0) {
         return messages.join(' ')
       }
@@ -304,16 +288,15 @@ function getErrorMessage(
     }
   }
 
+  if (status === 405) {
+    return 'This action is not available on the server yet.'
+  }
+
   return `Request failed (${status})`
 }
 
-function createApiError(
-  data: unknown,
-  status: number,
-): ApiError {
-  const error = new Error(
-    getErrorMessage(data, status),
-  ) as ApiError
+function createApiError(data: unknown, status: number): ApiError {
+  const error = new Error(getErrorMessage(data, status)) as ApiError
 
   error.status = status
   error.data = data
@@ -322,11 +305,8 @@ function createApiError(
   return error
 }
 
-async function parseJsonSafely(
-  response: Response,
-): Promise<unknown> {
-  const contentType =
-    response.headers.get('content-type') || ''
+async function parseJsonSafely(response: Response): Promise<unknown> {
+  const contentType = response.headers.get('content-type') || ''
 
   if (!contentType.includes('application/json')) {
     return null
@@ -347,8 +327,7 @@ async function refreshAccessToken(): Promise<boolean> {
   }
 
   refreshPromise = (async () => {
-    const refresh_token =
-      tokenStore.get('refresh_token')
+    const refresh_token = tokenStore.get('refresh_token')
 
     if (!refresh_token) {
       return false
@@ -357,33 +336,22 @@ async function refreshAccessToken(): Promise<boolean> {
     let response: Response
 
     try {
-      response = await fetch(
-        `${API_BASE_URL}/api/auth/refresh/`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            refresh_token,
-          }),
-        },
-      )
+      response = await fetch(`${API_BASE_URL}/api/auth/refresh/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token }),
+      })
     } catch {
       return false
     }
 
-    const data =
-      await parseJsonSafely(response)
+    const data = await parseJsonSafely(response)
 
     if (!response.ok || !isRecord(data)) {
       return false
     }
 
-    if (
-      typeof data.access_token !== 'string' ||
-      typeof data.refresh_token !== 'string'
-    ) {
+    if (typeof data.access_token !== 'string' || typeof data.refresh_token !== 'string') {
       return false
     }
 
@@ -409,33 +377,23 @@ export async function apiFetch<T>(
 ): Promise<T> {
   const headers = new Headers(init.headers)
 
-  const access_token =
-    tokenStore.get('access_token')
+  const access_token = tokenStore.get('access_token')
 
   if (access_token) {
-    headers.set(
-      'Authorization',
-      `Bearer ${access_token}`,
-    )
+    headers.set('Authorization', `Bearer ${access_token}`)
   }
 
   if (!(init.body instanceof FormData)) {
-    headers.set(
-      'Content-Type',
-      'application/json',
-    )
+    headers.set('Content-Type', 'application/json')
   }
 
   let response: Response
 
   try {
-    response = await fetch(
-      `${API_BASE_URL}${path}`,
-      {
-        ...init,
-        headers,
-      },
-    )
+    response = await fetch(`${API_BASE_URL}${path}`, {
+      ...init,
+      headers,
+    })
   } catch {
     const error = new Error(
       'Unable to reach the server. Please check your connection and try again.',
@@ -446,63 +404,41 @@ export async function apiFetch<T>(
     throw error
   }
 
-  if (
-    response.status === 401 &&
-    retry
-  ) {
-    const refreshed =
-      await refreshAccessToken()
+  if (response.status === 401 && retry) {
+    const refreshed = await refreshAccessToken()
 
     if (refreshed) {
-      return apiFetch<T>(
-        path,
-        init,
-        false,
-      )
+      return apiFetch<T>(path, init, false)
     }
   }
 
-  const data =
-    await parseJsonSafely(response)
+  const data = await parseJsonSafely(response)
 
   if (!response.ok) {
     if (response.status === 401) {
       tokenStore.clear()
     }
 
-    throw createApiError(
-      data,
-      response.status,
-    )
+    throw createApiError(data, response.status)
   }
 
   return data as T
 }
 
-async function parseSseBlock(
-  block: string,
-): Promise<SseEvent | null> {
-  const lines =
-    block.split(/\r?\n/)
+async function parseSseBlock(block: string): Promise<SseEvent | null> {
+  const lines = block.split(/\r?\n/)
 
   let eventName = 'message'
   const dataLines: string[] = []
 
   for (const line of lines) {
     if (line.startsWith('event:')) {
-      eventName = line
-        .slice('event:'.length)
-        .trim()
-
+      eventName = line.slice('event:'.length).trim()
       continue
     }
 
     if (line.startsWith('data:')) {
-      dataLines.push(
-        line
-          .slice('data:'.length)
-          .trimStart(),
-      )
+      dataLines.push(line.slice('data:'.length).trimStart())
     }
   }
 
@@ -510,39 +446,24 @@ async function parseSseBlock(
     return null
   }
 
-  const rawData =
-    dataLines.join('\n')
+  const rawData = dataLines.join('\n')
 
   try {
-    const parsed =
-      JSON.parse(rawData)
+    const parsed = JSON.parse(rawData)
 
     if (isRecord(parsed)) {
-      const nestedData =
-        isRecord(parsed.data)
-          ? parsed.data
-          : undefined
+      const nestedData = isRecord(parsed.data) ? parsed.data : undefined
 
       return {
         event: eventName,
-        message:
-          typeof parsed.message ===
-          'string'
-            ? parsed.message
-            : undefined,
+        message: typeof parsed.message === 'string' ? parsed.message : undefined,
         data: nestedData,
       }
     }
 
-    return {
-      event: eventName,
-      message: rawData,
-    }
+    return { event: eventName, message: rawData }
   } catch {
-    return {
-      event: eventName,
-      message: rawData,
-    }
+    return { event: eventName, message: rawData }
   }
 }
 
@@ -556,33 +477,24 @@ export async function streamChat(
     signal?: AbortSignal
   },
 ): Promise<void> {
-  const send = async (
-    retry: boolean,
-  ): Promise<Response> => {
-    let access_token =
-      tokenStore.get('access_token')
+  const send = async (retry: boolean): Promise<Response> => {
+    let access_token = tokenStore.get('access_token')
 
     if (!access_token) {
-      const refreshed =
-        await refreshAccessToken()
+      const refreshed = await refreshAccessToken()
 
       if (refreshed) {
-        access_token =
-          tokenStore.get(
-            'access_token',
-          )
+        access_token = tokenStore.get('access_token')
       }
     }
 
     if (!access_token) {
-      const authError =
-        new Error(
-          'You are not authenticated. Please log in again.',
-        ) as ApiError
+      const authError = new Error(
+        'You are not authenticated. Please log in again.',
+      ) as ApiError
 
       authError.status = 401
-      authError.code =
-        'AUTH_REQUIRED'
+      authError.code = 'AUTH_REQUIRED'
 
       throw authError
     }
@@ -590,47 +502,32 @@ export async function streamChat(
     let response: Response
 
     try {
-      response = await fetch(
-        `${API_BASE_URL}/api/chat/messages/stream/`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type':
-              'application/json',
-            Accept:
-              'text/event-stream',
-            Authorization:
-              `Bearer ${access_token}`,
-          },
-          body: JSON.stringify(payload),
-          signal: options?.signal,
+      response = await fetch(`${API_BASE_URL}/api/chat/messages/stream/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'text/event-stream',
+          Authorization: `Bearer ${access_token}`,
         },
-      )
+        body: JSON.stringify(payload),
+        signal: options?.signal,
+      })
     } catch (error) {
-      if (
-        error instanceof DOMException &&
-        error.name === 'AbortError'
-      ) {
+      if (error instanceof DOMException && error.name === 'AbortError') {
         throw error
       }
 
-      const networkError =
-        new Error(
-          'Unable to reach the chat service. Please check your connection and try again.',
-        ) as ApiError
+      const networkError = new Error(
+        'Unable to reach the chat service. Please check your connection and try again.',
+      ) as ApiError
 
-      networkError.code =
-        'NETWORK_ERROR'
+      networkError.code = 'NETWORK_ERROR'
 
       throw networkError
     }
 
-    if (
-      response.status === 401 &&
-      retry
-    ) {
-      const refreshed =
-        await refreshAccessToken()
+    if (response.status === 401 && retry) {
+      const refreshed = await refreshAccessToken()
 
       if (refreshed) {
         return send(false)
@@ -640,74 +537,47 @@ export async function streamChat(
     return response
   }
 
-  const response =
-    await send(true)
+  const response = await send(true)
 
   if (!response.ok) {
-    const data =
-      await parseJsonSafely(response)
+    const data = await parseJsonSafely(response)
 
-    if (
-      response.status === 401
-    ) {
+    if (response.status === 401) {
       tokenStore.clear()
     }
 
-    throw createApiError(
-      data,
-      response.status,
-    )
+    throw createApiError(data, response.status)
   }
 
   if (!response.body) {
-    const error =
-      new Error(
-        'The chat service returned an empty response.',
-      ) as ApiError
+    const error = new Error('The chat service returned an empty response.') as ApiError
 
-    error.code =
-      'EMPTY_STREAM'
+    error.code = 'EMPTY_STREAM'
 
     throw error
   }
 
-  const reader =
-    response.body.getReader()
-
-  const decoder =
-    new TextDecoder()
+  const reader = response.body.getReader()
+  const decoder = new TextDecoder()
 
   let buffer = ''
 
   try {
     while (true) {
-      const {
-        value,
-        done,
-      } = await reader.read()
+      const { value, done } = await reader.read()
 
       if (done) {
         break
       }
 
-      buffer += decoder.decode(
-        value,
-        { stream: true },
-      )
+      buffer += decoder.decode(value, { stream: true })
 
-      const blocks =
-        buffer.split(
-          /\r?\n\r?\n/,
-        )
+      const blocks = buffer.split(/\r?\n\r?\n/)
 
-      buffer =
-        blocks.pop() || ''
+      buffer = blocks.pop() || ''
 
       for (const block of blocks) {
-        const event =
-          await parseSseBlock(
-            block,
-          )
+        const event = await parseSseBlock(block)
 
         if (event) {
           onEvent(event)
@@ -718,10 +588,7 @@ export async function streamChat(
     buffer += decoder.decode()
 
     if (buffer.trim()) {
-      const event =
-        await parseSseBlock(
-          buffer,
-        )
+      const event = await parseSseBlock(buffer)
 
       if (event) {
         onEvent(event)
@@ -733,233 +600,188 @@ export async function streamChat(
 }
 
 export const authApi = {
-  login: (payload: {
-    email: string
-    password: string
-  }) =>
-    apiFetch<AuthTokens>(
-      '/api/auth/login/',
-      {
-        method: 'POST',
-        body: JSON.stringify(
-          payload,
-        ),
-      },
-    ),
+  // Start Google sign-in or sign-up by redirecting the browser to Django.
+  startGoogleOAuth: (mode: 'signin' | 'signup') => {
+    if (typeof window === 'undefined') {
+      return
+    }
 
-  register: (payload: {
-    username: string
-    email: string
-    password: string
-  }) =>
-    apiFetch<{ message: string }>(
-      '/api/auth/register/',
-      {
-        method: 'POST',
-        body: JSON.stringify(
-          payload,
-        ),
-      },
-    ),
+    const baseUrl = API_BASE_URL.replace(/\/+$/, '')
 
-  verifyOtp: (payload: {
-    email: string
-    otp: string
-  }) =>
-    apiFetch<{ message: string }>(
-      '/api/auth/verify-otp/',
-      {
-        method: 'POST',
-        body: JSON.stringify(
-          payload,
-        ),
-      },
-    ),
+    const startUrl = `${baseUrl}/api/auth/oauth/google/start/?mode=${encodeURIComponent(mode)}`
 
-  forgotPassword: (payload: {
-    email: string
-  }) =>
-    apiFetch<{ message: string }>(
-      '/api/auth/forgot-password/',
-      {
-        method: 'POST',
-        body: JSON.stringify(
-          payload,
-        ),
-      },
-    ),
+    window.location.assign(startUrl)
+  },
 
-  resetPassword: (payload: {
-    email: string
-    otp: string
-    new_password: string
-  }) =>
-    apiFetch<{ message: string }>(
-      '/api/auth/reset-password/',
-      {
-        method: 'POST',
-        body: JSON.stringify(
-          payload,
-        ),
-      },
-    ),
-
-  me: () =>
-    apiFetch<User>(
-      '/api/auth/me/',
-    ),
-
-  logout: async () => {
-    const refresh_token =
-      tokenStore.get(
-        'refresh_token',
-      )
+  // Exchange the short-lived, single-use OAuth code for QueryPilot JWTs.
+  // This request deliberately does not use apiFetch, so stale access tokens
+  // cannot trigger the regular JWT refresh flow during OAuth exchange.
+  exchangeOAuthCode: async (code: string): Promise<AuthTokens> => {
+    let response: Response
 
     try {
-      return await apiFetch<{
-        message: string
-      }>(
-        '/api/auth/logout/',
-        {
-          method: 'POST',
-          body: JSON.stringify({
-            refresh_token,
-          }),
-        },
-      )
+      const baseUrl = API_BASE_URL.replace(/\/+$/, '')
+
+      response = await fetch(`${baseUrl}/api/auth/oauth/exchange/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code }),
+      })
+    } catch {
+      const error = new Error(
+        'Unable to reach the server. Please check your connection and try again.',
+      ) as ApiError
+
+      error.code = 'NETWORK_ERROR'
+
+      throw error
+    }
+
+    const data = await parseJsonSafely(response)
+
+    if (!response.ok) {
+      throw createApiError(data, response.status)
+    }
+
+    if (
+      !isRecord(data) ||
+      typeof data.access_token !== 'string' ||
+      typeof data.refresh_token !== 'string'
+    ) {
+      throw new Error('The Google sign-in response did not contain usable tokens.')
+    }
+
+    return {
+      access_token: data.access_token,
+      refresh_token: data.refresh_token,
+    }
+  },
+
+  login: (payload: { email: string; password: string }) =>
+    apiFetch<AuthTokens>('/api/auth/login/', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  register: (payload: { username: string; email: string; password: string }) =>
+    apiFetch<{ message: string }>('/api/auth/register/', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  verifyOtp: (payload: { email: string; otp: string }) =>
+    apiFetch<{ message: string }>('/api/auth/verify-otp/', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  forgotPassword: (payload: { email: string }) =>
+    apiFetch<{ message: string }>('/api/auth/forgot-password/', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  resetPassword: (payload: { email: string; otp: string; new_password: string }) =>
+    apiFetch<{ message: string }>('/api/auth/reset-password/', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  me: () => apiFetch<User>('/api/auth/me/'),
+
+  logout: async () => {
+    const refresh_token = tokenStore.get('refresh_token')
+
+    try {
+      return await apiFetch<{ message: string }>('/api/auth/logout/', {
+        method: 'POST',
+        body: JSON.stringify({ refresh_token }),
+      })
     } finally {
       tokenStore.clear()
     }
   },
 
-  saveTokens:
-    tokenStore.set,
+  saveTokens: tokenStore.set,
 
-  clearTokens:
-    tokenStore.clear,
+  clearTokens: tokenStore.clear,
 
-  hasAccess: () =>
-    Boolean(
-      tokenStore.get(
-        'access_token',
-      ),
-    ),
+  hasAccess: () => Boolean(tokenStore.get('access_token')),
 }
 
 export const workspaceApi = {
-  list: () =>
-    apiFetch<Workspace[]>(
-      '/api/workspaces/',
-    ),
+  list: () => apiFetch<Workspace[]>('/api/workspaces/'),
 
-  create: (
-    title: string,
-  ) =>
-    apiFetch<Workspace>(
-      '/api/workspaces/create/',
-      {
-        method: 'POST',
-        body: JSON.stringify({
-          title,
-        }),
-      },
-    ),
+  create: (title: string) =>
+    apiFetch<Workspace>('/api/workspaces/create/', {
+      method: 'POST',
+      body: JSON.stringify({ title }),
+    }),
 
-  remove: (
-    id: number,
-  ) =>
-    apiFetch<void>(
-      `/api/workspaces/${id}/`,
-      {
-        method: 'DELETE',
-      },
-    ),
+  settings: (id: number) => apiFetch<WorkspaceSettings>(`/api/workspaces/${id}/settings/`),
+
+  update: (id: number, payload: { title: string }) =>
+    apiFetch<Workspace>(`/api/workspaces/${id}/`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }),
+
+  remove: (id: number) =>
+    apiFetch<void>(`/api/workspaces/${id}/`, {
+      method: 'DELETE',
+    }),
 }
 
 export const documentApi = {
-  list: (
-    workspaceId: number,
-  ) =>
-    apiFetch<Document[]>(
-      `/api/documents/?workspace_id=${workspaceId}`,
-    ),
+  list: (workspaceId: number) =>
+    apiFetch<Document[]>(`/api/documents/?workspace_id=${workspaceId}`),
 
-  upload: (
-    workspaceId: number,
-    file: File,
-  ) => {
-    const body =
-      new FormData()
+  upload: (workspaceId: number, file: File) => {
+    const body = new FormData()
 
-    body.append(
-      'workspace_id',
-      String(
-        workspaceId,
-      ),
-    )
+    body.append('workspace_id', String(workspaceId))
+    body.append('file', file)
 
-    body.append(
-      'file',
-      file,
-    )
-
-    return apiFetch<DocumentUploadResponse>(
-      '/api/documents/upload/',
-      {
-        method: 'POST',
-        body,
-      },
-    )
+    return apiFetch<DocumentUploadResponse>('/api/documents/upload/', {
+      method: 'POST',
+      body,
+    })
   },
 
-  status: (
-    id: number,
-  ) =>
-    apiFetch<DocumentStatus>(
-      `/api/documents/${id}/status/`,
-    ),
+  status: (id: number) => apiFetch<DocumentStatus>(`/api/documents/${id}/status/`),
 
-  remove: (
-    id: number,
-  ) =>
-    apiFetch<{
-      message: string
-    }>(
-      `/api/documents/${id}/`,
-      {
-        method: 'DELETE',
-      },
-    ),
+  remove: (id: number) =>
+    apiFetch<{ message: string }>(`/api/documents/${id}/`, {
+      method: 'DELETE',
+    }),
 }
 
 export const chatApi = {
-  conversations: (
-    workspaceId: number,
-  ) =>
-    apiFetch<Conversation[]>(
-      `/api/chat/conversations/?workspace_id=${workspaceId}`,
-    ),
+  conversations: (workspaceId: number) =>
+    apiFetch<Conversation[]>(`/api/chat/conversations/?workspace_id=${workspaceId}`),
 
-  conversation: (
-    id: number,
-  ) =>
-    apiFetch<ConversationDetail>(
-      `/api/chat/conversations/${id}/`,
-    ),
+  conversation: (id: number) => apiFetch<ConversationDetail>(`/api/chat/conversations/${id}/`),
 
-  createConversation: (
-    workspaceId: number,
-  ) =>
-    apiFetch<Conversation>(
-      '/api/chat/conversations/',
-      {
-        method: 'POST',
-        body: JSON.stringify({
-          workspace_id:
-            workspaceId,
-        }),
-      },
-    ),
+  createConversation: (workspaceId: number) =>
+    apiFetch<Conversation>('/api/chat/conversations/', {
+      method: 'POST',
+      body: JSON.stringify({ workspace_id: workspaceId }),
+    }),
+
+  /** Needs a DELETE handler on /api/chat/conversations/<id>/ (returns 204). */
+  deleteConversation: (id: number) =>
+    apiFetch<void>(`/api/chat/conversations/${id}/`, {
+      method: 'DELETE',
+    }),
+
+  settings: (id: number) =>
+    apiFetch<ConversationSettings>(`/api/chat/conversations/${id}/settings/`),
+
+  updateSettings: (id: number, patch: ConversationSettingsPatch) =>
+    apiFetch<ConversationSettings>(`/api/chat/conversations/${id}/settings/`, {
+      method: 'PATCH',
+      body: JSON.stringify(patch),
+    }),
 }
 
 export { tokenStore }

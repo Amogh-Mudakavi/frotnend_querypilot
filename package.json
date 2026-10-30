@@ -9,6 +9,8 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@animateicons/react": "^0.12.1",
+    "@radix-ui/react-dropdown-menu": "^2.2.1",
     "@vercel/analytics": "^1.4.1",
     "clsx": "^2.1.1",
     "gsap": "^3.15.0",
@@ -19,7 +21,8 @@
     "react-dom": "^19.0.0",
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1",
-    "tailwind-merge": "^2.5.5"
+    "tailwind-merge": "^2.5.5",
+    "thinking-orbs": "^0.3.2"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.0.0",

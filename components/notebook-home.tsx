@@ -1,359 +1,1221 @@
 'use client'
 
 import Link from 'next/link'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import {
-  Bell,
-  ChevronDown,
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type KeyboardEvent as RKeyboardEvent,
+  type ReactNode,
+} from 'react'
+import {
+  ArrowUpRight,
+  BarChart3,
+  Calculator,
+  FileSpreadsheet,
+  FileText,
+  FlaskConical,
+  GitMerge,
+  Landmark,
+  Package,
+  Percent,
+  ShieldCheck,
+  Wallet,
+  ChevronRight,
+  ChevronsUpDown,
+  Code2,
+  Folder,
   FolderOpen,
-  HelpCircle,
-  Database,
-  MessageSquare,
-  Clock3,
+  Headphones,
+  LayoutGrid,
+  LayoutTemplate,
   LogOut,
-  Menu,
   MoreHorizontal,
   Plus,
+  Receipt,
+  Scale,
   Search,
   Settings,
-  SlidersHorizontal,
+  Trash2,
+  Users,
   X,
+  type LucideIcon,
 } from 'lucide-react'
-import { useRouter } from 'next/navigation'
-
 import { PixelDissolveButton } from '@/components/pixel-dissolve-button'
-import { authApi, workspaceApi, type User, type Workspace } from '@/lib/django-api'
+
+import {
+  authApi,
+  chatApi,
+  documentApi,
+  workspaceApi,
+  type User,
+  type Workspace,
+} from '../lib/django-api'
+import { FONT_SANS, QpGlobalStyles, focusRing } from './qp-ui'
 
 const ACTIVE_WORKSPACE_KEY = 'querypilot_active_workspace_id'
-const WORKSPACE_NAME_MAX_LENGTH = 120
+const NAME_MAX = 120
+const STATS_LIMIT = 100
+const STATS_CONCURRENCY = 6
+const STATS_FLUSH_MS = 120
 
-function errorMessage(error: unknown) {
-  return error instanceof Error
-    ? error.message
-    : 'Something went wrong. Please try again.'
+/* ---------------- Design tokens (one place, used everywhere) ---------------- */
+const AUTH_BLUE = '#3a44a8'
+const AUTH_DISSOLVE_BLUE = '#2a3282'
+const DANGER = '#e5665a' // Notion's destructive red
+
+// Primary pill: 32px tall, 13px medium, same everywhere.
+// Disabled uses explicit darker/desaturated colors (not opacity) so the label stays legible but clearly inactive.
+const PRIMARY_BUTTON_CLASSES =
+  '!h-8 !min-h-0 !w-auto !rounded-full !border !border-[#3a44a8] !bg-[#3a44a8] !px-4 !text-[13px] !font-medium ' +
+  '!normal-case !tracking-normal !text-white hover:!bg-[#4651bd] active:!bg-[#313a99] disabled:!cursor-not-allowed disabled:!border-[#2a2f6b] disabled:!bg-[#2a2f6b] disabled:!text-white/70 whitespace-nowrap ' +
+  focusRing
+
+// Shared look for the secondary (ghost) pill buttons. Height and side padding are added where each one is used.
+const PILL_BASE =
+  '!min-h-0 !w-auto !rounded-full !text-[13px] !font-medium !normal-case !tracking-normal whitespace-nowrap shrink-0 ' +
+  focusRing
+
+// Inputs: 1px border, accent focus. FIELD_SM (32px) pairs with pill buttons on one row.
+const FIELD_BASE =
+  'w-full rounded-md border border-white/[0.1] bg-[#191919] text-[13px] text-[#ececec] outline-none transition-colors placeholder:text-zinc-500 hover:border-white/[0.16] focus:border-[#6b76e0] disabled:opacity-60'
+const FIELD = `h-9 px-3 ${FIELD_BASE}`
+const FIELD_SM = `h-8 px-3 ${FIELD_BASE}`
+const MENU_ITEM =
+  'flex h-8 w-full items-center gap-2.5 rounded-md px-2.5 text-left text-[13px] text-[#e0e0e0] outline-none transition-colors hover:bg-white/[0.07] focus-visible:bg-white/[0.09]'
+const MENU_PANEL =
+  'rounded-lg border border-white/[0.09] bg-[#252525] p-1 shadow-[0_12px_32px_rgba(0,0,0,0.5)]'
+const NAV_ITEM =
+  'flex h-8 w-full items-center gap-2.5 rounded-md px-2.5 text-left text-[13px] text-[#a8a8a8] transition-colors hover:bg-white/[0.04] hover:text-[#ececec]'
+
+/* ---------------- Templates: each one shows the kind of question it answers ---------------- */
+type Category = 'Finance' | 'People & pay' | 'Legal' | 'Operations' | 'Technical'
+const CATEGORIES: Category[] = ['Finance', 'People & pay', 'Legal', 'Operations', 'Technical']
+
+type Preset = {
+  name: string
+  ask: string
+  Icon: LucideIcon
+  tint: string
+  answer: string
+  source: string
+  cat: Category
+}
+const PRESETS: Preset[] = [
+  // Cross-document templates: every question needs facts from two files (rules in a PDF, data in a sheet, or two PDFs compared).
+  { name: 'Payroll & Tax Slab Joins', cat: 'People & pay', ask: 'How much tax does Priya owe this year?', Icon: Calculator, tint: '#e0a54a', answer: 'Her ₹12,00,000 taxable income (payroll.xlsx) spans three slabs in the PDF: ₹80,000 a year, about ₹6,667 a month.', source: 'tax-slabs.pdf + payroll.xlsx' },
+  { name: 'Contract Conflict Check', cat: 'Legal', ask: 'Do the NDA and MSA disagree on termination notice?', Icon: GitMerge, tint: '#dc6b66', answer: "Yes. The NDA allows 30 days' notice, while the MSA requires 60.", source: 'nda.pdf + vendor-msa.pdf' },
+  { name: 'Vendor Spend vs Contract Caps', cat: 'Finance', ask: 'Which vendors billed above their contract cap?', Icon: Landmark, tint: '#529cca', answer: 'Acme billed ₹14.2L against a ₹12L cap, and Zenith ₹6.8L against ₹6L.', source: 'vendor-msa.pdf + invoices.xlsx' },
+  { name: 'Loan Rates & Applicants', cat: 'Finance', ask: "What is applicant A-102's monthly EMI?", Icon: Percent, tint: '#9a6dd7', answer: 'A credit score of 760 sits in the 8.5% band, so the EMI on ₹10L over 20 years is about ₹8,678.', source: 'rate-sheet.pdf + applicants.xlsx' },
+  { name: 'Insurance Claims & Policies', cat: 'Finance', ask: 'Is claim 4821 covered, and for how much?', Icon: ShieldCheck, tint: '#4dab9a', answer: 'A ₹3,00,000 claim is within the ₹5L limit; after the ₹25,000 deductible the payout is ₹2,75,000.', source: 'policy.pdf + claims.xlsx' },
+  { name: 'Sales Commission Plans', cat: 'People & pay', ask: 'What commission does Rahul earn for Q3?', Icon: Wallet, tint: '#7c8cf0', answer: '₹82,000: 5% on his first ₹10L of sales and 8% on the remaining ₹4L.', source: 'commission-plan.pdf + q3-sales.xlsx' },
+  { name: 'Research Paper Comparison', cat: 'Technical', ask: 'Which paper reports the best F1 on SQuAD?', Icon: FlaskConical, tint: '#9a6dd7', answer: 'Paper B reports 0.91 F1, ahead of Paper A at 0.88, both on the same test split.', source: 'paper-a.pdf + paper-b.pdf' },
+  { name: 'Inventory & Supplier Terms', cat: 'Operations', ask: 'Which SKUs need reordering, and from whom?', Icon: Package, tint: '#4dab9a', answer: 'SKU-114 and SKU-207 are below reorder level; order from Nova Parts and Kite Supply.', source: 'reorder-rules.pdf + stock.xlsx' },
+  { name: 'HR & Onboarding', cat: 'People & pay', ask: 'How many leave days carry over?', Icon: Users, tint: '#4dab9a', answer: 'Up to 10 unused days carry over into the next year.', source: 'leave-policy.pdf' },
+  { name: 'Customer Support Runbooks', cat: 'Operations', ask: 'How do I refund a duplicate charge?', Icon: Headphones, tint: '#529cca', answer: 'Open the charge in Billing, choose Refund duplicate, then confirm.', source: 'refund-runbook.md' },
+  { name: 'Salary & Tax Policies', cat: 'People & pay', ask: 'Which deductions apply to my CTC?', Icon: Receipt, tint: '#e0a54a', answer: 'HRA and the standard deduction apply to your CTC breakdown.', source: 'tax-policy.pdf' },
+  { name: 'Financial 10-K Reports', cat: 'Finance', ask: 'What drove operating margin last year?', Icon: BarChart3, tint: '#9a6dd7', answer: 'Margin rose as cost of revenue grew slower than sales.', source: 'form-10k.pdf' },
+  { name: 'Legal & Vendor Contracts', cat: 'Legal', ask: 'When does the vendor contract renew?', Icon: Scale, tint: '#dc6b66', answer: 'It renews each year unless cancelled 60 days before the term ends.', source: 'vendor-msa.pdf' },
+  { name: 'Engineering Specs', cat: 'Technical', ask: 'Which endpoints need the admin scope?', Icon: Code2, tint: '#7c8cf0', answer: 'Every /admin route requires the admin scope.', source: 'api-spec.yaml' },
+]
+
+const sourceFiles = (source: string) =>
+  source
+    .split('+')
+    .map((s) => s.trim())
+    .filter(Boolean)
+const isSheet = (file: string) => /\.(xlsx|xls|csv)$/i.test(file)
+
+/* ---------------- Status ---------------- */
+type StatusKey = 'synced' | 'indexing' | 'idle'
+const STATUS_DOT: Record<StatusKey, string> = {
+  synced: 'bg-zinc-300',
+  indexing: 'bg-zinc-500',
+  idle: 'bg-zinc-700',
 }
 
-function selectWorkspace(id: number) {
-  sessionStorage.setItem(ACTIVE_WORKSPACE_KEY, String(id))
+function statusOf(m: { loaded: boolean; documents: number | null; indexing: number }): StatusKey {
+  if (!m.loaded) return 'idle'
+  if (m.indexing > 0) return 'indexing'
+  return (m.documents ?? 0) > 0 ? 'synced' : 'idle'
 }
 
-// Small initials helper so the page never needs hardcoded account data.
-function initialsForUser(user: User | null) {
-  if (!user) return '—'
-
-  const source = user.username?.trim() || user.email?.trim() || ''
-  const parts = source.split(/\s+/).filter(Boolean)
-
-  if (parts.length >= 2) {
-    return `${parts[0][0]}${parts[1][0]}`.toUpperCase()
-  }
-
-  return source.slice(0, 2).toUpperCase() || '—'
-}
-
-function displayNameForUser(user: User | null) {
-  return user?.username?.trim() || 'Account'
-}
-
-function greetingForHour(hour: number) {
-  if (hour < 12) return 'Good morning'
-  if (hour < 18) return 'Good afternoon'
-  return 'Good evening'
-}
-
-function validateWorkspaceName(raw: string): string | null {
-  const trimmed = raw.trim()
-
-  if (!trimmed) {
-    return 'Give your workspace a name.'
-  }
-
-  if (trimmed.length > WORKSPACE_NAME_MAX_LENGTH) {
-    return `Keep it under ${WORKSPACE_NAME_MAX_LENGTH} characters.`
-  }
-
-  // eslint-disable-next-line no-control-regex
-  if (/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/.test(trimmed)) {
-    return "That name contains characters that aren't allowed."
-  }
-
-  return null
-}
-
-function AnimatedReveal({
-  children,
-  className = '',
-  delay = 0,
-}: {
-  children: React.ReactNode
-  className?: string
-  delay?: number
-}) {
+function StatusDot({ s }: { s: StatusKey }) {
   return (
-    <span
-      className={`qp-reveal ${className}`}
-      style={{ '--qp-delay': `${delay}ms` } as Record<string, string>}
-    >
-      {children}
+    <span className="relative flex size-2 flex-none items-center justify-center">
+      {s === 'indexing' && (
+        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-zinc-500 opacity-60 motion-reduce:animate-none" />
+      )}
+      <span aria-hidden="true" className={`inline-block size-1.5 rounded-full ${STATUS_DOT[s]}`} />
     </span>
   )
 }
 
-function EmptyStateVisual() {
-  return (
-    <div className="relative flex h-full min-h-[500px] w-full items-center justify-center overflow-visible lg:min-h-[650px] lg:justify-end xl:min-h-[680px]">
-      {/* Soft ambient light behind the illustration so it feels embedded in the page. */}
-      <div className="pointer-events-none absolute inset-[-14%]">
-        <div className="absolute right-[4%] top-[10%] h-[70%] w-[78%] rounded-full bg-[radial-gradient(ellipse_at_center,rgba(215,235,225,0.52),transparent_68%)] blur-[10px]" />
-        <div className="absolute bottom-[4%] left-[5%] h-[42%] w-[82%] rounded-full bg-[radial-gradient(ellipse_at_center,rgba(225,236,231,0.36),transparent_74%)] blur-[12px]" />
-      </div>
+/* ---------------- Helpers ---------------- */
+const errorMessage = (e: unknown) =>
+  e instanceof Error ? e.message : 'Something went wrong. Please try again.'
 
-      {/* The source image is masked at its edges so there is no visible rectangular
-          canvas. Multiply blending lets the page / mountain texture remain visible
-          through the pale parts of the illustration. */}
-      <div
-        className="relative z-10 w-[122%] lg:w-[134%] xl:w-[138%]"
-        style={{
-          WebkitMaskImage:
-            "radial-gradient(ellipse 82% 78% at 50% 50%, #000 42%, rgba(0,0,0,.98) 58%, rgba(0,0,0,.65) 76%, transparent 100%)",
-          maskImage:
-            "radial-gradient(ellipse 82% 78% at 50% 50%, #000 42%, rgba(0,0,0,.98) 58%, rgba(0,0,0,.65) 76%, transparent 100%)",
-        }}
-      >
-        <img
-          src="/workspace.png"
-          alt=""
-          aria-hidden="true"
-          className="block h-auto w-full object-contain"
-          style={{
-            mixBlendMode: "darken",
-            opacity: 0.96,
-            filter: "contrast(1.04) saturate(0.98)",
-          }}
-        />
-      </div>
+const selectWorkspace = (id: number) => {
+  try {
+    window.sessionStorage.setItem(ACTIVE_WORKSPACE_KEY, String(id))
+  } catch {
+    /* ignore */
+  }
+}
+const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? '' : 's'}`
+const byRecent = (a: Workspace, b: Workspace) =>
+  new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
 
-      {/* Feather the remaining edge so the source canvas never reads as a white card. */}
-      <div
-        className="pointer-events-none absolute inset-[1%] z-20"
-        style={{
-          WebkitMaskImage:
-            "radial-gradient(ellipse 78% 74% at 50% 50%, transparent 48%, #000 79%, transparent 100%)",
-          maskImage:
-            "radial-gradient(ellipse 78% 74% at 50% 50%, transparent 48%, #000 79%, transparent 100%)",
-          background: "rgba(251,252,251,0.12)",
-        }}
-      />
-    </div>
-  )
+function initialsForUser(user: User | null) {
+  const src = user?.username?.trim() || user?.email?.trim() || ''
+  const parts = src.split(/\s+/).filter(Boolean)
+  if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase()
+  return src.slice(0, 2).toUpperCase() || '—'
 }
 
-function FeaturePill({
-  icon,
-  title,
-  description,
-  className,
+function formatRelative(value: string) {
+  const t = new Date(value).getTime()
+  if (Number.isNaN(t)) return ''
+  const m = Math.floor((Date.now() - t) / 60000)
+  if (m < 1) return 'Just now'
+  if (m < 60) return `${m}m ago`
+  const h = Math.floor(m / 60)
+  if (h < 24) return `${h}h ago`
+  const d = Math.floor(h / 24)
+  if (d < 7) return `${d}d ago`
+  return new Date(value).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })
+}
+
+function validateName(raw: string): string | null {
+  const t = raw.trim()
+  if (!t) return 'Give your workspace a name.'
+  if (t.length > NAME_MAX) return `Keep it under ${NAME_MAX} characters.`
+  // eslint-disable-next-line no-control-regex
+  if (/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/.test(t)) return "That name contains characters that aren't allowed."
+  return null
+}
+
+function useDismiss<T extends HTMLElement>(open: boolean, onClose: () => void) {
+  const ref = useRef<T>(null)
+  useEffect(() => {
+    if (!open) return
+    const down = (e: PointerEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose()
+    }
+    const key = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
+    document.addEventListener('pointerdown', down)
+    document.addEventListener('keydown', key)
+    return () => {
+      document.removeEventListener('pointerdown', down)
+      document.removeEventListener('keydown', key)
+    }
+  }, [open, onClose])
+  return ref
+}
+
+async function pool<T>(items: T[], limit: number, fn: (item: T) => Promise<void>, aborted: () => boolean) {
+  let next = 0
+  const worker = async () => {
+    while (!aborted()) {
+      const i = next++
+      if (i >= items.length) return
+      await fn(items[i])
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker))
+}
+
+/* ---------------- Per-workspace stats ---------------- */
+type Stat = { documents: number | null; conversations: number | null; indexing: number }
+const StatsContext = createContext<Record<number, Stat>>({})
+
+function useMeta(id: number) {
+  const s = useContext(StatsContext)[id]
+  return {
+    loaded: Boolean(s),
+    documents: s?.documents ?? null,
+    conversations: s?.conversations ?? null,
+    indexing: s?.indexing ?? 0,
+  }
+}
+
+/* ---------------- Shared UI: pill buttons + dialog shell ---------------- */
+/*
+ * One secondary button for every dialog: 32px, 13px medium, fully rounded.
+ * It is a PixelDissolveButton, so it gets the same hover as every other button on the site.
+ * The label is plain text (the dissolve button takes a string, not children elements).
+ */
+function Pill({
+  variant = 'ghost',
+  className = '',
+  children,
+  onClick,
+  disabled,
 }: {
-  icon: React.ReactNode
-  title: string
-  description: string
+  variant?: 'ghost' | 'danger'
   className?: string
+  children: string
+  onClick?: () => void
+  disabled?: boolean
 }) {
+  const danger = variant === 'danger'
   return (
-    <div className={`flex items-start gap-3 ${className ?? ''}`}>
-      <div className="grid size-10 shrink-0 place-items-center rounded-xl border border-emerald-100 bg-white/70 text-[#0c6b43] shadow-[0_10px_26px_rgba(15,23,42,0.03)] backdrop-blur">
-        {icon}
-      </div>
-      <div className="pt-0.5">
-        <p className="text-[13px] font-semibold tracking-[-0.01em] text-slate-900">
-          {title}
-        </p>
-        <p className="mt-1 text-[11px] leading-5 text-slate-500">
-          {description}
-        </p>
+    <PixelDissolveButton
+      type="button"
+      label={children}
+      onClick={onClick}
+      disabled={disabled}
+      color={danger ? DANGER : 'rgba(255,255,255,0.07)'}
+      textColor={danger ? '#ffffff' : '#e6e6e6'}
+      dissolveColor={danger ? '#7a1f1a' : 'rgba(255,255,255,0.28)'}
+      cellSize={4}
+      className={`${PILL_BASE} !h-8 !px-4 ${className}`}
+    />
+  )
+}
+
+function Dialog({
+  open,
+  onClose,
+  locked = false,
+  labelledBy,
+  width = 'max-w-[400px]',
+  height = '',
+  padded = true,
+  children,
+}: {
+  open: boolean
+  onClose: () => void
+  locked?: boolean
+  labelledBy: string
+  width?: string
+  height?: string
+  padded?: boolean
+  children: ReactNode
+}) {
+  const panelRef = useRef<HTMLDivElement>(null)
+  const closeRef = useRef(onClose)
+  const lockedRef = useRef(locked)
+  closeRef.current = onClose
+  lockedRef.current = locked
+
+  useEffect(() => {
+    if (!open) return
+    const prev = document.activeElement as HTMLElement | null
+    const sel = 'a[href],button:not([disabled]),input:not([disabled]),[tabindex]:not([tabindex="-1"])'
+    const key = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (!lockedRef.current) closeRef.current()
+        return
+      }
+      const el = panelRef.current
+      if (e.key !== 'Tab' || !el) return
+      const f = Array.from(el.querySelectorAll<HTMLElement>(sel))
+      if (!f.length) return
+      const a = document.activeElement
+      const first = f[0]
+      const last = f[f.length - 1]
+      if (e.shiftKey && (a === first || !el.contains(a))) {
+        e.preventDefault()
+        last.focus()
+      } else if (!e.shiftKey && (a === last || !el.contains(a))) {
+        e.preventDefault()
+        first.focus()
+      }
+    }
+    document.addEventListener('keydown', key)
+    return () => {
+      document.removeEventListener('keydown', key)
+      prev?.focus?.()
+    }
+  }, [open])
+
+  if (!open) return null
+  return (
+    <div
+      className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4"
+      onPointerDown={(e) => {
+        if (e.target === e.currentTarget && !locked) onClose()
+      }}
+    >
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={labelledBy}
+        className={`qp-dialog-in flex max-h-[calc(100dvh-2rem)] w-full ${width} ${height} flex-col overflow-hidden rounded-xl border border-[var(--qp-border)] bg-[var(--qp-sidebar)] shadow-[0_20px_50px_rgba(0,0,0,0.45)] ${padded ? 'p-5' : ''}`}
+      >
+        {children}
       </div>
     </div>
   )
 }
 
-function HowItWorks() {
-  const steps = [
-    ['01', 'Create a workspace', 'Set up your workspace in seconds'],
-    ['02', 'Add your data', 'Upload documents or connect data sources'],
-    ['03', 'Ask questions', 'Get accurate, source-grounded answers'],
-  ]
-
+/* ---------------- Shell pieces ---------------- */
+function Logo() {
   return (
-    <section className="mt-4 border-t border-slate-300/70 pt-8 sm:mt-6 sm:pt-10">
-      <div className="flex items-end justify-between gap-6">
-        <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-400 sm:text-[11px]">
-            A simple workflow
-          </p>
-          <h2 className="mt-2 text-[24px] font-medium tracking-[-0.035em] text-slate-950 sm:text-[29px]">
-            How it works
-          </h2>
-        </div>
-
-        <p className="hidden max-w-[250px] text-right text-[11px] leading-5 text-slate-500 md:block">
-          Bring your knowledge together, then ask QueryPilot to find the signal.
-        </p>
-      </div>
-
-      <div className="mt-7 grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-0">
-        {steps.map(([number, title, description], index) => (
-          <div
-            key={number}
-            className={`group relative min-h-[150px] rounded-2xl border border-slate-200/70 bg-white/38 p-5 backdrop-blur-[2px] transition duration-300 hover:-translate-y-0.5 hover:bg-white/55 ${
-              index > 0 ? 'sm:rounded-l-none sm:border-l-0' : ''
-            } ${index < 2 ? 'sm:border-r-0' : ''}`}
-          >
-            <div className="flex items-center justify-between">
-              <span className="grid size-9 place-items-center rounded-full border border-slate-200 bg-white/70 text-[11px] font-semibold tracking-[0.08em] text-slate-500">
-                {number}
-              </span>
-              <span className="h-px flex-1 bg-slate-200/70 mx-4 transition group-hover:bg-emerald-200" />
-              <span className="size-2 rounded-full bg-emerald-400/70 opacity-50 transition group-hover:scale-125 group-hover:opacity-100" />
-            </div>
-
-            <p className="mt-6 text-[15px] font-semibold tracking-[-0.02em] text-slate-950 sm:text-[16px]">
-              <AnimatedReveal delay={index * 90}>{title}</AnimatedReveal>
-            </p>
-            <p className="mt-2 max-w-[250px] text-[12px] leading-5 text-slate-500 sm:text-[12.5px]">
-              {description}
-            </p>
-          </div>
-        ))}
-      </div>
-    </section>
+    <Link
+      href="/"
+      aria-label="QueryPilot home"
+      className={`inline-flex items-center gap-2.5 rounded-md text-[14px] font-medium tracking-tight text-[#e6e6e6] ${focusRing}`}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/querypilot-logo.svg" alt="" width={20} height={20} draggable={false} />
+      <span>QueryPilot</span>
+    </Link>
   )
 }
 
+function AccountMenu({
+  user,
+  onLogout,
+  variant,
+  settingsHref,
+}: {
+  user: User | null
+  onLogout: () => void
+  variant: 'sidebar' | 'avatar'
+  settingsHref: string | null
+}) {
+  const [open, setOpen] = useState(false)
+  const close = useCallback(() => setOpen(false), [])
+  const ref = useDismiss<HTMLDivElement>(open, close)
+  const avatar = (
+    <span className="grid size-6 flex-none place-items-center rounded-md bg-[#3a3a3a] text-[10.5px] font-semibold text-[#e6e6e6]">
+      {initialsForUser(user)}
+    </span>
+  )
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label="Account menu"
+        onClick={() => setOpen((v) => !v)}
+        className={
+          variant === 'sidebar'
+            ? `flex h-10 w-full items-center gap-2.5 rounded-md px-2 text-left transition-colors hover:bg-white/[0.05] ${open ? 'bg-white/[0.05]' : ''} ${focusRing}`
+            : `grid size-9 place-items-center rounded-md transition-colors hover:bg-white/[0.06] ${focusRing}`
+        }
+      >
+        {avatar}
+        {variant === 'sidebar' && (
+          <>
+            <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-[#d0d0d0]">
+              {user?.username ?? 'Account'}
+            </span>
+            <ChevronsUpDown size={14} className="flex-none text-[#8a8a8a]" />
+          </>
+        )}
+      </button>
+      {open && (
+        <div
+          role="menu"
+          className={`absolute z-40 w-[232px] ${MENU_PANEL} ${
+            variant === 'sidebar' ? 'bottom-full left-0 mb-2' : 'right-0 top-full mt-2'
+          }`}
+        >
+          <div className="px-2.5 py-2">
+            <p className="truncate text-[13px] font-medium text-[#e6e6e6]">{user?.username ?? 'Account'}</p>
+            <p className="truncate text-[12px] text-[#9a9a9a]">{user?.email ?? ''}</p>
+          </div>
+          <div className="my-1 h-px bg-white/[0.08]" />
+          {settingsHref && (
+            <Link href={settingsHref} role="menuitem" onClick={close} className={MENU_ITEM}>
+              <Settings size={14} className="text-[#9b9b9b]" /> Settings
+            </Link>
+          )}
+          <button
+            type="button"
+            role="menuitem"
+            onClick={onLogout}
+            className={`${MENU_ITEM} text-[var(--qp-text-secondary)] hover:bg-[var(--qp-surface-hover)] hover:text-[var(--qp-text-primary)]`}
+          >
+            <LogOut size={14} /> Sign out
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
 
-function WorkspaceCard({
-  workspace,
+/* Sidebar is navigation + a library summary. It never re-lists the workspaces. */
+function SidebarStat({ label, value, dot }: { label: string; value: number; dot?: string }) {
+  return (
+    <div className="flex h-7 items-center justify-between px-2.5 text-[13px]">
+      <span className="flex items-center gap-2 text-[#8c8c8c]">
+        {dot && <span aria-hidden="true" className={`inline-block size-1.5 rounded-full ${dot}`} />}
+        {label}
+      </span>
+      <span className="tabular-nums text-[#c4c4c4]">{value}</span>
+    </div>
+  )
+}
+
+/* ---------------- Workspace list ---------------- */
+// Header and rows share these columns and the same horizontal padding, so every column lines up.
+const ROW_COLS = 'grid-cols-[minmax(0,1fr)_auto_28px] md:grid-cols-[minmax(0,1fr)_88px_64px_88px_28px]'
+const ROW_PAD = 'pl-4 pr-2'
+
+function ListHead() {
+  return (
+    <div
+      className={`hidden h-9 items-center gap-4 border-b border-white/[0.08] ${ROW_PAD} text-[12px] text-[#8c8c8c] md:grid ${ROW_COLS}`}
+    >
+      <span>Name</span>
+      <span className="text-right">Documents</span>
+      <span className="text-right">Chats</span>
+      <span className="text-right">Updated</span>
+      <span aria-hidden="true" />
+    </div>
+  )
+}
+
+/*
+ * Row actions. The parent row lifts itself above its siblings while the menu is open
+ * (z-30), so the panel is never painted underneath the next row's button or text.
+ * Near the bottom of the viewport the panel opens upward.
+ */
+function RowMenu({
+  w,
+  open,
+  setOpen,
   onOpen,
   onDelete,
 }: {
-  workspace: Workspace
-  onOpen: () => void
-  onDelete: () => void
+  w: Workspace
+  open: boolean
+  setOpen: (v: boolean) => void
+  onOpen: (w: Workspace) => void
+  onDelete: (w: Workspace) => void
 }) {
+  const [up, setUp] = useState(false)
+  const btnRef = useRef<HTMLButtonElement>(null)
+  const close = useCallback(() => setOpen(false), [setOpen])
+  const ref = useDismiss<HTMLDivElement>(open, close)
+
+  const toggle = () => {
+    if (!open && btnRef.current) {
+      const r = btnRef.current.getBoundingClientRect()
+      setUp(window.innerHeight - r.bottom < 150)
+    }
+    setOpen(!open)
+  }
+
   return (
-    <article className="group relative flex min-h-[192px] flex-col overflow-hidden rounded-2xl border border-slate-200/90 bg-white/78 p-4 text-left shadow-[0_12px_35px_rgba(15,23,42,0.035)] backdrop-blur-sm transition duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:bg-white/92 hover:shadow-[0_18px_40px_rgba(15,23,42,0.07)]">
-      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-emerald-200/70 to-transparent opacity-0 transition group-hover:opacity-100" />
-
+    <div ref={ref} className="absolute right-2 top-1/2 -translate-y-1/2">
       <button
+        ref={btnRef}
         type="button"
-        onClick={onDelete}
-        aria-label={`More options for ${workspace.title}`}
-        className="absolute right-3 top-3 grid size-8 place-items-center rounded-lg text-slate-400 opacity-0 transition hover:bg-slate-100 hover:text-slate-800 group-hover:opacity-100 focus:opacity-100"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label={`Actions for ${w.title}`}
+        onClick={toggle}
+        className={`grid size-7 place-items-center rounded-md text-[#8a8a8a] transition-colors hover:bg-white/[0.07] hover:text-[#e6e6e6] ${
+          open ? 'bg-white/[0.07] text-[#e6e6e6]' : ''
+        } ${focusRing}`}
       >
-        <MoreHorizontal size={17} strokeWidth={1.8} />
+        <MoreHorizontal size={15} />
       </button>
-
-      <button
-        type="button"
-        onClick={onOpen}
-        className="flex h-full w-full flex-col items-start text-left focus:outline-none"
-      >
-        <div className="flex w-full items-start justify-between pr-8">
-          <span className="grid size-10 place-items-center rounded-xl border border-emerald-100 bg-emerald-50/80 text-[#0c6b43]">
-            <FolderOpen size={18} strokeWidth={1.8} />
-          </span>
-          <span className="mt-1 size-1.5 rounded-full bg-emerald-500/70 opacity-0 transition group-hover:opacity-100" />
+      {open && (
+        <div
+          role="menu"
+          className={`absolute right-0 z-40 w-[168px] ${MENU_PANEL} ${up ? 'bottom-full mb-1' : 'top-full mt-1'}`}
+        >
+          <button type="button" role="menuitem" onClick={() => { close(); onOpen(w) }} className={MENU_ITEM}>
+            <FolderOpen size={14} className="text-[#9b9b9b]" /> Open
+          </button>
+          <Link
+            href={`/workspaces/${w.id}/settings`}
+            role="menuitem"
+            onClick={() => { close(); selectWorkspace(w.id) }}
+            className={MENU_ITEM}
+          >
+            <Settings size={14} className="text-[#9b9b9b]" /> Settings
+          </Link>
+          <div className="my-1 h-px bg-white/[0.08]" />
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => { close(); onDelete(w) }}
+            className={`${MENU_ITEM} text-[#f08a84] hover:bg-[#3a2323] hover:text-[#ffb0aa]`}
+          >
+            <Trash2 size={14} /> Delete
+          </button>
         </div>
-
-        <h2 className="mt-5 max-w-full truncate text-[14px] font-semibold tracking-[-0.025em] text-slate-950">
-          {workspace.title}
-        </h2>
-
-        <p className="mt-1.5 max-w-[245px] text-[10.5px] leading-5 text-slate-500">
-          Workspace for documents, conversations, and structured knowledge.
-        </p>
-
-        <div className="mt-auto flex w-full items-end justify-between gap-3 pt-6">
-          <div>
-            <p className="text-[9px] uppercase tracking-[0.16em] text-slate-400">Updated</p>
-            <p className="mt-1 text-[10px] font-medium text-slate-600">
-              {new Date(workspace.updated_at).toLocaleDateString('en-IN', {
-                day: 'numeric',
-                month: 'short',
-                year: 'numeric',
-              })}
-            </p>
-          </div>
-
-          <span className="text-[10px] font-semibold text-[#0c6b43] opacity-0 transition group-hover:opacity-100">
-            Open →
-          </span>
-        </div>
-      </button>
-    </article>
+      )}
+    </div>
   )
 }
 
-function CreateWorkspaceCard({ onClick }: { onClick: () => void }) {
+function WorkspaceRow({ w, onOpen, onDelete }: { w: Workspace; onOpen: (w: Workspace) => void; onDelete: (w: Workspace) => void }) {
+  const meta = useMeta(w.id)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const st = statusOf(meta)
+  const docs = meta.loaded ? meta.documents ?? 0 : null
+  const chats = meta.loaded ? meta.conversations ?? 0 : null
+
+  return (
+    <li
+      className={`relative border-b border-white/[0.06] last:border-b-0 [&:last-child>button]:rounded-b-lg ${menuOpen ? 'z-30' : ''}`}
+    >
+      <button
+        type="button"
+        onClick={() => onOpen(w)}
+        className={`grid h-11 w-full items-center gap-4 ${ROW_PAD} text-left transition-colors hover:bg-white/[0.04] ${ROW_COLS} ${focusRing}`}
+      >
+        <span className="flex min-w-0 items-center gap-3">
+          <span className="relative flex-none">
+            <Folder size={16} strokeWidth={1.6} className="text-zinc-400" />
+            <span className="absolute -bottom-1 -right-1 rounded-full bg-[#191919] p-px">
+              <StatusDot s={st} />
+            </span>
+          </span>
+          <span className="truncate text-[14px] font-medium text-[#ececec]">{w.title}</span>
+        </span>
+        <span className="hidden text-right text-[13px] tabular-nums md:block">
+          {meta.indexing > 0 ? (
+            <span className="rounded-full bg-[var(--qp-surface-hover)] px-2 py-0.5 text-[12px] text-[var(--qp-text-secondary)]">Indexing {meta.indexing}</span>
+          ) : docs === null ? null : (
+            <span className={docs === 0 ? 'text-[#6f6f6f]' : 'text-[#b4b4b4]'}>{docs}</span>
+          )}
+        </span>
+        <span className={`hidden text-right text-[13px] tabular-nums md:block ${chats ? 'text-[#b4b4b4]' : 'text-[#6f6f6f]'}`}>{chats ?? ''}</span>
+        <span className="text-right text-[13px] tabular-nums text-[#9a9a9a]">{formatRelative(w.updated_at)}</span>
+        <span aria-hidden="true" />
+      </button>
+      <RowMenu w={w} open={menuOpen} setOpen={setMenuOpen} onOpen={onOpen} onDelete={onDelete} />
+    </li>
+  )
+}
+
+/* ---------------- Templates ---------------- */
+function TemplateIcon({ p }: { p: Preset }) {
+  return (
+    <span
+      aria-hidden="true"
+      className="grid size-6 flex-none place-items-center rounded-md border border-[var(--qp-border)] bg-[var(--qp-input)] text-[var(--qp-text-secondary)]"
+    >
+      <p.Icon size={14} strokeWidth={1.6} />
+    </span>
+  )
+}
+
+function TemplateCard({ p, busy, disabled, onPick }: { p: Preset; busy: boolean; disabled: boolean; onPick: (p: Preset) => void }) {
   return (
     <button
       type="button"
-      onClick={onClick}
-      className="group flex min-h-[192px] flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-white/35 px-6 text-center transition hover:border-emerald-200 hover:bg-emerald-50/25"
+      onClick={() => onPick(p)}
+      disabled={disabled}
+      className={`flex w-full flex-col rounded-lg border border-white/[0.1] px-4 py-3.5 text-left transition-colors enabled:hover:border-white/[0.18] enabled:hover:bg-white/[0.04] focus-visible:border-white/[0.18] focus-visible:bg-white/[0.04] active:bg-white/[0.06] disabled:cursor-not-allowed disabled:opacity-60 ${focusRing}`}
     >
-      <span className="grid size-11 place-items-center rounded-full border border-emerald-100 bg-emerald-50 text-[#0c6b43] transition group-hover:scale-105">
-        <Plus size={20} strokeWidth={1.8} />
+      <span className="flex items-center gap-2.5">
+        <TemplateIcon p={p} />
+        <span className="min-w-0 flex-1 truncate text-[14px] font-medium leading-5 text-[#ececec]">{p.name}</span>
+        {busy && <span className="flex-none text-[12px] text-[#9a9a9a]">Creating…</span>}
       </span>
-      <span className="mt-4 text-[13px] font-semibold tracking-[-0.01em] text-slate-900">
-        Create new workspace
+      <span className="mt-1.5 block text-[13px] leading-5 text-[#8c8c8c] [text-wrap:pretty]">“{p.ask}”</span>
+    </button>
+  )
+}
+
+// Intro copy and onboarding form share one measure: 560px, or exactly two grid columns when the grid has three.
+const COL_W = 'min-w-0 max-w-[560px] xl:max-w-[calc((200%_-_12px)/3)]'
+const GRID = 'grid grid-cols-1 auto-rows-fr gap-3 sm:grid-cols-2 xl:grid-cols-3'
+
+function SectionHead({ children, hint, action }: { children: ReactNode; hint?: string; action?: ReactNode }) {
+  return (
+    <div className="mb-4">
+      <div className="flex items-center justify-between gap-4">
+        <h2 className="text-[14px] font-medium leading-7 text-[#ececec]">{children}</h2>
+        {action}
+      </div>
+      {hint && <p className="max-w-[640px] text-[13px] leading-5 text-[#8c8c8c] [text-wrap:pretty]">{hint}</p>}
+    </div>
+  )
+}
+
+/* ---------------- Template gallery (opened from the sidebar or "Browse all") ---------------- */
+/*
+ * Cards are neutral surfaces. The template's tint appears in exactly three places: the icon tile,
+ * the file glyphs, and the border on hover. No colour washes on the card itself.
+ * The answer panel sits fully inside the card and is pinned to the bottom, so every row lines up
+ * even when the questions wrap to a different number of lines.
+ */
+function FileChip({ file }: { file: string }) {
+  const Glyph = isSheet(file) ? FileSpreadsheet : FileText
+  return (
+    <span className="inline-flex h-5 max-w-full items-center gap-1 rounded bg-[var(--qp-input)] px-1.5 text-[11px] text-[var(--qp-text-secondary)]">
+      <Glyph size={11} strokeWidth={1.6} className="flex-none text-[var(--qp-text-muted)]" aria-hidden="true" />
+      <span className="truncate">{file}</span>
+    </span>
+  )
+}
+
+function GalleryCard({ p, exists, busy, disabled, onPick }: { p: Preset; exists: boolean; busy: boolean; disabled: boolean; onPick: (p: Preset) => void }) {
+  const files = sourceFiles(p.source)
+  return (
+    <button
+      type="button"
+      onClick={() => onPick(p)}
+      disabled={disabled}
+      className={`group flex h-full w-full flex-col rounded-lg border border-[var(--qp-border)] bg-[var(--qp-surface)] p-4 text-left transition-colors enabled:hover:bg-[var(--qp-surface-hover)] focus-visible:bg-[var(--qp-surface-hover)] disabled:cursor-not-allowed disabled:opacity-60 ${focusRing}`}
+    >
+      <span className="flex items-center gap-2.5">
+        <TemplateIcon p={p} />
+        <span className="min-w-0 flex-1 break-words text-[14px] font-medium leading-5 text-[var(--qp-text-primary)]">{p.name}</span>
+        {busy ? (
+          <span className="flex-none text-[12px] text-[var(--qp-text-secondary)]">Creating…</span>
+        ) : exists ? (
+          <span className="inline-flex flex-none items-center gap-1 text-[12px] text-[var(--qp-text-secondary)]">
+            Open <ArrowUpRight size={12} strokeWidth={1.8} aria-hidden="true" />
+          </span>
+        ) : (
+          <ArrowUpRight
+            size={14}
+            strokeWidth={1.8}
+            aria-hidden="true"
+            className="flex-none text-[var(--qp-text-muted)] opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
+          />
+        )}
       </span>
-      <span className="mt-1 max-w-[190px] text-[10px] leading-5 text-slate-500">
-        Set up a new workspace to organize your documents and conversations.
+
+      <span className="mt-2 block text-[13px] leading-5 text-[var(--qp-text-secondary)] [text-wrap:pretty]">“{p.ask}”</span>
+
+      <span className="mt-auto block pt-4">
+        <span className="block rounded-md border border-[var(--qp-border-subtle)] bg-[var(--qp-background)] px-3 pb-3 pt-2.5">
+          <span className="block text-[11px] leading-4 text-[var(--qp-text-muted)]">Sample answer</span>
+          <span className="mt-1 block text-[13px] leading-[18px] text-[var(--qp-text-primary)] [text-wrap:pretty]">{p.answer}</span>
+          <span className="mt-2.5 flex flex-wrap gap-1.5">
+            {files.map((f) => (
+              <FileChip key={f} file={f} />
+            ))}
+          </span>
+        </span>
       </span>
     </button>
   )
 }
 
+function TemplateGallery({
+  open,
+  onClose,
+  presets,
+  existing,
+  pending,
+  creating,
+  onPick,
+}: {
+  open: boolean
+  onClose: () => void
+  presets: Preset[]
+  existing: Set<string>
+  pending: string | null
+  creating: boolean
+  onPick: (p: Preset) => void
+}) {
+  const [q, setQ] = useState('')
+  const [cat, setCat] = useState<Category | 'All'>('All')
+  useEffect(() => {
+    if (open) {
+      setQ('')
+      setCat('All')
+    }
+  }, [open])
+
+  const needle = q.trim().toLowerCase()
+  const matched = useMemo(
+    () => (needle ? presets.filter((p) => `${p.name} ${p.ask} ${p.source}`.toLowerCase().includes(needle)) : presets),
+    [presets, needle]
+  )
+  // Category counts follow the search, so the rail always tells you where the matches are.
+  const counts = useMemo(() => {
+    const c: Record<string, number> = { All: matched.length }
+    for (const p of matched) c[p.cat] = (c[p.cat] ?? 0) + 1
+    return c
+  }, [matched])
+  const shown = cat === 'All' ? matched : matched.filter((p) => p.cat === cat)
+  const created = presets.filter((p) => existing.has(p.name.toLowerCase())).length
+  const tabs: (Category | 'All')[] = ['All', ...CATEGORIES]
+
+  return (
+    // Fixed height so the dialog does not jump while you filter; only the card area scrolls.
+    <Dialog open={open} onClose={onClose} labelledBy="tpl-title" width="max-w-[1080px]" height="h-[min(780px,calc(100dvh-2rem))]" padded={false}>
+      <div className="flex h-14 flex-none items-center gap-3 border-b border-white/[0.08] px-5">
+        <h2 id="tpl-title" className="flex items-baseline gap-2 text-[15px] font-semibold tracking-tight text-white">
+          Templates
+          <span className="text-[13px] font-normal tabular-nums text-[#7e7e7e]">{presets.length}</span>
+        </h2>
+        <div className="relative ml-auto min-w-0 flex-1 sm:max-w-[260px]">
+          <Search size={14} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-500" />
+          <input
+            autoFocus
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search templates"
+            aria-label="Search templates"
+            spellCheck={false}
+            className={`${FIELD_SM} !pl-8`}
+          />
+        </div>
+        <button
+          type="button"
+          aria-label="Close"
+          onClick={onClose}
+          className={`-mr-2 grid size-8 flex-none place-items-center rounded-md text-[#8a8a8a] transition-colors hover:bg-white/[0.07] hover:text-[#e6e6e6] ${focusRing}`}
+        >
+          <X size={15} />
+        </button>
+      </div>
+
+      <div className="flex min-h-0 flex-1">
+        <nav
+          aria-label="Template categories"
+          className="hidden w-[188px] flex-none flex-col gap-0.5 overflow-y-auto border-r border-white/[0.08] p-2.5 sm:flex"
+        >
+          {tabs.map((t) => {
+            const active = cat === t
+            const n = counts[t] ?? 0
+            return (
+              <button
+                key={t}
+                type="button"
+                aria-pressed={active}
+                onClick={() => setCat(t)}
+                className={`flex h-8 w-full items-center justify-between gap-2 rounded-md px-2.5 text-left text-[13px] transition-colors ${
+                  active ? 'bg-white/[0.06] text-[#ececec]' : 'text-[#a8a8a8] hover:bg-white/[0.04] hover:text-[#ececec]'
+                } ${focusRing}`}
+              >
+                <span className="truncate">{t}</span>
+                <span className={`flex-none text-[12px] tabular-nums ${active ? 'text-[#a8a8a8]' : n === 0 ? 'text-[#4f4f4f]' : 'text-[#6f6f6f]'}`}>{n}</span>
+              </button>
+            )
+          })}
+        </nav>
+
+        <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain p-5 [scrollbar-color:#3a3a3a_transparent] [scrollbar-width:thin]">
+          <div className="-mx-5 mb-4 flex gap-1.5 overflow-x-auto px-5 [scrollbar-width:none] sm:hidden" role="group" aria-label="Template categories">
+            {tabs.map((t) => {
+              const active = cat === t
+              return (
+                <button
+                  key={t}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => setCat(t)}
+                  className={`h-7 flex-none whitespace-nowrap rounded-full border px-3 text-[12px] transition-colors ${
+                    active
+                      ? 'border-white/[0.2] bg-white/[0.08] text-[#ececec]'
+                      : 'border-white/[0.1] text-[#a8a8a8] hover:text-[#ececec]'
+                  } ${focusRing}`}
+                >
+                  {t}
+                </button>
+              )
+            })}
+          </div>
+
+          <p className="mb-4 max-w-[60ch] text-[13px] leading-5 text-[#8c8c8c]">
+            Each template starts an empty workspace with this name. Add your own documents, then ask questions like these.
+          </p>
+
+          {shown.length === 0 ? (
+            <div className="flex flex-col items-center gap-3 py-14 text-center">
+              <p className="text-[13px] text-zinc-500">{q.trim() ? <>No templates match “{q.trim()}”</> : 'No templates in this category'}</p>
+              <Pill
+                onClick={() => {
+                  setQ('')
+                  setCat('All')
+                }}
+              >
+                Clear filters
+              </Pill>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 auto-rows-fr gap-3 lg:grid-cols-2">
+              {shown.map((p) => (
+                <GalleryCard
+                  key={p.name}
+                  p={p}
+                  exists={existing.has(p.name.toLowerCase())}
+                  busy={pending === p.name}
+                  disabled={creating}
+                  onPick={onPick}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="flex h-11 flex-none items-center gap-4 border-t border-white/[0.08] px-5 text-[12px] text-[#8c8c8c]">
+        <span className="tabular-nums" aria-live="polite">
+          {shown.length === presets.length ? `${presets.length} templates` : `${shown.length} of ${presets.length} templates`}
+        </span>
+        {created > 0 && <span className="tabular-nums">{created} already in your workspaces</span>}
+        <span className="ml-auto hidden items-center gap-1.5 sm:flex">
+          <kbd className="rounded border border-white/[0.12] px-1.5 py-px text-[10px] text-[#8a8a8a]">Esc</kbd>
+          to close
+        </span>
+      </div>
+    </Dialog>
+  )
+}
+
+/* ---------------- Create form (used inline and in the dialog) ---------------- */
+function CreateForm({
+  creating,
+  autoFocus = false,
+  onCreate,
+  onCancel,
+}: {
+  creating: boolean
+  autoFocus?: boolean
+  onCreate: (name: string) => Promise<void>
+  onCancel?: () => void
+}) {
+  const [name, setName] = useState('')
+  const [err, setErr] = useState('')
+
+  const submit = async () => {
+    if (creating) return
+    const v = validateName(name)
+    if (v) return setErr(v)
+    setErr('')
+    try {
+      await onCreate(name)
+    } catch (e) {
+      setErr(errorMessage(e))
+    }
+  }
+
+  const inline = !onCancel // onboarding: single row. Dialog keeps Cancel + primary below.
+
+  const errorEl = err ? (
+    <p id="ws-name-err" role="alert" className="mt-2 text-[13px] text-[#f08a84]">
+      {err}
+    </p>
+  ) : null
+
+  const primary = (
+    <PixelDissolveButton
+      type="button"
+      label={creating ? 'Creating…' : 'Create workspace'}
+      disabled={!name.trim() || creating}
+      onClick={() => void submit()}
+      color={AUTH_BLUE}
+      dissolveColor={AUTH_DISSOLVE_BLUE}
+      cellSize={4}
+      className={PRIMARY_BUTTON_CLASSES}
+    />
+  )
+
+  const input = (
+    <input
+      id="ws-name"
+      autoFocus={autoFocus}
+      value={name}
+      maxLength={NAME_MAX}
+      disabled={creating}
+      onChange={(e) => {
+        setName(e.target.value)
+        if (err) setErr('')
+      }}
+      onKeyDown={(e: RKeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter') {
+          e.preventDefault()
+          void submit()
+        }
+      }}
+      placeholder="e.g. Return policy and warranty"
+      aria-invalid={Boolean(err)}
+      aria-describedby={err ? 'ws-name-err' : undefined}
+      className={inline ? `${FIELD_SM} sm:w-[320px] sm:flex-none` : FIELD}
+    />
+  )
+
+  return (
+    <div>
+      <label htmlFor="ws-name" className="mb-2 block text-[13px] font-medium text-[#c4c4c4]">
+        Workspace name
+      </label>
+      {inline ? (
+        <>
+          {/* Both controls are 32px; 8px gap. Stacks (left-aligned) below sm. */}
+          <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center">
+            {input}
+            {primary}
+          </div>
+          {errorEl}
+        </>
+      ) : (
+        <>
+          {input}
+          {errorEl}
+          <div className="mt-4 flex items-center justify-end gap-2">
+            <Pill disabled={creating} onClick={onCancel}>
+              Cancel
+            </Pill>
+            {primary}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+/* ---------------- Delete confirmation (one click to confirm) ---------------- */
+function DeleteDialog({
+  workspace,
+  onClose,
+  onConfirm,
+}: {
+  workspace: Workspace | null
+  onClose: () => void
+  onConfirm: (w: Workspace) => Promise<void>
+}) {
+  const meta = useMeta(workspace?.id ?? -1)
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState('')
+  const cancelWrap = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    setBusy(false)
+    setErr('')
+  }, [workspace?.id])
+
+  // Cancel (the safe choice) gets focus when the dialog opens. The dissolve button has no autoFocus prop,
+  // so we focus the button inside its wrapper.
+  useEffect(() => {
+    if (!workspace) return
+    const t = window.setTimeout(() => cancelWrap.current?.querySelector('button')?.focus(), 0)
+    return () => window.clearTimeout(t)
+  }, [workspace])
+
+  const submit = async () => {
+    if (!workspace || busy) return
+    setBusy(true)
+    setErr('')
+    try {
+      await onConfirm(workspace)
+    } catch (x) {
+      setErr(errorMessage(x))
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Dialog open={workspace !== null} onClose={onClose} locked={busy} labelledBy="del-title">
+      {workspace && (
+        <>
+          <h2 id="del-title" className="text-[15px] font-semibold tracking-tight text-white">
+            Delete “{workspace.title}”?
+          </h2>
+          <p className="mt-2 text-[13px] leading-5 text-[#a8a8a8]">
+            This permanently deletes the workspace, including{' '}
+            {meta.documents !== null ? plural(meta.documents, 'document') : 'its documents'} and{' '}
+            {meta.conversations !== null ? plural(meta.conversations, 'chat') : 'its chats'}. This cannot be undone.
+          </p>
+          {err && (
+            <p role="alert" className="mt-3 text-[13px] text-[#f08a84]">
+              {err}
+            </p>
+          )}
+          <div className="mt-5 flex justify-end gap-2">
+            <div ref={cancelWrap}>
+              <Pill disabled={busy} onClick={onClose}>
+                Cancel
+              </Pill>
+            </div>
+            <PixelDissolveButton
+              type="button"
+              label={busy ? 'Deleting…' : 'Confirm'}
+              disabled={busy}
+              onClick={() => void submit()}
+              color="#d45a4d"
+              dissolveColor="#7a1f1a"
+              cellSize={4}
+              className="!h-8 !min-h-0 !w-auto !rounded-full !border !border-[#d45a4d] !bg-[#d45a4d] !px-4 !text-[13px] !font-medium !normal-case !tracking-normal !text-white hover:!bg-[#df6a5d] active:!bg-[#ad4139] disabled:!cursor-not-allowed disabled:!border-[#7d342f] disabled:!bg-[#7d342f] disabled:!text-white/70 whitespace-nowrap"
+            />
+          </div>
+        </>
+      )}
+    </Dialog>
+  )
+}
+
+/* ---------------- Command palette (Cmd/Ctrl+K) ---------------- */
+type PaletteItem = { id: string; group: string; label: string; hint: string; Icon: LucideIcon; run: () => void }
+
+function CommandPalette({ open, onClose, items }: { open: boolean; onClose: () => void; items: PaletteItem[] }) {
+  const [query, setQuery] = useState('')
+  const [active, setActive] = useState(0)
+  const listRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (open) {
+      setQuery('')
+      setActive(0)
+    }
+  }, [open])
+  const needle = query.trim().toLowerCase()
+  const shown = useMemo(() => (needle ? items.filter((i) => `${i.label} ${i.hint}`.toLowerCase().includes(needle)) : items), [items, needle])
+  useEffect(() => {
+    listRef.current?.querySelector('[data-active="true"]')?.scrollIntoView({ block: 'nearest' })
+  }, [active, shown])
+  if (!open) return null
+
+  const run = (i?: PaletteItem) => {
+    if (!i) return
+    onClose()
+    i.run()
+  }
+  const onKey = (e: RKeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setActive((a) => Math.min(a + 1, shown.length - 1))
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setActive((a) => Math.max(a - 1, 0))
+    } else if (e.key === 'Enter') {
+      e.preventDefault()
+      run(shown[active])
+    } else if (e.key === 'Escape') onClose()
+  }
+  let lastGroup = ''
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 px-4 pt-[14vh]"
+      onPointerDown={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Search"
+        className="w-full max-w-[560px] overflow-hidden rounded-xl border border-white/[0.09] bg-[#202020] shadow-[0_24px_64px_rgba(0,0,0,0.6)]"
+      >
+        <div className="flex items-center gap-3 border-b border-white/[0.08] px-4">
+          <Search size={15} className="flex-none text-zinc-500" />
+          <input
+            autoFocus
+            value={query}
+            onChange={(e) => {
+              setQuery(e.target.value)
+              setActive(0)
+            }}
+            onKeyDown={onKey}
+            placeholder="Search workspaces, templates and actions"
+            aria-label="Search workspaces, templates and actions"
+            spellCheck={false}
+            className="h-12 w-full bg-transparent text-[14px] text-[#ececec] outline-none placeholder:text-zinc-500"
+          />
+          <kbd className="flex-none rounded border border-white/[0.12] px-1.5 py-px text-[10px] text-zinc-500">Esc</kbd>
+        </div>
+        <div ref={listRef} className="max-h-[340px] overflow-y-auto p-1.5">
+          {shown.length === 0 ? (
+            <p className="px-3 py-8 text-center text-[13px] text-zinc-500">No results for “{query}”</p>
+          ) : (
+            shown.map((it, i) => {
+              const head = it.group !== lastGroup
+              lastGroup = it.group
+              return (
+                <div key={it.id}>
+                  {head && <p className="px-2.5 pb-1 pt-2 text-[12px] text-zinc-500">{it.group}</p>}
+                  <button
+                    type="button"
+                    data-active={i === active}
+                    onMouseMove={() => setActive(i)}
+                    onClick={() => run(it)}
+                    className={`flex h-9 w-full items-center gap-3 rounded-md px-2.5 text-left text-[13px] text-[#e0e0e0] ${i === active ? 'bg-white/[0.07]' : ''}`}
+                  >
+                    <it.Icon size={15} strokeWidth={1.6} className="flex-none text-zinc-400" />
+                    <span className="min-w-0 flex-1 truncate">{it.label}</span>
+                    <span className="flex-none text-[12px] text-zinc-500">{it.hint}</span>
+                  </button>
+                </div>
+              )
+            })
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ---------------- Page root ---------------- */
 export function NotebookHome() {
   const router = useRouter()
-
   const [workspaces, setWorkspaces] = useState<Workspace[]>([])
+  const [stats, setStats] = useState<Record<number, Stat>>({})
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+  const [loaded, setLoaded] = useState(false)
   const [creating, setCreating] = useState(false)
+  const [pendingPreset, setPendingPreset] = useState<string | null>(null)
   const [loggingOut, setLoggingOut] = useState(false)
   const [error, setError] = useState('')
-  const [modalOpen, setModalOpen] = useState(false)
-  const [profileOpen, setProfileOpen] = useState(false)
-  const [mobileNavOpen, setMobileNavOpen] = useState(false)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [sortNewest, setSortNewest] = useState(true)
-  const [title, setTitle] = useState('')
-  const [titleError, setTitleError] = useState('')
+  const [createOpen, setCreateOpen] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<Workspace | null>(null)
+  const [paletteOpen, setPaletteOpen] = useState(false)
+  const [galleryOpen, setGalleryOpen] = useState(false)
+  const mounted = useRef(true)
+  const loadSeq = useRef(0)
+  const canCreateRef = useRef(false)
+
+  useEffect(() => {
+    mounted.current = true
+    return () => {
+      mounted.current = false
+    }
+  }, [])
+
+  // Cmd/Ctrl+K toggles the palette; N opens "New workspace" when nothing else is focused
+  useEffect(() => {
+    const k = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault()
+        setPaletteOpen((v) => !v)
+        return
+      }
+      if (e.metaKey || e.ctrlKey || e.altKey || e.key.toLowerCase() !== 'n' || !canCreateRef.current) return
+      const t = e.target as HTMLElement | null
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return
+      if (document.querySelector('[role="dialog"]')) return
+      e.preventDefault()
+      setCreateOpen(true)
+    }
+    window.addEventListener('keydown', k)
+    return () => window.removeEventListener('keydown', k)
+  }, [])
 
   const load = useCallback(async () => {
+    const seq = ++loadSeq.current
+    const live = () => mounted.current && seq === loadSeq.current
     setLoading(true)
     setError('')
-
     try {
-      const [items, me] = await Promise.all([
-        workspaceApi.list(),
-        authApi.me(),
-      ])
-
-      setWorkspaces(items)
+      const [items, me] = await Promise.all([workspaceApi.list(), authApi.me()])
+      if (!live()) return
+      setWorkspaces(Array.isArray(items) ? items : [])
       setUser(me)
+      setLoaded(true)
     } catch (err) {
-      const apiError = err as { status?: number }
-
-      if (apiError.status === 401 || apiError.status === 403) {
+      if (!live()) return
+      const status = (err as { status?: number }).status
+      if (status === 401 || status === 403) {
         authApi.clearTokens()
         router.replace('/login')
         return
       }
-
       setError(errorMessage(err))
     } finally {
-      setLoading(false)
+      if (live()) setLoading(false)
     }
   }, [router])
 
@@ -361,875 +1223,409 @@ export function NotebookHome() {
     void load()
   }, [load])
 
-  const sortedWorkspaces = useMemo(
-    () =>
-      [...workspaces].sort(
-        (a, b) =>
-          new Date(b.updated_at).getTime() -
-          new Date(a.updated_at).getTime(),
-      ),
-    [workspaces],
+  /* Doc + chat counts for each workspace */
+  const idsKey = workspaces.slice(0, STATS_LIMIT).map((w) => w.id).join(',')
+  const statsSeen = useRef(new Set<number>())
+
+  useEffect(() => {
+    if (!idsKey) return
+    const ids = idsKey
+      .split(',')
+      .map(Number)
+      .filter((id) => !statsSeen.current.has(id))
+    if (!ids.length) return
+    ids.forEach((id) => statsSeen.current.add(id))
+    let buffer: Record<number, Stat> = {}
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const flush = () => {
+      timer = undefined
+      if (!mounted.current) return
+      const batch = buffer
+      buffer = {}
+      if (Object.keys(batch).length) setStats((prev) => ({ ...prev, ...batch }))
+    }
+    void pool(
+      ids,
+      STATS_CONCURRENCY,
+      async (id) => {
+        const [docs, convs] = await Promise.allSettled([documentApi.list(id), chatApi.conversations(id)])
+        const list = docs.status === 'fulfilled' && Array.isArray(docs.value) ? docs.value : null
+        buffer[id] = {
+          documents: list ? list.length : null,
+          conversations: convs.status === 'fulfilled' && Array.isArray(convs.value) ? convs.value.length : null,
+          indexing: list
+            ? list.filter((d) => /pend|process|index|queue/i.test(String((d as { status?: string }).status ?? ''))).length
+            : 0,
+        }
+        if (timer === undefined) timer = setTimeout(flush, STATS_FLUSH_MS)
+      },
+      () => !mounted.current
+    ).then(() => {
+      if (timer !== undefined) clearTimeout(timer)
+      flush()
+    })
+  }, [idsKey])
+
+  const recent = useMemo(() => [...workspaces].sort(byRecent), [workspaces])
+
+  // Templates you already turned into a workspace are not offered again.
+  const presets = useMemo(() => {
+    const taken = new Set(workspaces.map((w) => w.title.trim().toLowerCase()))
+    return PRESETS.filter((p) => !taken.has(p.name.toLowerCase()))
+  }, [workspaces])
+
+  const totals = useMemo(() => {
+    let documents = 0
+    let conversations = 0
+    let indexing = 0
+    for (const w of workspaces) {
+      const s = stats[w.id]
+      if (!s) continue
+      documents += s.documents ?? 0
+      conversations += s.conversations ?? 0
+      indexing += s.indexing
+    }
+    return { documents, conversations, indexing }
+  }, [workspaces, stats])
+
+  const openWorkspace = useCallback(
+    (w: Workspace) => {
+      selectWorkspace(w.id)
+      router.push(`/workspaces/${w.id}`)
+    },
+    [router]
   )
 
-  const visibleWorkspaces = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase()
+  // ?new=1 makes the workspace shell start the product tour
+  const makeWorkspace = useCallback(
+    async (name: string) => {
+      const w = await workspaceApi.create(name.trim())
+      selectWorkspace(w.id)
+      router.push(`/workspaces/${w.id}?new=1`)
+    },
+    [router]
+  )
 
-    const filtered = [...sortedWorkspaces].filter((workspace) =>
-      !query ? true : workspace.title.toLowerCase().includes(query),
-    )
-
-    if (!sortNewest) {
-      filtered.reverse()
-    }
-
-    return filtered
-  }, [searchQuery, sortNewest, sortedWorkspaces])
-
-  const openCreateModal = () => {
-    setTitle('')
-    setTitleError('')
-    setModalOpen(true)
-  }
-
-  const closeCreateModal = () => {
-    if (creating) return
-    setModalOpen(false)
-    setTitleError('')
-  }
-
-  const createWorkspace = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-
-    const validationError = validateWorkspaceName(title)
-
-    if (validationError) {
-      setTitleError(validationError)
-      return
-    }
-
+  /* Throws on failure so the form can show the message inline. */
+  const createWorkspace = async (name: string) => {
     setCreating(true)
-    setError('')
-    setTitleError('')
-
     try {
-      const workspace = await workspaceApi.create(title.trim())
-      selectWorkspace(workspace.id)
-      setTitle('')
-      setModalOpen(false)
-      router.push(`/workspaces/${workspace.id}?new=1`)
+      await makeWorkspace(name)
     } catch (err) {
-      setError(errorMessage(err))
-    } finally {
       setCreating(false)
+      throw err
     }
   }
 
-  const openWorkspace = (workspace: Workspace) => {
-    selectWorkspace(workspace.id)
-    router.push(`/workspaces/${workspace.id}`)
-  }
-
-  const removeWorkspace = async (workspace: Workspace) => {
-    const confirmed = window.confirm(
-      `Delete “${workspace.title}”? This removes the workspace, its documents, and its conversations.`,
-    )
-
-    if (!confirmed) return
-
+  const startPreset = async (p: Preset) => {
+    if (creating) return
+    const existing = workspaces.find((w) => w.title.trim().toLowerCase() === p.name.toLowerCase())
+    if (existing) return openWorkspace(existing)
+    setCreating(true)
+    setPendingPreset(p.name)
+    setError('')
     try {
-      await workspaceApi.remove(workspace.id)
-
-      setWorkspaces((current) =>
-        current.filter((item) => item.id !== workspace.id),
-      )
-
-      if (
-        sessionStorage.getItem(ACTIVE_WORKSPACE_KEY) ===
-        String(workspace.id)
-      ) {
-        sessionStorage.removeItem(ACTIVE_WORKSPACE_KEY)
-      }
+      await makeWorkspace(p.name)
     } catch (err) {
       setError(errorMessage(err))
+      setCreating(false)
+      setPendingPreset(null)
     }
   }
 
-  const logout = async () => {
+  const removeWorkspace = async (w: Workspace) => {
+    await workspaceApi.remove(w.id)
+    setWorkspaces((cur) => cur.filter((x) => x.id !== w.id))
+    try {
+      if (window.sessionStorage.getItem(ACTIVE_WORKSPACE_KEY) === String(w.id)) window.sessionStorage.removeItem(ACTIVE_WORKSPACE_KEY)
+    } catch {
+      /* ignore */
+    }
+    setDeleteTarget(null)
+  }
+
+  const logout = useCallback(async () => {
     if (loggingOut) return
-
     setLoggingOut(true)
-    setProfileOpen(false)
-
     try {
       await authApi.logout()
     } catch {
-      // authApi.logout() clears local auth state in its finally block.
+      /* ignore */
     } finally {
       router.replace('/login')
     }
-  }
+  }, [loggingOut, router])
+
+  const paletteItems: PaletteItem[] = paletteOpen
+    ? [
+        { id: 'new', group: 'Actions', label: 'New workspace', hint: 'Create', Icon: Plus, run: () => setCreateOpen(true) },
+        { id: 'browse', group: 'Actions', label: 'Browse templates', hint: 'Open', Icon: LayoutTemplate, run: () => setGalleryOpen(true) },
+        ...recent.map((w) => ({ id: `w${w.id}`, group: 'Workspaces', label: w.title, hint: 'Open', Icon: Folder, run: () => openWorkspace(w) })),
+        ...presets.map((p) => ({ id: `t${p.name}`, group: 'Templates', label: p.name, hint: 'Template', Icon: p.Icon, run: () => void startPreset(p) })),
+      ]
+    : []
+
+  // Settings from the account menu opens the active (or most recent) workspace's settings.
+  const settingsTarget = (() => {
+    let activeId: string | null = null
+    try {
+      activeId = window.sessionStorage.getItem(ACTIVE_WORKSPACE_KEY)
+    } catch {
+      /* ignore */
+    }
+    return recent.find((w) => String(w.id) === activeId) ?? recent[0] ?? null
+  })()
+  const settingsHref = settingsTarget ? `/workspaces/${settingsTarget.id}/settings` : null
 
   if (loggingOut) {
     return (
-      <div className="grid min-h-screen place-items-center bg-[#fbfcfb] text-sm text-slate-500">
+      <div className="grid min-h-[100dvh] place-items-center bg-[#191919] text-sm text-[#8a8a8a]" style={{ fontFamily: FONT_SANS }}>
         Signing out…
       </div>
     )
   }
 
-  const initials = initialsForUser(user)
-  const displayName = displayNameForUser(user)
-  const greeting = greetingForHour(new Date().getHours())
+  const firstRun = loaded && workspaces.length === 0
+  canCreateRef.current = loaded && workspaces.length > 0
 
   return (
-    <main className="min-h-screen bg-[#fbfcfb] text-slate-900">
-<style jsx global>{`
-  @keyframes qpReveal {
-    0% {
-      opacity: 0;
-      transform: translateY(8px);
-      clip-path: inset(0 100% 0 0);
-      filter: blur(4px);
-    }
-    55% {
-      opacity: 1;
-      clip-path: inset(0 16% 0 0);
-      filter: blur(0);
-    }
-    100% {
-      opacity: 1;
-      transform: translateY(0);
-      clip-path: inset(0 0 0 0);
-      filter: blur(0);
-    }
-  }
+    <StatsContext.Provider value={stats}>
+      <main className="qp-zoom qp-h flex overflow-hidden bg-[var(--qp-background)] text-[var(--qp-text-primary)] antialiased" style={{ fontFamily: FONT_SANS }}>
+        <QpGlobalStyles />
 
-  @keyframes qpCardIn {
-    0% {
-      opacity: 0;
-      transform: translateY(10px);
-    }
-    100% {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-  .qp-card-in {
-    animation: qpCardIn 650ms cubic-bezier(.22,.8,.28,1) both;
-    animation-delay: var(--qp-card-delay, 0ms);
-  }
-
-  @keyframes qpCaret {
-    0%, 48% { opacity: 0.25; }
-    49%, 100% { opacity: 1; }
-  }
-
-  .qp-reveal {
-    display: inline-block;
-    animation: qpReveal 850ms cubic-bezier(.22,.8,.28,1) both;
-    animation-delay: var(--qp-delay, 0ms);
-    will-change: transform, opacity, clip-path, filter;
-  }
-
-  .qp-caret {
-    display: inline-block;
-    animation: qpCaret 900ms steps(1, end) infinite;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .qp-reveal,
-    .qp-caret,
-    .qp-card-in {
-      animation: none !important;
-    }
-  }
-`}</style>
-      <div className="relative flex min-h-screen">
-        {/* Full-height primary navigation */}
-        <aside className="relative z-20 hidden w-[260px] shrink-0 border-r border-slate-200/80 bg-white/88 backdrop-blur-xl lg:flex lg:flex-col">
-          <div className="px-7 pt-7">
-            <Link href="/workspaces" className="flex items-center gap-2.5">
-              <img
-                src="/querypilot-logo.svg"
-                alt="QueryPilot"
-                className="size-6 object-contain"
-              />
-              <span className="text-[17px] font-semibold tracking-[-0.035em] text-slate-950">
-                QueryPilot
-              </span>
-            </Link>
+        <aside className="hidden w-[240px] flex-none flex-col border-r border-[var(--qp-border)] bg-[var(--qp-sidebar)] md:flex">
+          <div className="flex h-12 items-center px-3.5">
+            <Logo />
           </div>
-
-          <nav className="mt-10 px-4" aria-label="Primary navigation">
-            <Link
-              href="/workspaces"
-              className="flex w-full items-center gap-3 rounded-xl bg-emerald-50/80 px-4 py-3.5 text-left text-[14px] font-semibold text-slate-950"
-            >
-              <FolderOpen size={16} strokeWidth={1.8} />
-              Workspaces
+          <nav className="min-h-0 flex-1 overflow-y-auto px-2 pt-3">
+            <Link href="/workspaces" aria-current="page" className={`${NAV_ITEM} !bg-white/[0.06] !text-[#ececec] ${focusRing}`}>
+              <LayoutGrid size={15} strokeWidth={1.6} className="flex-none" /> Overview
             </Link>
-
-            <Link
-              href="/settings"
-              className="mt-1 flex w-full items-center gap-3 rounded-xl px-4 py-3.5 text-left text-[14px] font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-950"
-            >
-              <Settings size={16} strokeWidth={1.8} />
-              Settings
-            </Link>
-          </nav>
-
-          <div className="mt-auto">
-            <div className="border-t border-slate-200/70 px-5 py-5">
-              <button
-                type="button"
-                onClick={() => setProfileOpen((current) => !current)}
-                className="flex w-full items-center gap-3 text-left"
-              >
-                <div className="grid size-8 shrink-0 place-items-center rounded-full bg-slate-300 text-[10px] font-semibold text-white">
-                  {initials}
-                </div>
-
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-[11px] font-semibold text-slate-900">
-                    {displayName}
-                  </p>
-                  <p className="truncate text-[9px] text-slate-500">
-                    {user?.email ?? ''}
-                  </p>
-                </div>
-
-                <ChevronDown
-                  size={13}
-                  className={`shrink-0 text-slate-400 transition ${
-                    profileOpen ? 'rotate-180' : ''
-                  }`}
-                />
+            {loaded && (
+              <button type="button" onClick={() => setGalleryOpen(true)} className={`${NAV_ITEM} mt-0.5 ${focusRing}`}>
+                <LayoutTemplate size={15} strokeWidth={1.6} className="flex-none" /> Templates
               </button>
+            )}
+            {loaded && workspaces.length > 0 && (
+              <button type="button" onClick={() => setCreateOpen(true)} className={`${NAV_ITEM} mt-0.5 ${focusRing}`}>
+                <Plus size={15} strokeWidth={1.6} className="flex-none" />
+                <span className="flex-1">New workspace</span>
+                <kbd className="rounded border border-white/[0.12] px-1.5 py-px text-[10px] text-[#8a8a8a]">N</kbd>
+              </button>
+            )}
 
-              {profileOpen && (
-                <div className="mt-3 rounded-xl border border-slate-200 bg-white p-1.5 shadow-[0_18px_40px_rgba(15,23,42,0.1)]">
-                  <div className="px-3 py-2">
-                    <p className="truncate text-[11px] font-semibold text-slate-900">
-                      {displayName}
-                    </p>
-                    <p className="mt-0.5 truncate text-[10px] text-slate-500">
-                      {user?.email ?? ''}
-                    </p>
-                  </div>
-
-                  <div className="my-1 border-t border-slate-100" />
-
+            {loaded && presets.length > 0 && (
+              <div className="mt-6">
+                <p className="px-2.5 pb-1 text-[12px] text-[#8c8c8c]">Quick start</p>
+                {presets.slice(0, 4).map((p) => (
                   <button
+                    key={p.name}
                     type="button"
-                    onClick={() => void logout()}
-                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-[11px] font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
+                    title={p.name}
+                    disabled={creating}
+                    onClick={() => void startPreset(p)}
+                    className={`${NAV_ITEM} !gap-2 !pl-1.5 !pr-1.5 disabled:cursor-not-allowed disabled:opacity-60 ${focusRing}`}
                   >
-                    <LogOut size={14} strokeWidth={1.8} />
-                    Sign out
+                    <TemplateIcon p={p} />
+                    <span className="min-w-0 flex-1 truncate">{pendingPreset === p.name ? 'Creating…' : p.name}</span>
                   </button>
-                </div>
-              )}
-            </div>
+                ))}
+              </div>
+            )}
 
-            <button
-              type="button"
-              className="flex w-full items-center gap-3 border-t border-slate-200/70 px-7 py-4.5 text-[13px] font-medium text-slate-600 transition hover:text-slate-950"
-            >
-              <HelpCircle size={15} strokeWidth={1.8} />
-              Help &amp; Support
-            </button>
+            {loaded && workspaces.length > 0 && (
+              <div className="mt-6">
+                <p className="px-2.5 pb-1 text-[12px] text-[#8c8c8c]">Library</p>
+                <SidebarStat label="Workspaces" value={workspaces.length} />
+                <SidebarStat label="Documents" value={totals.documents} />
+                <SidebarStat label="Chats" value={totals.conversations} />
+                {totals.indexing > 0 && <SidebarStat label="Indexing" value={totals.indexing} dot="bg-zinc-500" />}
+              </div>
+            )}
+          </nav>
+          <div className="border-t border-white/[0.06] p-2">
+            {loaded &&
+              (settingsHref && settingsTarget ? (
+                <Link
+                  href={settingsHref}
+                  onClick={() => selectWorkspace(settingsTarget.id)}
+                  className={`${NAV_ITEM} mb-1 ${focusRing}`}
+                >
+                  <Settings size={15} strokeWidth={1.6} className="flex-none" /> Workspace settings
+                </Link>
+              ) : (
+                // The settings route needs a workspace id, so with no workspace yet this stays visible but inactive.
+                <span
+                  aria-disabled="true"
+                  title="Create a workspace to open its settings"
+                  className={`${NAV_ITEM} mb-1 cursor-not-allowed opacity-50 hover:!bg-transparent hover:!text-[#a8a8a8]`}
+                >
+                  <Settings size={15} strokeWidth={1.6} className="flex-none" /> Workspace settings
+                </span>
+              ))}
+            <AccountMenu user={user} onLogout={() => void logout()} variant="sidebar" settingsHref={settingsHref} />
           </div>
         </aside>
 
-        <section className="relative min-w-0 flex-1 overflow-hidden bg-[#fbfcfb]">
-          <div className="pointer-events-none absolute inset-0 z-0">
-            <img
-              src="/hh.avif"
-              alt=""
-              aria-hidden="true"
-              className="absolute inset-0 h-full w-full object-cover object-center opacity-[0.24] mix-blend-multiply"
-            />
-            <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(251,252,251,0.9)_0%,rgba(251,252,251,0.68)_28%,rgba(251,252,251,0.44)_56%,rgba(251,252,251,0.14)_82%,rgba(251,252,251,0.18)_100%)]" />
-            <div className="absolute -right-36 top-16 h-[520px] w-[820px] rounded-[50%] bg-[radial-gradient(ellipse_at_center,rgba(225,237,231,0.46),transparent_70%)] blur-[3px]" />
-            <div className="absolute -left-44 bottom-[-90px] h-[460px] w-[720px] rounded-[50%] bg-[radial-gradient(ellipse_at_center,rgba(225,236,231,0.34),transparent_72%)] blur-[4px]" />
-          </div>
-
-          <header className="relative flex min-h-[58px] items-center gap-3 border-b border-slate-200/70 px-4 py-3 sm:px-7 lg:px-10">
-            <button
-              type="button"
-              aria-label="Open navigation"
-              aria-expanded={mobileNavOpen}
-              onClick={() => setMobileNavOpen(true)}
-              className="grid size-8 shrink-0 place-items-center rounded-lg text-slate-600 transition hover:bg-slate-100 lg:hidden"
-            >
-              <Menu size={18} strokeWidth={1.8} />
-            </button>
-
-            <div className="flex shrink-0 items-center gap-2 lg:hidden">
-              <img
-                src="/querypilot-logo.svg"
-                alt="QueryPilot"
-                className="size-6 object-contain"
-              />
-              <span className="text-[14px] font-medium tracking-[-0.03em] text-slate-900">QueryPilot</span>
+        <section className="flex min-w-0 flex-1 flex-col">
+          <header className="h-12 flex-none"><div className="mx-auto flex h-full w-full max-w-[1000px] items-center gap-3 px-4 sm:px-8">
+            <div className="md:hidden">
+              <Logo />
             </div>
-
-            <div className="relative hidden min-w-0 flex-1 md:block">
-              <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-slate-400" strokeWidth={1.8} />
-              <input
-                aria-label="Search workspaces"
-                value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
-                placeholder="Search workspaces, documents, or anything..."
-                className="h-11 w-full max-w-[560px] rounded-xl border border-slate-200/90 bg-white/88 pl-10 pr-16 text-[12px] font-medium text-slate-800 shadow-[0_6px_24px_rgba(15,23,42,0.035)] outline-none transition placeholder:text-slate-400 focus:border-slate-300 focus:bg-white focus:ring-4 focus:ring-slate-100/80"
-              />
-              <div className="pointer-events-none absolute right-2.5 top-1/2 hidden -translate-y-1/2 items-center gap-1 sm:flex">
-                <kbd className="rounded-md border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[9px] font-medium text-slate-400">⌘</kbd>
-                <kbd className="rounded-md border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[9px] font-medium text-slate-400">K</kbd>
-              </div>
-            </div>
-
-            <div className="ml-auto flex items-center gap-2">
-              <button
-                type="button"
-                aria-label="Notifications"
-                className="grid size-8 place-items-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
-              >
-                <Bell size={15} strokeWidth={1.8} />
-              </button>
-
-              <div className="relative">
-                <button
-                  type="button"
-                  aria-haspopup="menu"
-                  aria-expanded={profileOpen}
-                  onClick={() => setProfileOpen((current) => !current)}
-                  className="flex items-center gap-1.5 rounded-full p-0.5 transition hover:bg-slate-100"
-                >
-                  <span className="grid size-8 place-items-center rounded-full bg-slate-300 text-[10px] font-semibold text-white">
-                    {initials}
-                  </span>
-                  <ChevronDown
-                    size={12}
-                    className={`text-slate-400 transition ${
-                      profileOpen ? 'rotate-180' : ''
-                    }`}
-                  />
-                </button>
-
-                {profileOpen && (
-                  <div className="absolute right-0 top-11 z-40 w-52 overflow-hidden rounded-xl border border-slate-200 bg-white p-1.5 shadow-[0_18px_40px_rgba(15,23,42,0.12)]">
-                    <div className="px-3 py-2">
-                      <p className="truncate text-[11px] font-semibold text-slate-900">{displayName}</p>
-                      <p className="mt-0.5 truncate text-[10px] text-slate-500">{user?.email ?? ''}</p>
-                    </div>
-                    <div className="my-1 border-t border-slate-100" />
-                    <button
-                      type="button"
-                      onClick={() => void logout()}
-                      className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-[11px] font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
-                    >
-                      <LogOut size={14} strokeWidth={1.8} />
-                      Sign out
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          </header>
-
-          <div className="relative z-10 mx-auto w-full max-w-[1500px] px-4 pb-8 pt-4 sm:px-7 sm:pt-5 lg:px-12 lg:pt-6 xl:px-16">
-            <div className="mb-4 md:hidden">
-              <div className="relative">
-                <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-slate-400" strokeWidth={1.8} />
-                <input
-                  aria-label="Search workspaces"
-                  value={searchQuery}
-                  onChange={(event) => setSearchQuery(event.target.value)}
-                  placeholder="Search workspaces..."
-                  className="h-10 w-full rounded-xl border border-slate-200 bg-white/80 pl-9 pr-3 text-[11px] text-slate-800 outline-none placeholder:text-slate-400 focus:border-slate-300 focus:ring-2 focus:ring-slate-100"
-                />
-              </div>
-            </div>
-            {error && (
-              <div className="mb-5 flex items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                <span>{error}</span>
-                <button
-                  type="button"
-                  onClick={() => void load()}
-                  className="font-medium underline underline-offset-2"
-                >
-                  Retry
-                </button>
-              </div>
-            )}
-
-            {loading ? (
-              <div className="grid min-h-[74vh] place-items-center text-sm text-slate-400">
-                Loading your workspaces…
-              </div>
-            ) : sortedWorkspaces.length === 0 ? (
-              <div className="relative">
-                <div className="grid min-h-[610px] items-center gap-6 lg:grid-cols-[0.72fr_1.28fr] lg:gap-10 xl:grid-cols-[0.70fr_1.30fr] xl:gap-12">
-                  <div className="relative z-10 max-w-[620px] pt-0 sm:pt-2 lg:pt-0">
-                    <AnimatedReveal
-                      className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-500 sm:text-[11px]"
-                    >
-                      Welcome to QueryPilot
-                    </AnimatedReveal>
-
-                    <h1 className="mt-3 max-w-[660px] text-[43px] font-medium leading-[0.96] tracking-[-0.058em] text-slate-950 sm:text-[53px] lg:text-[60px] xl:text-[66px]">
-                      <AnimatedReveal delay={80}>
-                        Your knowledge
-                      </AnimatedReveal>
-                      <br />
-                      <AnimatedReveal delay={150}>
-                        starts with a workspace.
-                      </AnimatedReveal>
-                    </h1>
-
-                    <p className="mt-5 max-w-[560px] text-[14px] leading-6 text-slate-500 sm:text-[15px] lg:text-[16px]">
-                      <AnimatedReveal delay={240}>
-                        Create a workspace to keep your documents, conversations,
-                        tables, and data sources organized.
-                      </AnimatedReveal>
-                    </p>
-
-                    <PixelDissolveButton
-                      label="Create your first workspace"
-                      onClick={openCreateModal}
-                      className="mt-6"
-                      color="#0c6b43"
-                      dissolveColor="#005026"
-                    />
-                  </div>
-
-                  <EmptyStateVisual />
-                </div>
-
-                <HowItWorks />
-              </div>
-            ) : (
-              <div>
-                {(() => {
-                  const featuredWorkspace = sortedWorkspaces[0]
-                  const latestDate = featuredWorkspace
-                    ? new Date(featuredWorkspace.updated_at).toLocaleDateString('en-IN', {
-                        day: 'numeric',
-                        month: 'short',
-                        year: 'numeric',
-                      })
-                    : '—'
-
-                  return (
-                    <>
-                      <section className="relative overflow-hidden rounded-[28px] border border-slate-200/75 bg-white/46 px-5 py-6 shadow-[0_20px_70px_rgba(15,23,42,0.04)] backdrop-blur-sm sm:px-7 sm:py-8 lg:px-9 lg:py-9">
-                        <div className="pointer-events-none absolute inset-0">
-                          <div className="absolute right-[-7%] top-[-24%] h-[430px] w-[58%] rounded-full bg-[radial-gradient(ellipse_at_center,rgba(215,234,224,0.62),transparent_68%)] blur-[4px]" />
-                          <div className="absolute bottom-[-40%] left-[-8%] h-[320px] w-[60%] rounded-full bg-[radial-gradient(ellipse_at_center,rgba(226,237,232,0.55),transparent_72%)]" />
-                          <div className="absolute right-0 top-0 h-full w-[46%] overflow-hidden opacity-65">
-                            <img
-                              src="/hh.avif"
-                              alt=""
-                              aria-hidden="true"
-                              className="h-full w-full object-cover object-[62%_34%] opacity-[0.16] mix-blend-multiply"
-                            />
-                          </div>
-                          <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.82)_0%,rgba(255,255,255,0.58)_52%,rgba(255,255,255,0.22)_100%)]" />
-                        </div>
-
-                        <div className="relative z-10 flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
-                          <div className="max-w-[720px]">
-                            <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-400 sm:text-[11px]">
-                              <span className="size-1.5 animate-pulse rounded-full bg-emerald-400" />
-                              <AnimatedReveal>QueryPilot workspace</AnimatedReveal>
-                            </div>
-
-                            <h1 className="mt-3 text-[40px] font-medium leading-[0.96] tracking-[-0.06em] text-slate-950 sm:text-[50px] lg:text-[58px]">
-                              <AnimatedReveal delay={70}>
-                                {greeting},
-                              </AnimatedReveal>{' '}
-                              <AnimatedReveal delay={140}>
-                                {displayName}.
-                              </AnimatedReveal>
-                            </h1>
-
-                            <p className="mt-4 max-w-[650px] text-[14px] leading-6 text-slate-600 sm:text-[15px]">
-                              <AnimatedReveal delay={220}>
-                                Your knowledge is already taking shape. Open a workspace, add context,
-                                and turn scattered information into answers you can trust.
-                              </AnimatedReveal>
-                            </p>
-
-                            <div className="mt-6 flex flex-wrap items-center gap-2.5">
-                              <PixelDissolveButton
-                                label="New workspace"
-                                onClick={openCreateModal}
-                                className="w-fit"
-                                color="#0c6b43"
-                                dissolveColor="#d1fae5"
-                              />
-                              <div className="rounded-xl border border-slate-200/80 bg-white/58 px-3.5 py-2.5 text-[10px] font-medium text-slate-500 backdrop-blur-sm sm:text-[11px]">
-                                <span className="text-slate-900">{workspaces.length}</span>{' '}
-                                {workspaces.length === 1 ? 'workspace' : 'workspaces'} connected
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:w-[430px]">
-                            <div className="rounded-2xl border border-white/80 bg-white/62 p-4 shadow-[0_12px_30px_rgba(15,23,42,0.035)] backdrop-blur">
-                              <Database size={16} className="text-[#0c6b43]" strokeWidth={1.7} />
-                              <p className="mt-5 text-[22px] font-medium tracking-[-0.04em] text-slate-950">{workspaces.length}</p>
-                              <p className="mt-1 text-[10px] uppercase tracking-[0.14em] text-slate-400">Workspaces</p>
-                            </div>
-
-                            <div className="rounded-2xl border border-white/80 bg-white/62 p-4 shadow-[0_12px_30px_rgba(15,23,42,0.035)] backdrop-blur">
-                              <MessageSquare size={16} className="text-[#0c6b43]" strokeWidth={1.7} />
-                              <p className="mt-5 text-[22px] font-medium tracking-[-0.04em] text-slate-950">Ready</p>
-                              <p className="mt-1 text-[10px] uppercase tracking-[0.14em] text-slate-400">Conversations</p>
-                            </div>
-
-                            <div className="col-span-2 rounded-2xl border border-white/80 bg-white/62 p-4 shadow-[0_12px_30px_rgba(15,23,42,0.035)] backdrop-blur sm:col-span-1">
-                              <Clock3 size={16} className="text-[#0c6b43]" strokeWidth={1.7} />
-                              <p className="mt-5 truncate text-[15px] font-medium tracking-[-0.02em] text-slate-950">{latestDate}</p>
-                              <p className="mt-1 text-[10px] uppercase tracking-[0.14em] text-slate-400">Latest update</p>
-                            </div>
-                          </div>
-                        </div>
-                      </section>
-
-                      <section className="mt-7">
-                        <div className="flex flex-col gap-3 border-b border-slate-300/65 pb-4 sm:flex-row sm:items-end sm:justify-between">
-                          <div>
-                            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-400">
-                              Your knowledge base
-                            </p>
-                            <h2 className="mt-2 text-[24px] font-medium tracking-[-0.04em] text-slate-950 sm:text-[28px]">
-                              Workspaces
-                            </h2>
-                          </div>
-
-                          <div className="flex items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={() => setSortNewest((current) => !current)}
-                              className="flex h-9 items-center gap-2 rounded-xl border border-slate-200 bg-white/72 px-3.5 text-[10px] font-medium text-slate-600 shadow-[0_6px_20px_rgba(15,23,42,0.025)] transition hover:bg-white hover:text-slate-900 sm:text-[11px]"
-                            >
-                              {sortNewest ? 'Last updated' : 'Oldest updated'}
-                              <ChevronDown size={12} className={`text-slate-400 transition ${sortNewest ? '' : 'rotate-180'}`} />
-                            </button>
-                            <button
-                              type="button"
-                              className="grid size-9 place-items-center rounded-xl border border-slate-200 bg-white/72 text-slate-500 shadow-[0_6px_20px_rgba(15,23,42,0.025)] transition hover:bg-white hover:text-slate-900"
-                              aria-label="Workspace filters"
-                            >
-                              <SlidersHorizontal size={13} strokeWidth={1.8} />
-                            </button>
-                          </div>
-                        </div>
-
-                        <div className="mt-4 flex items-center gap-1 overflow-x-auto">
-                          <button
-                            type="button"
-                            className="relative shrink-0 rounded-lg bg-white/52 px-3 py-2 text-[10px] font-semibold text-slate-950"
-                          >
-                            All
-                            <span className="absolute inset-x-3 -bottom-[5px] h-px rounded-full bg-[#0c6b43]" />
-                          </button>
-                          <button
-                            type="button"
-                            disabled
-                            className="shrink-0 rounded-lg px-3 py-2 text-[10px] font-medium text-slate-400"
-                          >
-                            Owned by me
-                          </button>
-                          <button
-                            type="button"
-                            disabled
-                            className="shrink-0 rounded-lg px-3 py-2 text-[10px] font-medium text-slate-400"
-                          >
-                            Shared with me
-                          </button>
-                        </div>
-
-                        {visibleWorkspaces.length === 0 ? (
-                          <div className="mt-5 rounded-2xl border border-dashed border-slate-300 bg-white/38 px-6 py-14 text-center">
-                            <div className="mx-auto grid size-11 place-items-center rounded-full bg-slate-100 text-slate-400">
-                              <Search size={18} strokeWidth={1.8} />
-                            </div>
-                            <p className="mt-4 text-[13px] font-semibold text-slate-900">No workspaces found</p>
-                            <p className="mt-1 text-[10px] text-slate-500">
-                              Try a different search term or create a new workspace.
-                            </p>
-                          </div>
-                        ) : (
-                          <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                            {visibleWorkspaces.map((workspace, index) => (
-                              <div
-                                key={workspace.id}
-                                className="qp-card-in"
-                                style={{ '--qp-card-delay': `${index * 70}ms` } as Record<string, string>}
-                              >
-                                <WorkspaceCard
-                                  workspace={workspace}
-                                  onOpen={() => openWorkspace(workspace)}
-                                  onDelete={() => void removeWorkspace(workspace)}
-                                />
-                              </div>
-                            ))}
-
-                            <div
-                              className="qp-card-in"
-                              style={{ '--qp-card-delay': `${visibleWorkspaces.length * 70}ms` } as Record<string, string>}
-                            >
-                              <CreateWorkspaceCard onClick={openCreateModal} />
-                            </div>
-                          </div>
-                        )}
-                      </section>
-
-                      <section className="mt-8 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-                        <div className="relative overflow-hidden rounded-[22px] border border-slate-200/75 bg-white/38 p-6 backdrop-blur-sm">
-                          <div className="pointer-events-none absolute -right-16 -top-16 size-44 rounded-full bg-emerald-100/40 blur-3xl" />
-                          <div className="relative">
-                            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">
-                              Next move
-                            </p>
-                            <h3 className="mt-2 text-[19px] font-medium tracking-[-0.03em] text-slate-950">
-                              Build context before you ask.
-                            </h3>
-                            <p className="mt-2 max-w-[610px] text-[12px] leading-5 text-slate-500">
-                              Add the documents, structured data, and sources that make your answers useful.
-                              QueryPilot keeps the pieces together inside each workspace.
-                            </p>
-
-                            <div className="mt-5 flex flex-wrap gap-2">
-                              <span className="rounded-full border border-slate-200 bg-white/70 px-3 py-1.5 text-[10px] text-slate-600">Documents</span>
-                              <span className="rounded-full border border-slate-200 bg-white/70 px-3 py-1.5 text-[10px] text-slate-600">Conversations</span>
-                              <span className="rounded-full border border-slate-200 bg-white/70 px-3 py-1.5 text-[10px] text-slate-600">Tables</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="rounded-[22px] border border-slate-200/75 bg-white/42 p-6 backdrop-blur-sm">
-                          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">
-                            Latest workspace
-                          </p>
-                          <p className="mt-3 text-[17px] font-semibold tracking-[-0.025em] text-slate-950">
-                            {featuredWorkspace?.title ?? 'No workspace'}
-                          </p>
-                          <p className="mt-2 text-[11px] leading-5 text-slate-500">
-                            Updated {latestDate}. Open it to continue where you left off.
-                          </p>
-                          {featuredWorkspace && (
-                            <button
-                              type="button"
-                              onClick={() => openWorkspace(featuredWorkspace)}
-                              className="mt-5 inline-flex items-center rounded-xl border border-emerald-200/80 bg-emerald-50/70 px-3.5 py-2.5 text-[11px] font-semibold text-[#0c6b43] transition hover:bg-emerald-100/70"
-                            >
-                              Continue →
-                            </button>
-                          )}
-                        </div>
-                      </section>
-                    </>
-                  )
-                })()}
-              </div>
-            )}
-          </div>
-        </section>
-      </div>
-
-      {mobileNavOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-slate-950/15 lg:hidden"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) setMobileNavOpen(false)
-          }}
-        >
-          <aside className="flex h-full w-[min(86vw,300px)] flex-col border-r border-slate-200 bg-white/95 shadow-[20px_0_60px_rgba(15,23,42,0.12)] backdrop-blur-xl">
-            <div className="flex items-center justify-between px-5 py-5">
-              <Link
-                href="/workspaces"
-                onClick={() => setMobileNavOpen(false)}
-                className="flex items-center gap-2.5"
-              >
-                <img src="/querypilot-logo.svg" alt="QueryPilot" className="size-6 object-contain" />
-                <span className="text-[17px] font-semibold tracking-[-0.035em] text-slate-950">QueryPilot</span>
-              </Link>
-              <button
-                type="button"
-                aria-label="Close navigation"
-                onClick={() => setMobileNavOpen(false)}
-                className="grid size-8 place-items-center rounded-lg text-slate-500 hover:bg-slate-100"
-              >
-                <X size={17} strokeWidth={1.8} />
-              </button>
-            </div>
-
-            <nav className="px-3 pt-2" aria-label="Mobile navigation">
-              <Link
-                href="/workspaces"
-                onClick={() => setMobileNavOpen(false)}
-                className="flex w-full items-center gap-3 rounded-xl bg-emerald-50/80 px-4 py-3.5 text-[14px] font-semibold text-slate-950"
-              >
-                <FolderOpen size={17} strokeWidth={1.8} />
+            <nav aria-label="Breadcrumb" className="hidden items-center gap-1.5 text-[13px] text-[#8c8c8c] md:flex">
+              <Link href="/workspaces" className={`rounded hover:text-[#e6e6e6] ${focusRing}`}>
                 Workspaces
               </Link>
-              <Link
-                href="/settings"
-                onClick={() => setMobileNavOpen(false)}
-                className="mt-1 flex w-full items-center gap-3 rounded-xl px-4 py-3.5 text-[14px] font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-950"
-              >
-                <Settings size={17} strokeWidth={1.8} />
-                Settings
-              </Link>
+              <ChevronRight size={13} />
+              <span className="text-[#cfcfcf]">{firstRun ? 'Get started' : 'Overview'}</span>
             </nav>
-
-            <div className="mt-auto border-t border-slate-200/70 px-5 py-5">
+            <button
+              type="button"
+              onClick={() => setPaletteOpen(true)}
+              aria-label="Search"
+              className={`ml-auto hidden h-8 w-full max-w-[260px] items-center gap-2 rounded-md border border-white/[0.1] px-3 text-left text-[13px] text-zinc-500 transition-colors hover:border-white/[0.16] md:flex ${focusRing}`}
+            >
+              <Search size={14} />
+              <span className="flex-1">Search…</span>
+              <kbd className="rounded border border-white/[0.12] px-1.5 py-px text-[10px] text-[#8a8a8a]">⌘K</kbd>
+            </button>
+            <div className="ml-auto flex items-center gap-1 md:hidden">
               <button
                 type="button"
-                onClick={() => setProfileOpen((current) => !current)}
-                className="flex w-full items-center gap-3 text-left"
+                onClick={() => setPaletteOpen(true)}
+                aria-label="Search"
+                className={`grid size-9 place-items-center rounded-md text-[#b8b8b8] hover:bg-white/[0.06] ${focusRing}`}
               >
-                <div className="grid size-8 shrink-0 place-items-center rounded-full bg-slate-300 text-[10px] font-semibold text-white">
-                  {initials}
-                </div>
-                <div className="min-w-0">
-                  <p className="truncate text-[11px] font-semibold text-slate-900">{displayName}</p>
-                  <p className="truncate text-[9px] text-slate-500">{user?.email ?? ''}</p>
-                </div>
+                <Search size={16} />
               </button>
-              <button
-                type="button"
-                onClick={() => void logout()}
-                className="mt-4 flex w-full items-center gap-2 rounded-lg px-1 py-2 text-[11px] font-medium text-slate-600 hover:text-slate-900"
-              >
-                <LogOut size={14} strokeWidth={1.8} />
-                Sign out
-              </button>
+              <AccountMenu user={user} onLogout={() => void logout()} variant="avatar" settingsHref={settingsHref} />
             </div>
-          </aside>
-        </div>
-      )}
+          </div></header>
 
-      {modalOpen && (
-        <div
-          className="fixed inset-0 z-50 grid place-items-center bg-slate-950/20 p-3 backdrop-blur-[7px] sm:p-6" 
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) closeCreateModal()
-          }}
-        >
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="create-workspace-title"
-            className="relative w-full max-w-[860px] overflow-hidden rounded-[24px] border border-slate-200/90 bg-[#fbfcfb] shadow-[0_32px_90px_rgba(15,23,42,0.18)]"
-          >
-            <div className="pointer-events-none absolute inset-0">
-              <div className="absolute -right-24 top-12 h-[310px] w-[520px] rounded-[50%] bg-[radial-gradient(ellipse_at_center,rgba(226,236,232,0.6),transparent_72%)]" />
-              <div className="absolute -left-24 bottom-[-30px] h-[220px] w-[390px] rounded-[50%] bg-[radial-gradient(ellipse_at_center,rgba(231,239,236,0.5),transparent_72%)]" />
-              <img
-                src="/hh.avif"
-                alt=""
-                aria-hidden="true"
-                className="absolute inset-y-0 right-0 hidden h-full w-[58%] object-cover object-center opacity-[0.1] sm:block"
-              />
-            </div>
-
-            <div className="relative p-6 sm:p-9 lg:p-11">
-              <button
-                type="button"
-                onClick={closeCreateModal}
-                aria-label="Close create workspace dialog"
-                disabled={creating}
-                className="absolute right-5 top-5 grid size-9 place-items-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <X size={19} strokeWidth={1.7} />
-              </button>
-
-              <div className="grid size-[72px] place-items-center rounded-[18px] border border-emerald-100 bg-emerald-50/65 shadow-[0_10px_30px_rgba(12,107,67,0.06)]">
-                <img
-                  src="/querypilot-logo.svg"
-                  alt="QueryPilot"
-                  className="h-12 w-12 object-contain"
-                />
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            <div className="mx-auto w-full max-w-[1000px] px-4 pb-16 pt-6 sm:px-8 sm:pt-8">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-8">
+                <div className={COL_W}>
+                  <h1 className="text-[20px] font-semibold leading-8 tracking-tight text-white">
+                    {firstRun ? 'Create your first workspace' : 'Overview'}
+                  </h1>
+                  <p className="mt-1 text-[13px] leading-5 text-[#a8a8a8] [text-wrap:pretty]">
+                    A workspace holds the documents for one topic. Ask questions across all of them and get answers with sources.
+                  </p>
+                </div>
+                {!firstRun && loaded && (
+                  <PixelDissolveButton
+                    type="button"
+                    label="New workspace"
+                    onClick={() => setCreateOpen(true)}
+                    color={AUTH_BLUE}
+                    dissolveColor={AUTH_DISSOLVE_BLUE}
+                    cellSize={4}
+                    className={`${PRIMARY_BUTTON_CLASSES} shrink-0`}
+                  />
+                )}
               </div>
 
-              <p className="mt-7 text-[10px] font-semibold uppercase tracking-[0.23em] text-slate-500">
-                New workspace
-              </p>
-
-              <h2
-                id="create-workspace-title"
-                className="mt-2 text-[32px] font-medium tracking-[-0.045em] text-slate-950 sm:text-[38px]"
-              >
-                Create a workspace
-              </h2>
-
-              <p className="mt-2 max-w-[520px] text-[14px] leading-6 text-slate-500">
-                Your sources and conversations will live inside this
-                workspace.
-              </p>
-
-              <form onSubmit={createWorkspace} className="mt-8">
-                <label
-                  htmlFor="workspace-name"
-                  className="block text-[12px] font-semibold text-slate-700"
+              {error && (
+                <div
+                  role="alert"
+                  className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[#5a2f2f] bg-[#2d2020] px-3.5 py-2.5 text-[13px] text-[#f0a09b]"
                 >
-                  Workspace name
-                </label>
-
-                <input
-                  id="workspace-name"
-                  autoFocus
-                  value={title}
-                  onChange={(event) => {
-                    setTitle(event.target.value)
-                    if (titleError) setTitleError('')
-                  }}
-                  placeholder="e.g. HR Policies"
-                  maxLength={WORKSPACE_NAME_MAX_LENGTH}
-                  aria-invalid={Boolean(titleError)}
-                  disabled={creating}
-                  className="mt-2 w-full rounded-xl border border-slate-300 bg-white/90 px-4 py-3.5 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-[#0c6b43] focus:ring-4 focus:ring-emerald-100/60 disabled:cursor-not-allowed disabled:opacity-60"
-                />
-
-                {titleError && (
-                  <p className="mt-2 text-xs text-red-600">{titleError}</p>
-                )}
-
-                <div className="mt-5 flex justify-end gap-2.5">
-                  <button
-                    type="button"
-                    onClick={closeCreateModal}
-                    disabled={creating}
-                    className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    Cancel
-                  </button>
-
-                  <button
-                    type="submit"
-                    disabled={!title.trim() || creating}
-                    className="rounded-xl bg-[#0c6b43] px-4 py-2.5 text-sm font-semibold text-white shadow-[0_8px_20px_rgba(12,107,67,0.15)] transition hover:bg-[#095d3a] disabled:cursor-not-allowed disabled:opacity-45"
-                  >
-                    {creating ? 'Creating…' : 'Create workspace'}
-                  </button>
+                  <span>{error}</span>
+                  <Pill onClick={() => void load()}>Retry</Pill>
                 </div>
-              </form>
+              )}
+
+              {loading ? (
+                <div className="mt-6 overflow-hidden rounded-lg border border-white/[0.1]">
+                  {[0, 1, 2].map((k) => (
+                    <div key={k} className="h-11 animate-pulse border-b border-white/[0.06] bg-white/[0.02] last:border-b-0 motion-reduce:animate-none" />
+                  ))}
+                </div>
+              ) : !loaded ? (
+                <p className="py-16 text-center text-[13px] text-[#8a8a8a]">Your workspaces couldn’t be loaded.</p>
+              ) : (
+                <>
+                  {firstRun && (
+                    <div className={`mt-5 ${COL_W}`}>
+                      <CreateForm creating={creating && !pendingPreset} autoFocus onCreate={createWorkspace} />
+                    </div>
+                  )}
+
+                  {recent.length > 0 && (
+                    <section className="mt-6">
+                      <div className="rounded-lg border border-white/[0.1]">
+                        <ListHead />
+                        <ul>
+                          {recent.map((w) => (
+                            <WorkspaceRow key={w.id} w={w} onOpen={openWorkspace} onDelete={setDeleteTarget} />
+                          ))}
+                        </ul>
+                      </div>
+                    </section>
+                  )}
+
+                  {presets.length > 0 && (
+                    <section id="templates" className="mt-10 scroll-mt-6">
+                      <SectionHead
+                        hint="Starts an empty workspace with this name. Add your own documents, then ask questions like these."
+                        action={
+                          <PixelDissolveButton
+                            type="button"
+                            label="Browse all"
+                            onClick={() => setGalleryOpen(true)}
+                            color="transparent"
+                            textColor="#a8a8a8"
+                            dissolveColor="rgba(255,255,255,0.28)"
+                            cellSize={4}
+                            className={`${PILL_BASE} !h-7 !px-3 border !border-white/10`}
+                          />
+                        }
+                      >
+                        Start from a template
+                      </SectionHead>
+                      <div className={GRID}>
+                        {presets.slice(0, 6).map((p) => (
+                          <TemplateCard key={p.name} p={p} busy={pendingPreset === p.name} disabled={creating} onPick={startPreset} />
+                        ))}
+                      </div>
+                    </section>
+                  )}
+                </>
+              )}
             </div>
           </div>
-        </div>
-      )}
-    </main>
+        </section>
+
+        <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} items={paletteItems} />
+
+        <Dialog open={createOpen} onClose={() => setCreateOpen(false)} locked={creating} labelledBy="create-title">
+          <h2 id="create-title" className="text-[15px] font-semibold tracking-tight text-white">
+            New workspace
+          </h2>
+          <p className="mb-4 mt-1.5 text-[13px] leading-5 text-[#a5a5a5]">
+            Name it after what it holds. A short tour will help you add documents next.
+          </p>
+          <CreateForm creating={creating} autoFocus onCreate={createWorkspace} onCancel={() => setCreateOpen(false)} />
+        </Dialog>
+
+        <TemplateGallery
+          open={galleryOpen}
+          onClose={() => setGalleryOpen(false)}
+          presets={PRESETS}
+          existing={new Set(workspaces.map((w) => w.title.trim().toLowerCase()))}
+          pending={pendingPreset}
+          creating={creating}
+          onPick={(p) => {
+            setGalleryOpen(false)
+            void startPreset(p)
+          }}
+        />
+
+        <DeleteDialog workspace={deleteTarget} onClose={() => setDeleteTarget(null)} onConfirm={removeWorkspace} />
+      </main>
+    </StatsContext.Provider>
   )
 }
-
-
-
-
 
 export default NotebookHome
