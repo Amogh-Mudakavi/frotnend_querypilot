@@ -9,7 +9,8 @@ import type { ReactNode } from "react";
  * ========================================================================== */
 
 const FRAME = "w-[var(--qp-frame,min(92vw,1120px))]";
-const REPO = "https://github.com/Amogh-Mudakavi/QueryPilot_backend";
+// Temporary: disable the repo link until you point this at your own project.
+const REPO = "#";
 
 const mono = "font-mono text-[12px] leading-[1.7] text-white/70";
 

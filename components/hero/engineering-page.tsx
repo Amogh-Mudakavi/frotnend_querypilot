@@ -26,7 +26,7 @@ import { ButtonFx, PD_COLORS, PD_GHOST, PD_PILL } from "@/components/hero/engine
  *    nothing is a measurement. Nothing here is a host, ID, bucket, key, port, secret or file path.
  * ========================================================================== */
 
-const GITHUB_URL = "https://github.com/Amogh-Mudakavi/QueryPilot_backend";
+const GITHUB_URL = "#";
 const APP_HREF = "/workspaces";
 const LOGIN_HREF = "/login";
 const UPDATED = "Nov 2026";
@@ -1801,7 +1801,17 @@ function TopBar({ onMenu, onSearch, authed, scrolled, progress, githubUrl, appHr
             <span className="qpe-mono hidden shrink-0 items-center gap-1 text-[12px] text-white/40 md:flex"><kbd className="rounded border border-white/15 px-1.5 py-px">{mod}</kbd><kbd className="rounded border border-white/15 px-1.5 py-px">K</kbd></span>
           </button>
 
-          <a href={githubUrl} target="_blank" rel="noopener noreferrer" aria-label="QueryPilot on GitHub" title="GitHub" className={`hidden size-9 items-center justify-center rounded-md text-white/80 transition-colors hover:bg-white/[0.06] hover:text-white sm:inline-flex ${FOCUS}`}><Icon n="github" className="size-5" /></a>
+          <a
+            href={githubUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="GitHub (temporarily disabled)"
+            title="GitHub"
+            onClick={(e) => e.preventDefault()}
+            className={`hidden size-9 items-center justify-center rounded-md text-white/80 transition-colors hover:bg-white/[0.06] hover:text-white sm:inline-flex ${FOCUS}`}
+          >
+            <Icon n="github" className="size-5" />
+          </a>
 
           <div className={`flex items-center gap-1.5 ${checking ? "invisible" : ""}`} aria-hidden={checking ? true : undefined}>
             {authed ? (

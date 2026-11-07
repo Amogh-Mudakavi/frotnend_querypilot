@@ -23,7 +23,8 @@ import { FeaturesSection } from "@/components/demos/features-showcase";
 const FRAME = "w-[var(--qp-frame,min(92vw,1120px))]";
 const BRAND_BLUE = "#3a44a8";
 const BRAND_DISSOLVE_BLUE = "#2a3282";
-const GITHUB_URL = "https://github.com/Amogh-Mudakavi/QueryPilot_backend";
+// Temporary: disable external GitHub redirect until you want to point this at your own repo.
+const GITHUB_URL = "#";
 // Relative on purpose: resolves to localhost:3000/engineering in dev and to your own domain in production.
 const ENGINEERING_HREF = "/engineering";
 // Where a signed-in person lands (same place the auth page sends them after login).
@@ -173,8 +174,9 @@ export function PublicNav(_props: { initialTheme?: "light" | "dark"; autoTheme?:
             href={GITHUB_URL}
             target="_blank"
             rel="noopener noreferrer"
-            aria-label="QueryPilot on GitHub"
+            aria-label="GitHub (temporarily disabled)"
             title="GitHub"
+            onClick={(e) => e.preventDefault()}
             className={`inline-flex size-9 items-center justify-center rounded-md text-white/80 transition-colors hover:bg-white/[0.06] hover:text-white ${focusRing}`}
           >
             <GithubIcon className="size-6" />
@@ -266,6 +268,9 @@ export function PublicNav(_props: { initialTheme?: "light" | "dark"; autoTheme?:
                     href={l.href}
                     target="_blank"
                     rel="noopener noreferrer"
+                    onClick={(e) => {
+                      if (l.label === "GitHub") e.preventDefault();
+                    }}
                     className="block py-4 text-[18px] text-white/85"
                   >
                     {l.label}
@@ -273,7 +278,10 @@ export function PublicNav(_props: { initialTheme?: "light" | "dark"; autoTheme?:
                 ) : (
                   <Link
                     href={l.href}
-                    onClick={() => setOpen(false)}
+                    onClick={(e) => {
+                      setOpen(false);
+                      if (l.label === "GitHub") e.preventDefault();
+                    }}
                     className="block py-4 text-[18px] text-white/85"
                   >
                     {l.label}
