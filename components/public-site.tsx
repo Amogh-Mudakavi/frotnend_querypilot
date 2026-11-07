@@ -11,6 +11,7 @@ import { QueryPilotDemo } from "@/components/hero/querypilot-demo";
 import { AgentTrace, MONO, QP, SANS, alpha, type TraceRun } from "@/components/hero/agent-trace-demo";
 import FinalCTASection from "@/components/hero/component_last_cta";
 import EngineeringPreview from "@/components/hero/engineering-preview";
+import EngineeringPageContent from "@/components/hero/engineering-page";
 import { FeaturesSection } from "@/components/demos/features-showcase";
 
 /* ============================================================================
@@ -925,11 +926,6 @@ const PAGE_CSS = `
         }
 `;
 
-const ENGINEERING_CSS = `
-        .querypilot-engineering-page, .querypilot-engineering-page * { font-family: var(--font-geist), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important; }
-`;
-
-
 export function LandingPage() {
   const [ready, setReady] = useState(false);
 
@@ -998,41 +994,11 @@ export function LandingPage() {
 
 /* ------------------------------------------------------ engineering page -- */
 
-/** Placeholder while the full engineering page is being rebuilt. */
+/**
+ * The /engineering route. The docs page brings its own navbar and fonts, so there is no PublicNav here.
+ * Kept as a named export so `app/engineering/page.tsx` can keep importing it from this file.
+ * Needs `components/hero/engineering-page.tsx` to have a default export (the docs page I gave you).
+ */
 export function EngineeringPage() {
-  return (
-    <div className="querypilot-engineering-page flex min-h-screen flex-col bg-[#0A0A0A] text-white">
-      <style dangerouslySetInnerHTML={{ __html: ENGINEERING_CSS }} />
-
-      <header className="border-b border-white/10">
-        <div className={`mx-auto flex items-center justify-between ${FRAME}`} style={{ height: "var(--qp-nav-h, 64px)" }}>
-          <Link href="/" className={`inline-flex items-center gap-2 rounded text-[14px] font-medium tracking-[-0.01em] ${focusRing}`}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/querypilot-logo.svg" alt="" aria-hidden="true" className="size-5 object-contain" />
-            QueryPilot
-          </Link>
-        </div>
-      </header>
-
-      <main className="flex flex-1 items-center">
-        <div className={`mx-auto ${FRAME}`}>
-          <h1 className="max-w-[40rem] text-[clamp(26px,2.8vw,36px)] font-medium leading-[1.2] tracking-[-0.03em]">
-            The engineering write-up is being rebuilt.
-          </h1>
-          <p className="mt-4 max-w-[34rem] text-[15px] leading-[1.6] text-white/60">
-            The architecture, routing and evidence checks will be documented here shortly.
-          </p>
-          <PixelDissolveButton
-            label="Back to home"
-            href="/"
-            color="transparent"
-            textColor={GHOST_TEXT}
-            dissolveColor={GHOST_DISSOLVE}
-            cellSize={5}
-            className={`mt-8 ${PD_PILL} ${PD_GHOST_BORDER} !h-10`}
-          />
-        </div>
-      </main>
-    </div>
-  );
+  return <EngineeringPageContent />;
 }
