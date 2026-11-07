@@ -77,7 +77,7 @@ function fxColor(host: Element): string {
 
 /**
  * Mount once inside the docs root. Hovering any <button> inside `.qpd` runs the pixel dissolve behind its content.
- * Skipped: touch, reduced motion, disabled buttons, `data-nofx`, absolutely positioned buttons (backdrops) and very wide ones.
+ * Skipped: touch, reduced motion, disabled buttons, any button without `data-pixel` (opt-in only), absolutely positioned buttons (backdrops) and very wide ones.
  */
 export function ButtonFx() {
   useEffect(() => {
@@ -155,7 +155,7 @@ export function ButtonFx() {
       const host = (e.target as Element | null)?.closest?.("button") as HTMLButtonElement | null;
       if (!host || host === cur?.host || !host.closest(".qpd")) return;
       stop();
-      if (host.disabled || host.dataset.nofx !== undefined) return;
+      if (host.disabled || host.dataset.pixel === undefined) return;
       if (host.querySelector(":scope > canvas:not([data-fx])")) return;
       const cs = getComputedStyle(host);
       if (cs.position === "absolute" || cs.position === "fixed" || host.offsetWidth > 700) return;
@@ -1462,9 +1462,9 @@ export function RequestFlow() {
       hov={hoverProps}
       right={
         <span className="flex items-center gap-2">
-          <button type="button" className={ctl} onClick={() => go(s - 1)} aria-label="Previous stage"><Icon n="arrow" className="h-3.5 w-3.5 rotate-180" /></button>
+          <button type="button" data-pixel className={ctl} onClick={() => go(s - 1)} aria-label="Previous stage"><Icon n="arrow" className="h-3.5 w-3.5 rotate-180" /></button>
           
-          <button type="button" className={ctl} onClick={() => go(s + 1)} aria-label="Next stage"><Icon n="arrow" className="h-3.5 w-3.5" /></button>
+          <button type="button" data-pixel className={ctl} onClick={() => go(s + 1)} aria-label="Next stage"><Icon n="arrow" className="h-3.5 w-3.5" /></button>
         </span>
       }
     >
