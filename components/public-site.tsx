@@ -13,6 +13,7 @@ import FinalCTASection from "@/components/hero/component_last_cta";
 import EngineeringPreview from "@/components/hero/engineering-preview";
 import EngineeringPageContent from "@/components/hero/engineering-page";
 import { FeaturesSection } from "@/components/demos/features-showcase";
+import { MobileGate } from "@/components/mobile-gate";
 
 /* ============================================================================
  * QueryPilot public site. Dark only.
@@ -981,6 +982,7 @@ export function LandingPage() {
         <style>{".qp-rise,.qp-card{opacity:1!important}"}</style>
       </noscript>
 
+      <MobileGate />
       <PublicNav />
 
       <main>
@@ -1008,5 +1010,10 @@ export function LandingPage() {
  * Needs `components/hero/engineering-page.tsx` to have a default export (the docs page I gave you).
  */
 export function EngineeringPage() {
-  return <EngineeringPageContent />;
+  return (
+    <>
+      <MobileGate />
+      <EngineeringPageContent />
+    </>
+  );
 }
