@@ -22,6 +22,14 @@ export type ApiError = Error & {
   fieldErrors?: Record<string, string[]>
 }
 
+/** RequestInit plus an optional time limit. With no timeoutMs there is no time limit. */
+export type ApiRequestInit = RequestInit & {
+  timeoutMs?: number
+}
+
+/** How long login, signup and the other auth calls wait before we call the server unreachable. */
+const AUTH_TIMEOUT_MS = 5000
+
 export type User = {
   id: number
   username: string
@@ -305,6 +313,40 @@ function createApiError(data: unknown, status: number): ApiError {
   return error
 }
 
+function createUnreachableError(timedOut: boolean): ApiError {
+  const error = new Error(
+    timedOut
+      ? 'The server took too long to respond.'
+      : 'Unable to reach the server. Please check your connection and try again.',
+  ) as ApiError
+
+  error.code = timedOut ? 'TIMEOUT' : 'NETWORK_ERROR'
+
+  return error
+}
+
+/**
+ * True when the backend itself looks off or unreachable: the request got no
+ * answer (network error or timeout), or nginx replied 502/503/504 because
+ * nothing is running behind it. Wrong passwords and validation errors are
+ * not in this group.
+ */
+export function isServerUnreachable(error: unknown): boolean {
+  if (!(error instanceof Error)) {
+    return false
+  }
+
+  const { code, status } = error as ApiError
+
+  return (
+    code === 'NETWORK_ERROR' ||
+    code === 'TIMEOUT' ||
+    status === 502 ||
+    status === 503 ||
+    status === 504
+  )
+}
+
 async function parseJsonSafely(response: Response): Promise<unknown> {
   const contentType = response.headers.get('content-type') || ''
 
@@ -372,10 +414,11 @@ async function refreshAccessToken(): Promise<boolean> {
 
 export async function apiFetch<T>(
   path: string,
-  init: RequestInit = {},
+  init: ApiRequestInit = {},
   retry = true,
 ): Promise<T> {
-  const headers = new Headers(init.headers)
+  const { timeoutMs, ...fetchInit } = init
+  const headers = new Headers(fetchInit.headers)
 
   const access_token = tokenStore.get('access_token')
 
@@ -383,25 +426,28 @@ export async function apiFetch<T>(
     headers.set('Authorization', `Bearer ${access_token}`)
   }
 
-  if (!(init.body instanceof FormData)) {
+  if (!(fetchInit.body instanceof FormData)) {
     headers.set('Content-Type', 'application/json')
   }
 
   let response: Response
 
+  // Only the auth calls set a timeout. Uploads and chat can legitimately take a long time.
+  const controller = timeoutMs ? new AbortController() : null
+  const timer = controller ? setTimeout(() => controller.abort(), timeoutMs) : null
+
   try {
     response = await fetch(`${API_BASE_URL}${path}`, {
-      ...init,
+      ...fetchInit,
       headers,
+      signal: controller ? controller.signal : fetchInit.signal,
     })
   } catch {
-    const error = new Error(
-      'Unable to reach the server. Please check your connection and try again.',
-    ) as ApiError
-
-    error.code = 'NETWORK_ERROR'
-
-    throw error
+    throw createUnreachableError(controller?.signal.aborted === true)
+  } finally {
+    if (timer) {
+      clearTimeout(timer)
+    }
   }
 
   if (response.status === 401 && retry) {
@@ -657,32 +703,56 @@ export const authApi = {
     }
   },
 
+  checkServer: async (): Promise<boolean> => {
+    // A plain GET to an endpoint that exists. Any reply, even a 401, means the backend is up.
+    // A network failure, a timeout or an nginx 502/503/504 means it is not.
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), AUTH_TIMEOUT_MS)
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/me/`, {
+        signal: controller.signal,
+      })
+
+      return ![502, 503, 504].includes(response.status)
+    } catch {
+      return false
+    } finally {
+      clearTimeout(timer)
+    }
+  },
+
   login: (payload: { email: string; password: string }) =>
     apiFetch<AuthTokens>('/api/auth/login/', {
+      timeoutMs: AUTH_TIMEOUT_MS,
       method: 'POST',
       body: JSON.stringify(payload),
     }),
 
   register: (payload: { username: string; email: string; password: string }) =>
     apiFetch<{ message: string }>('/api/auth/register/', {
+      timeoutMs: AUTH_TIMEOUT_MS,
       method: 'POST',
       body: JSON.stringify(payload),
     }),
 
   verifyOtp: (payload: { email: string; otp: string }) =>
     apiFetch<{ message: string }>('/api/auth/verify-otp/', {
+      timeoutMs: AUTH_TIMEOUT_MS,
       method: 'POST',
       body: JSON.stringify(payload),
     }),
 
   forgotPassword: (payload: { email: string }) =>
     apiFetch<{ message: string }>('/api/auth/forgot-password/', {
+      timeoutMs: AUTH_TIMEOUT_MS,
       method: 'POST',
       body: JSON.stringify(payload),
     }),
 
   resetPassword: (payload: { email: string; otp: string; new_password: string }) =>
     apiFetch<{ message: string }>('/api/auth/reset-password/', {
+      timeoutMs: AUTH_TIMEOUT_MS,
       method: 'POST',
       body: JSON.stringify(payload),
     }),

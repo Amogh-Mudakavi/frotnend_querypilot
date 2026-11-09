@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { authApi } from "@/lib/django-api";
+import { authApi, isServerUnreachable } from "@/lib/django-api";
 import { PixelDissolveButton } from "@/components/pixel-dissolve-button";
 import {
   Archive,
@@ -147,6 +147,96 @@ const primaryButtonClasses =
   "!h-[44px] !w-full !min-h-0 !rounded-full !border !border-[#3a44a8] !bg-[#3a44a8] !px-5 !text-[13px] !font-medium " +
   "!normal-case !tracking-normal !text-white hover:!bg-[#4651bd] disabled:!opacity-70 " +
   "min-[1920px]:!h-[48px] min-[1920px]:!text-[14px]";
+
+/* ---------------------------------------------------------------- notices -- */
+
+// Put your email here to show a "Message me" link when the server is off.
+// While this is empty, the link is simply not shown.
+const CONTACT_EMAIL: string = "";
+
+const CONTACT_HREF = CONTACT_EMAIL
+  ? `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent("QueryPilot server is off")}`
+  : "";
+
+// Brown/amber callout, same look as the "What this page doesn't claim" box on the engineering page.
+const noticeBox =
+  "rounded-[10px] border border-[#d4a84a]/25 bg-[#d4a84a]/[0.06] px-4 py-3.5";
+
+const noticeLink =
+  "text-[13px] font-medium text-[#8f9bff] underline-offset-4 transition-colors hover:text-[#b4bcff] hover:underline min-[1920px]:text-[14px]";
+
+function WarningIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      width="16"
+      height="16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="flex-none"
+    >
+      <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3" />
+      <path d="M12 9v4" />
+      <path d="M12 17h.01" />
+    </svg>
+  );
+}
+
+function Notice({ title, children }: { title?: string; children: ReactNode }) {
+  return (
+    <div role="alert" className={noticeBox}>
+      <div className="flex items-start gap-2.5">
+        <span className="mt-[5px] text-[#d9ae55]">
+          <WarningIcon />
+        </span>
+
+        <div className="min-w-0 flex-1">
+          {title ? (
+            <p className="text-[14px] font-medium leading-6 text-[#d9ae55] min-[1920px]:text-[15px]">
+              {title}
+            </p>
+          ) : null}
+
+          <div
+            className={`text-[13px] leading-[1.6] min-[1920px]:text-[14px] ${
+              title ? "mt-1 text-[#a1a1a8]" : "text-[#d9ae55]/90"
+            }`}
+          >
+            {children}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ServerOfflineNotice() {
+  return (
+    <Notice title="The server is offline right now.">
+      <p>
+        QueryPilot’s backend runs on AWS, and I sometimes switch it off to keep hosting
+        costs down. If you are trying it out, please message me and I will switch it back
+        on as soon as I can. Until then, you can read how I built it.
+      </p>
+
+      <p className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1.5">
+        <Link href="/engineering" className={noticeLink}>
+          Read the engineering docs
+        </Link>
+
+        {CONTACT_HREF ? (
+          <a href={CONTACT_HREF} className={noticeLink}>
+            Message me
+          </a>
+        ) : null}
+      </p>
+    </Notice>
+  );
+}
 
 function AuthLogo() {
   return (
@@ -766,6 +856,9 @@ export function AuthPage({ mode }: { mode: Mode }) {
 
   const [pending, setPending] = useState(false);
 
+  // True when the backend could not be reached (server off, timeout, nginx 502/503/504).
+  const [serverDown, setServerDown] = useState(false);
+
   const [passwordLength, setPasswordLength] = useState(0);
 
   const [savedEmail, setSavedEmail] = useState("");
@@ -786,12 +879,41 @@ export function AuthPage({ mode }: { mode: Mode }) {
       ? { "aria-invalid": true as const, "aria-describedby": `${name}-error` }
       : {};
 
+  // Check the server first. Without this, a click while the server is off sends the
+  // browser to a dead address and shows a browser error page instead of our notice.
+  const startGoogle = async () => {
+    if (pending) {
+      return;
+    }
+
+    setError("");
+    setServerDown(false);
+    setPending(true);
+
+    const up = await authApi.checkServer();
+
+    setPending(false);
+
+    if (!up) {
+      if (typeof navigator !== "undefined" && navigator.onLine === false) {
+        setError("You seem to be offline. Check your internet connection and try again.");
+      } else {
+        setServerDown(true);
+      }
+
+      return;
+    }
+
+    authApi.startGoogleOAuth(tab === "signup" ? "signup" : "signin");
+  };
+
   const switchTab = (next: "login" | "signup") => {
     if (next === tab) {
       return;
     }
 
     setTab(next);
+    setServerDown(false);
     setError("");
     setPasswordLength(0);
     setShowPassword(false);
@@ -851,6 +973,7 @@ export function AuthPage({ mode }: { mode: Mode }) {
     lastSubmitAtRef.current = now;
 
     setError("");
+    setServerDown(false);
     setPending(true);
 
     const values = new FormData(event.currentTarget);
@@ -991,9 +1114,17 @@ export function AuthPage({ mode }: { mode: Mode }) {
         router.replace("/login");
       }
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Unable to complete this request.",
-      );
+      if (isServerUnreachable(err)) {
+        if (typeof navigator !== "undefined" && navigator.onLine === false) {
+          setError("You seem to be offline. Check your internet connection and try again.");
+        } else {
+          setServerDown(true);
+        }
+      } else {
+        setError(
+          err instanceof Error ? err.message : "Unable to complete this request.",
+        );
+      }
     } finally {
       setPending(false);
     }
@@ -1176,11 +1307,7 @@ export function AuthPage({ mode }: { mode: Mode }) {
                     <button
                       type="button"
                       disabled={pending}
-                      onClick={() =>
-                        authApi.startGoogleOAuth(
-                          tab === "signup" ? "signup" : "signin",
-                        )
-                      }
+                      onClick={startGoogle}
                       className={secondaryButtonClasses}
                     >
                       <svg
@@ -1395,14 +1522,11 @@ export function AuthPage({ mode }: { mode: Mode }) {
                   </>
                 )}
 
-                {error && !errorTarget && (
-                  <div
-                    role="alert"
-                    className="rounded-[14px] border border-red-400/25 bg-red-500/[0.07] px-4 py-3 text-[13px] leading-5 text-red-300"
-                  >
-                    {error}
-                  </div>
-                )}
+                {serverDown ? <ServerOfflineNotice /> : null}
+
+                {!serverDown && error && !errorTarget ? (
+                  <Notice>{error}</Notice>
+                ) : null}
 
                 <PixelDissolveButton
                   type="submit"
