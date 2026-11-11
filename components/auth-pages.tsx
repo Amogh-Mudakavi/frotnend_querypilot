@@ -218,9 +218,8 @@ function ServerOfflineNotice() {
   return (
     <Notice title="The server is offline right now.">
       <p>
-        The server is offline right now.
-        QueryPilot's backend runs on AWS. To manage infrastructure costs, the developer keeps the servers switched off when they aren't in use and brings them online when someone wants to try the platform.
-        Please message the developer who built it, and he'll turn on the servers so you can experience the live platform.
+        Server instances are kept idle to control running costs.
+        If you were shared this demo link, text or ping me directly to trigger an environment spin-up so you can test the platform.
       </p>
 
       <p className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1.5">
