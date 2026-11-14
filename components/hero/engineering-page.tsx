@@ -1143,71 +1143,72 @@ graph.add_edge("finish", END)` }],
 
   {
     id: "docker-and-delivery", group: "ops", title: "Docker and delivery",
-    lead: "One image for the API and the worker, built with cached layers, pushed to a private registry and pulled onto the server.",
+    lead: "I package the API and the worker into one image, build it with cached layers, push it to a private registry and pull it onto the server.",
     sections: [
       { h: "Why Docker", blocks: [
-        P("The backend needs more than Django: database drivers, document-parsing libraries, embedding code and native system packages. Writing that down as an image means the environment is the same in development and on the server. Docker makes the runtime consistent. It doesn't make the app scalable or highly available by itself."),
+        P("The backend needs a lot more than Django. It depends on database drivers, document-parsing libraries, the embedding code and several native system packages. Putting all of that into an image keeps the environment the same on my machine and on the server. Docker gives me a consistent runtime, but it doesn't make the app scalable or highly available on its own."),
       ] },
       { h: "What is in the image", blocks: [
         UL([
           "A Python 3.12 slim base, built in stages.",
           "The system packages the libraries need.",
           "Python packages, with a CPU-only PyTorch install.",
-          "The quantized ONNX embedding model, already inside the image.",
-          "The application source, run as a non-root user.",
+          "The quantized ONNX embedding model, baked into the image.",
+          "The application source, running as a non-root user.",
           "The ASGI app, served by Uvicorn.",
         ]),
-        P("The model is inside the image so no container downloads it at start-up, which removes a slow step that can fail. The build also checks that the model loads and produces a 1024-dimension embedding, so a broken image fails at build time and not in production."),
+        P("I bake the model into the image so no container has to download it at start-up. That removes a slow step that can fail. The build also loads the model and checks that it produces a 1024-dimension embedding, so a broken image fails at build time instead of in production."),
       ] },
       { h: "API and worker", blocks: [
-        P("Both processes use the same codebase and are packaged from the same Dockerfile; they differ by startup command. The API runs under Uvicorn, while the worker starts with `python manage.py ingestion_worker`. The deployment manifest that starts and supervises both processes is not included in this repository snapshot, so this page describes their responsibilities rather than claiming a particular Compose configuration. The reason to split them is the same as in the ingestion pipeline: parsing and embedding take far longer than a request should, so the upload request only validates and queues, and the worker does the slow part."),
+        P("Both processes run the same codebase from the same Dockerfile. Only the startup command differs. The API runs under Uvicorn, and the worker starts with `python manage.py ingestion_worker`. I don't describe a specific Compose setup on this page, so what you get here is what each process is responsible for, not how they are supervised."),
+        P("I split them for the same reason as in the ingestion pipeline. Parsing and embedding take far longer than a request should, so the upload request only validates and queues, and the worker handles the slow part."),
       ] },
       { h: "Image delivery", blocks: [
-        P("Source code, an image built from it, that image in a registry and a container running it are four different things."),
+        P("Source code, the image built from it, that image in a registry and a running container are four different things."),
         TBL(["Thing", "What it is"], [
-          ["Source code in Git", "The files, with history"],
+          ["Source code in Git", "The files, with their history"],
           ["Docker image", "The built environment plus the code, produced from that source"],
           ["Image in ECR", "A copy of that image in a private registry"],
           ["Running container", "An image started on the EC2 server"],
         ]),
-        P("The server pulls a prepared image instead of rebuilding the Python environment each time the code changes."),
+        P("The server pulls a prebuilt image, so I don't have to rebuild the Python environment every time the code changes."),
       ] },
       { h: "Shipping an update", blocks: [
         DIA(SHIP, "From source to a running container"),
         UL([
-          "**Revision-based images.** Each image is tied to a source revision, so it is clear which version of the app is running.",
-          "**Build caching.** The previous image is used as a cache source. A code-only change doesn't reinstall every dependency.",
-          "**Incremental updates.** Only the service that changed is replaced, so an API-only change doesn't restart unrelated parts.",
-          "**Verify.** After an update, the logs say whether the new container came up properly.",
+          "**Revision-based images.** Each image is tied to a source revision, so I can always tell which version of the app is running.",
+          "**Build caching.** The previous image is used as a cache source, so a code-only change doesn't reinstall every dependency.",
+          "**Incremental updates.** Only the service that changed gets replaced. An API-only change doesn't restart the worker.",
+          "**Verify.** After an update I check the logs to confirm the new container came up properly.",
         ]),
-        NOTE("note", "No downtime claim", "This reduces unnecessary restarts. It isn't a zero-downtime setup, and none is claimed because it hasn't been measured."),
+        NOTE("note", "No downtime claim", "This cuts down on unnecessary restarts, but it isn't a zero-downtime setup. I don't claim one because I haven't measured it."),
       ] },
       { h: "Configuration", blocks: [
-        P("Production and local development differ in database connections, background processing, cloud storage, the vector backend, authentication and security settings, external service integrations and the allowed frontend origins. These come from environment configuration instead of the source, so secrets never live in the repository and each environment can differ without code changes. The setting names are listed on [Configuration](c:configuration)."),
-        P("Connecting a separately hosted frontend and backend is where this showed up most: the CORS and CSRF trust settings have to match the real frontend origin."),
+        P("Production and local development differ in a few places: database connections, background processing, cloud storage, the vector backend, authentication and security settings, external service integrations and the allowed frontend origins. All of it comes from environment configuration instead of the source, so secrets never live in the repository and each environment can differ without code changes. The setting names are listed on [Configuration](c:configuration)."),
+        P("This mattered most when I connected the separately hosted frontend and backend. The CORS and CSRF trust settings have to match the real frontend origin."),
       ] },
       { h: "Logs", blocks: [
-        P("The API and the ingestion worker write separate logs, and debugging starts there: failed requests, restarting containers, an embedding model that won't load, database connection errors, documents that failed processing, a chat stream cut short. Each chat request also logs a trace and a token-usage summary. There is no central monitoring dashboard."),
+        P("The API and the ingestion worker write separate logs, and that is where I start when something breaks: failed requests, containers that keep restarting, an embedding model that won't load, database connection errors, documents that failed processing, a chat stream that got cut short. Each chat request also logs a trace and a token-usage summary. I don't have a central monitoring dashboard."),
       ] },
       { h: "Processes and containers", blocks: [
-        P("A process is a running program with its own memory and file descriptors. A container isolates a process with operating-system namespaces and resource controls; it isn't a virtual machine, and a Docker image is the packaged filesystem and metadata a container starts from."),
-        P("Image layers, the build cache, multi-stage builds, environment variables, container logs, restart policies, health checks and the split between build-time and run-time configuration decide how the image behaves. The API and the ingestion worker use the same image with different commands."),
+        P("A process is a running program with its own memory and file descriptors. A container isolates a process using operating-system namespaces and resource controls. It isn't a virtual machine, and a Docker image is the packaged filesystem and metadata a container starts from."),
+        P("Several things decide how the image behaves: image layers, the build cache, multi-stage builds, environment variables, container logs, restart policies, health checks and the split between build-time and run-time configuration. The API and the ingestion worker use the same image with different commands."),
       ] },
       { h: "Operational basics", blocks: [
-        P("Environment-specific configuration, secret injection, database connection limits, object-storage permissions, log inspection, backups and recovery are the operational basics. A service starting successfully doesn't prove its dependencies are reachable or that an end-to-end request works."),
-        P("The supplied backend archive includes its Dockerfile and environment-based Django settings, but not the complete deployment manifests. Infrastructure details should be verified against the live deployment before they are presented as exact configuration."),
+        P("The operational basics are environment-specific configuration, secret injection, database connection limits, object-storage permissions, log inspection, backups and recovery. A service that starts successfully doesn't prove its dependencies are reachable or that an end-to-end request works."),
+        P("This page documents the Dockerfile and the environment-based Django settings. The full deployment setup isn't written up here, so please check infrastructure details against the live deployment before treating them as exact configuration."),
       ] },
       { h: "Deployment scenarios to walk through", blocks: [
         OL(["Explain the difference between a Docker image and a running container.", "Trace a browser request through DNS, TLS termination, Nginx and Django.", "Explain why a reverse proxy must forward the original HTTPS scheme.", "Describe how proxy buffering can affect SSE.", "Explain why secrets belong in runtime configuration rather than source control."]),
       ] },
       { h: "What this adds up to", blocks: [
         UL([
-          "Django inside Docker, behind a separate proxy, needs to be told about the proxy.",
-          "Separating API and ingestion keeps slow work off the request path.",
+          "Django inside Docker, behind a separate proxy, has to be told about the proxy.",
+          "Keeping the API and ingestion apart keeps slow work off the request path.",
           "Per-environment configuration keeps secrets out of the source.",
           "A separately hosted frontend needs deliberate CORS and CSRF settings.",
           "Cached builds and prebuilt images keep a small code change small.",
-          "Logs are where investigation starts.",
+          "Logs are where an investigation starts.",
         ]),
       ] },
     ],
@@ -1550,10 +1551,10 @@ event: error        # instead of complete, on failure` }],
 
   {
     id: "frontend", group: "development", title: "Frontend and ownership", wide: true,
-    lead: "The product interface, its contract with the backend, and an honest account of how the visual direction and implementation were handled.",
+    lead: "The product interface, how it talks to the backend, and a straight account of who designed it and how the code was written.",
     sections: [
       { h: "The frontend's job", blocks: [
-        P("The product frontend is a separate Next.js and React application. It is the user's working surface: account access, workspace navigation, document upload, document status, conversations and the chat stream. It communicates with the Django API over HTTP. The backend remains the authority for identity, ownership, processing state and stored conversation data."),
+        P("The product frontend is a separate Next.js and React application. It is where users actually work: signing in, moving between workspaces, uploading documents, checking document status, holding conversations and reading the chat stream. It talks to the Django API over HTTP, and the backend stays the authority for identity, ownership, processing state and stored conversations."),
         TBL(["User action", "Backend contract"], [
           ["Create an account or sign in", "`/api/auth/register/`, `/verify-otp/`, `/login/`, `/refresh/`, `/logout/`, `/me/` and Google OAuth routes"],
           ["Open or create a workspace", "`/api/workspaces/` and its create, update, delete and settings routes"],
@@ -1562,43 +1563,43 @@ event: error        # instead of complete, on failure` }],
           ["Open a conversation", "`/api/chat/conversations/` and conversation detail/settings routes"],
           ["Send a chat message", "`/api/chat/messages/stream/`, which returns Server-Sent Events"],
         ]),
-        P("Every route, with methods and status codes, is on the [API reference](c:api-reference)."),
+        P("Every route, with its methods and status codes, is on the [API reference](c:api-reference)."),
       ] },
       { h: "The upload experience", blocks: [
-        P("An upload request completing means that the backend accepted and recorded the file; it does not mean the file has already been parsed and indexed. The frontend should keep these states distinct: uploading, accepted/pending, processing, ready and failed. The document status endpoint lets the interface check the backend's recorded state rather than guessing from elapsed time."),
-        P("The backend enforces the workspace owner check, file type and size limits, the duplicate file hash constraint and the current document-count limit. These rules must not be implemented only as disabled buttons in the UI, because a client can send a request without using the visible form."),
+        P("When the upload request returns, it only means the backend has accepted and recorded the file. The file hasn't been parsed or indexed yet. The frontend needs to keep five states apart: uploading, accepted (pending), processing, ready and failed. The document status endpoint gives it the backend's recorded state, so it never has to guess from elapsed time."),
+        P("The backend enforces the workspace owner check, the file type and size limits, the duplicate-hash constraint and the document-count limit. None of these can live only as disabled buttons in the UI, because a client can send a request without ever using the visible form."),
       ] },
       { h: "The chat experience", blocks: [
-        P("The frontend sends a message to the chat stream endpoint and consumes SSE events from the HTTP response. That stream can report progress while planning and tool execution happen, then deliver generated text as it is produced. The final assistant message is persisted by the backend before the closing `complete` event is sent."),
-        P("A streaming interface needs to handle more than the happy path: connection interruption, an error event, an unfinished response, duplicate user submission, the per-user question limit (which arrives as a normal `complete` event) and the user leaving the conversation during generation. The exact client-side implementation should be documented from the frontend repository; it was not included in the backend archive supplied for this review."),
+        P("The frontend sends a message to the chat stream endpoint and reads the SSE events from the response. While planning and tool execution run, the stream reports progress, and after that it delivers the answer text as it is generated. The backend saves the final assistant message before it sends the closing `complete` event."),
+        P("A streaming UI has to handle more than the happy path: a dropped connection, an error event, an unfinished response, a double submit, the per-user question limit (which arrives as a normal `complete` event) and the user leaving the conversation in the middle of an answer. The client-side implementation details aren't covered on this page."),
       ] },
       { h: "Component and state design", blocks: [
-        P("The interface is built from components with props, state, controlled inputs, effects and composition. The design question is which state is local to a component, which is shared across a page and which is persisted by the backend. Loading, empty, success and error states differ, and an upload modal shouldn't imply a document is ready merely because the upload request succeeded: the backend processes the file asynchronously and exposes a status endpoint."),
+        P("The interface is built from React components using props, state, controlled inputs, effects and composition. The main design question is where each piece of state lives: local to a component, shared across a page, or persisted by the backend. Loading, empty, success and error states all look different, and an upload modal shouldn't suggest a document is ready just because the upload request succeeded. The backend processes the file asynchronously and exposes a status endpoint for exactly that reason."),
       ] },
       { h: "Routing and rendering", blocks: [
-        P("Next.js contributes the App Router, layouts, route segments, client and server components, navigation and query parameters. A client component is appropriate when the interface needs browser state, event handlers or browser APIs such as the clipboard and `IntersectionObserver`; not every page needs to be client-rendered."),
+        P("Next.js gives me the App Router, layouts, route segments, client and server components, navigation and query parameters. A client component makes sense when the interface needs browser state, event handlers or browser APIs such as the clipboard and `IntersectionObserver`. Not every page has to be client-rendered."),
       ] },
       { h: "API integration and authentication", blocks: [
-        P("The frontend treats the Django API as the authority for identity, workspace ownership, document status and conversation data. Request cancellation, loading and error states, token expiry, refresh handling and protection against duplicate submissions when a user clicks twice all sit on this boundary."),
-        P("The backend exposes `/api/auth/` for account operations, `/api/workspaces/` for workspaces, `/api/documents/` for uploads and status, and `/api/chat/` for conversations and streaming messages. The supplied backend source does not reveal the frontend's token-storage strategy or its complete client-side state model."),
+        P("The frontend treats the Django API as the authority for identity, workspace ownership, document status and conversation data. Request cancellation, loading and error states, token expiry, refresh handling and protection against double submits all sit on that boundary."),
+        P("The backend exposes `/api/auth/` for account operations, `/api/workspaces/` for workspaces, `/api/documents/` for uploads and status, and `/api/chat/` for conversations and streaming messages. How the frontend stores tokens and manages its client-side state isn't covered on this page."),
       ] },
       { h: "Streaming chat and accessibility", blocks: [
-        P("For chat, the browser reads a streaming response and parses SSE event boundaries. The UI has to distinguish progress events, text deltas, completion and failure, and handle the user navigating away or the connection being interrupted."),
-        P("Interface quality covers keyboard navigation, focus management, semantic HTML, responsive layout, reduced-motion preferences, contrast and readable type scales. A technical interface should stay usable without a mouse and at narrow viewport widths."),
+        P("For chat, the browser reads a streaming response and parses the SSE event boundaries. The UI has to tell progress events, text deltas, completion and failure apart, and it has to cope with the user navigating away or the connection breaking."),
+        P("Interface quality also covers keyboard navigation, focus management, semantic HTML, responsive layout, reduced-motion preferences, contrast and readable type scales. A technical interface should work without a mouse and at narrow viewport widths."),
       ] },
       { h: "Frontend scenarios to walk through", blocks: [
         OL(["Build a controlled upload form with validation and explicit pending/success/failure states.", "Explain when a React component needs `use client` in Next.js.", "Trace a login response into a protected API request without assuming the token-storage method.", "Read an SSE stream and update a chat message as text events arrive.", "Test the interface with a keyboard and with reduced motion enabled."]),
       ] },
       { h: "Design ownership and implementation", blocks: [
-        P("The frontend direction and visual design were shaped by me. I worked on the product's visual language, the layout of the main screens and how users should move between workspaces, documents and chat. I also used AI tools heavily during implementation, and much of the frontend code was produced with that assistance. I don't want to present the implementation as though I hand-wrote every component myself."),
-        P("That distinction matters: I can take responsibility for the product direction and the interface decisions without overstating how the code was produced. The backend architecture and the integration contract are documented separately from the frontend implementation details that would need the frontend repository to verify."),
+        P("I shaped the frontend direction and the visual design. That covers the product's visual language, the layout of the main screens and how users move between workspaces, documents and chat. I also used AI tools heavily while building it, and much of the frontend code was written with that help. I don't want to suggest I hand-wrote every component."),
+        P("I think that distinction matters. I can stand behind the product direction and the interface decisions without overstating how the code was produced. The backend architecture and the integration contract are documented separately from the frontend implementation details."),
       ] },
       { h: "How this Engineering documentation is built", blocks: [
-        P("The Engineering page itself is a Next.js client-side documentation view. Chapter content is kept as structured data and rendered through shared blocks for paragraphs, tables, steps, code panels, diagrams, endpoint tables, link cards and callouts. The `?c=<chapter-id>` query parameter selects a chapter; the sidebar keeps every section in view, and AI & Retrieval opens as its own scrollable list."),
-        P("The diagram components are SVG-based and expose the same information through selectable nodes and a detail panel. The page also supports search, keyboard navigation, a reading-position indicator and reduced-motion behaviour. These details describe the supplied Engineering docs code, not the unprovided product frontend repository."),
+        P("This Engineering page is a client-side Next.js documentation view. The chapter content is kept as structured data and rendered through shared blocks for paragraphs, tables, steps, code panels, diagrams, endpoint tables, link cards and callouts. The `?c=<chapter-id>` query parameter picks the chapter, the sidebar keeps every section in view, and AI & Retrieval opens as its own scrollable list."),
+        P("The diagrams are SVG-based and show the same information through selectable nodes and a detail panel. The page also has search, keyboard navigation, a reading-position indicator and reduced-motion support. This section describes the docs site itself, not the main product frontend."),
       ] },
-      { h: "What is and isn't verified", blocks: [
-        NOTE("note", "Source boundary", "The backend ZIP confirms the API routes and SSE response contract. It does not contain the main frontend application, so the exact client-side state library, token-storage mechanism, component tree and API wrapper are not claimed here."),
+      { h: "What is and isn't covered", blocks: [
+        NOTE("note", "Scope of this page", "The API routes and the SSE response contract described here come from the backend code. The main frontend's client-side state library, token-storage mechanism, component tree and API wrapper aren't described here."),
       ] },
     ],
   },
