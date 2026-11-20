@@ -1581,7 +1581,7 @@ event: error        # instead of complete, on failure` }],
       ] },
       { h: "API integration and authentication", blocks: [
         P("The frontend treats the Django API as the authority for identity, workspace ownership, document status and conversation data. Request cancellation, loading and error states, token expiry, refresh handling and protection against double submits all sit on that boundary."),
-        P("The backend exposes `/api/auth/` for account operations, `/api/workspaces/` for workspaces, `/api/documents/` for uploads and status, and `/api/chat/` for conversations and streaming messages. How the frontend stores tokens and manages its client-side state isn't covered on this page."),
+        P("The backend exposes `/api/auth/` for account operations, `/api/workspaces/` for workspaces, `/api/documents/` for uploads and status, and `/api/chat/` for conversations and streaming messages. How the frontend stores tokens and manages its client-side state isn't covered here."),
       ] },
       { h: "Streaming chat and accessibility", blocks: [
         P("For chat, the browser reads a streaming response and parses the SSE event boundaries. The UI has to tell progress events, text deltas, completion and failure apart, and it has to cope with the user navigating away or the connection breaking."),
@@ -1604,7 +1604,6 @@ event: error        # instead of complete, on failure` }],
     ],
   },
 ];
-
 /* --------------------------- docs chrome --------------------------- */
 
 const FOCUS = "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/60";
@@ -1780,7 +1779,7 @@ function TopBar({ onMenu, onSearch, authed, scrolled, progress, githubUrl, appHr
       <div className="grid w-full grid-cols-[1fr_auto] items-center gap-4 px-4 sm:px-6 xl:grid-cols-[1fr_auto_1fr]" style={{ height: "var(--nav)" }}>
         <div className="flex min-w-0 items-center gap-2.5 justify-self-start">
           <button type="button" onClick={onMenu} aria-label="Open page list" className={`grid size-9 place-items-center rounded-md text-white/80 hover:bg-white/[0.06] lg:hidden ${FOCUS}`}><Icon n="menu" className="size-5" /></button>
-          <Link href="/engineering" scroll={false} aria-label="QueryPilot docs home" className={`flex items-center gap-2.5 rounded-md text-[16px] font-semibold tracking-[-0.02em] text-white ${FOCUS}`}>
+          <Link href="/" scroll={false} aria-label="QueryPilot home" className={`flex items-center gap-2.5 rounded-md text-[16px] font-semibold tracking-[-0.02em] text-white ${FOCUS}`}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/querypilot-logo.svg" alt="" aria-hidden="true" className="size-6 object-contain" />
             <span className="max-[479px]:hidden">QueryPilot</span>
