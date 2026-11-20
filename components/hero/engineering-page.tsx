@@ -6,7 +6,7 @@ import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 
 import { authApi } from "@/lib/django-api";
 import {
-  API, AUTH, CARDS, CHAT, CMP, CODE, CROSS, DEPLOY, DIA, ERD, EXPLORER_CSS, FACTS, GRAPH, H3, INGEST, Home, ChapterBanner, Icon, LLMF, NOTE, OL, P, PageNav, RETR, SCOPE, SHIP, SPLIT, SQLF, STEPS, STORAGE, TBL, UL, VIZ, Blocks, hue, to,
+  API, AUTH, CARDS, CHAT, CMP, CODE, CROSS, DEPLOY, DIA, ERD, EXPLORER_CSS, FACTS, GRAPH, H3, INGEST, Home, ChapterBanner, Icon, LLMF, NOTE, OL, P, PageNav, RETR, SCOPE, SHIP, SPLIT, SQLF, STEPS, STORAGE, TBL, UL, VIZ, Blocks, to,
 } from "@/components/hero/engineering-explorer";
 import type { Block, Group, HubItem, Section } from "@/components/hero/engineering-explorer";
 import { PixelDissolveButton } from "@/components/pixel-dissolve-button";
@@ -26,7 +26,7 @@ import { ButtonFx, PD_COLORS, PD_GHOST, PD_PILL } from "@/components/hero/engine
  *    nothing is a measurement. Nothing here is a host, ID, bucket, key, port, secret or file path.
  * ========================================================================== */
 
-const GITHUB_URL = "#";
+const GITHUB_URL = "https://github.com/Amogh-Mudakavi/QueryPilot_backend";
 const APP_HREF = "/workspaces";
 const LOGIN_HREF = "/login";
 const UPDATED = "Nov 2026";
@@ -1806,9 +1806,8 @@ function TopBar({ onMenu, onSearch, authed, scrolled, progress, githubUrl, appHr
             href={githubUrl}
             target="_blank"
             rel="noopener noreferrer"
-            aria-label="GitHub (temporarily disabled)"
+            aria-label="GitHub repository"
             title="GitHub"
-            onClick={(e) => e.preventDefault()}
             className={`hidden size-9 items-center justify-center rounded-md text-white/80 transition-colors hover:bg-white/[0.06] hover:text-white sm:inline-flex ${FOCUS}`}
           >
             <Icon n="github" className="size-5" />

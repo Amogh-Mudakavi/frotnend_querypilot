@@ -25,7 +25,7 @@ const FRAME = "w-[var(--qp-frame,min(92vw,1120px))]";
 const BRAND_BLUE = "#3a44a8";
 const BRAND_DISSOLVE_BLUE = "#2a3282";
 // Temporary: disable external GitHub redirect until you want to point this at your own repo.
-const GITHUB_URL = "#";
+const GITHUB_URL = "https://github.com/Amogh-Mudakavi/QueryPilot_backend";
 // Relative on purpose: resolves to localhost:3000/engineering in dev and to your own domain in production.
 const ENGINEERING_HREF = "/engineering";
 // Where a signed-in person lands (same place the auth page sends them after login).
