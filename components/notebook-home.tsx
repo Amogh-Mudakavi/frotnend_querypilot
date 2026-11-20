@@ -1269,35 +1269,32 @@ export function NotebookHome() {
     }
   }
 
-  // Fetch the static ZIP and save it through a Blob URL. This keeps the user on
-  // the overview page instead of navigating the tab to the static asset URL.
+  // Build the ZIP in the browser from the individual sample files in public/samples,
+  // then save it through a Blob URL. No pre-made .zip files are needed on the server.
   const downloadPresetFiles = async (p: Preset) => {
     setError('')
 
     try {
-      const response = await fetch(p.downloadUrl, {
-        method: 'GET',
-        cache: 'no-store',
-        credentials: 'same-origin',
-      })
+      const { default: JSZip } = await import('jszip')
+      const zip = new JSZip()
 
-      if (!response.ok) {
-        throw new Error(
-          `The ${p.name} download is missing from the deployed site (HTTP ${response.status}). ` +
-          'Add the contents of the sample-assets archive to public/ and redeploy.',
-        )
-      }
+      await Promise.all(
+        p.files.map(async (f) => {
+          const res = await fetch(f.url, { cache: 'no-store' })
+          if (!res.ok) {
+            throw new Error(
+              `Could not load ${f.name} (HTTP ${res.status}). Check that public${f.url} exists and is committed to git.`,
+            )
+          }
+          zip.file(f.name, await res.blob())
+        }),
+      )
 
-      const blob = await response.blob()
-      if (blob.size === 0) {
-        throw new Error(`The ${p.name} download is empty. Please redeploy the sample assets.`)
-      }
-
+      const blob = await zip.generateAsync({ type: 'blob' })
       const objectUrl = window.URL.createObjectURL(blob)
       const anchor = document.createElement('a')
-      const filename = p.downloadUrl.split('/').pop() || 'querypilot-sample-files.zip'
       anchor.href = objectUrl
-      anchor.download = filename
+      anchor.download = p.downloadUrl.split('/').pop() || 'querypilot-sample-files.zip'
       anchor.style.display = 'none'
       document.body.appendChild(anchor)
       anchor.click()
