@@ -16,6 +16,7 @@ import {
 } from 'react'
 import {
   Calculator,
+  Download,
   GitMerge,
   Landmark,
   Percent,
@@ -674,6 +675,48 @@ function TemplateCard({ p, busy, disabled, onPick }: { p: Preset; busy: boolean;
       </span>
       <span className="mt-1.5 block text-[13px] leading-5 text-[#8c8c8c] [text-wrap:pretty]">“{p.ask}”</span>
     </button>
+  )
+}
+
+/**
+ * Keep downloads outside the clickable template button so the two actions never nest.
+ * Filenames open the original sample (PDFs preview in the browser); the download icon
+ * explicitly downloads that same file with its original filename.
+ */
+function TemplateDownloads({ p }: { p: Preset }) {
+  return (
+    <details className="group mt-1.5 px-4">
+      <summary
+        className={`flex cursor-pointer list-none items-center gap-1.5 py-1 text-[11px] text-[#777] outline-none transition-colors hover:text-[#b8b8b8] focus-visible:text-[#e6e6e6] [&::-webkit-details-marker]:hidden ${focusRing}`}
+      >
+        <Download size={12} strokeWidth={1.7} aria-hidden="true" />
+        <span>View / download sample files ({p.files.length})</span>
+      </summary>
+      <div className="mb-1 ml-0.5 space-y-0.5 border-l border-white/[0.1] pl-2.5">
+        {p.files.map((file) => (
+          <div key={file.name} className="flex min-w-0 items-center gap-2 rounded-md py-1">
+            <a
+              href={file.url}
+              target="_blank"
+              rel="noreferrer"
+              className={`min-w-0 flex-1 truncate text-[11px] text-[#999] transition-colors hover:text-[#e6e6e6] ${focusRing}`}
+              title={`Open ${file.name}`}
+            >
+              {file.name}
+            </a>
+            <a
+              href={file.url}
+              download={file.name}
+              aria-label={`Download ${file.name}`}
+              title={`Download ${file.name}`}
+              className={`grid size-6 flex-none place-items-center rounded text-[#888] transition-colors hover:bg-white/[0.07] hover:text-[#e6e6e6] ${focusRing}`}
+            >
+              <Download size={12} strokeWidth={1.7} aria-hidden="true" />
+            </a>
+          </div>
+        ))}
+      </div>
+    </details>
   )
 }
 
@@ -1477,13 +1520,15 @@ export function NotebookHome() {
                       </SectionHead>
                       <div className={GRID}>
                         {presets.map((p) => (
-                          <TemplateCard
-                            key={p.name}
-                            p={p}
-                            busy={pendingPreset === p.name}
-                            disabled={creating}
-                            onPick={startPreset}
-                          />
+                          <div key={p.name} className="min-w-0">
+                            <TemplateCard
+                              p={p}
+                              busy={pendingPreset === p.name}
+                              disabled={creating}
+                              onPick={startPreset}
+                            />
+                            <TemplateDownloads p={p} />
+                          </div>
                         ))}
                       </div>
                     </section>
