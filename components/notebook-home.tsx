@@ -94,6 +94,7 @@ type Preset = {
   tint: string
   answer: string
   source: string
+  downloadUrl: string
   cat: Category
   files: SampleFile[]
 }
@@ -107,6 +108,7 @@ const PRESETS: Preset[] = [
     tint: '#e0a54a',
     answer: 'Under the sample FY 2026-27 tax policy, Priya\'s ₹12,00,000 taxable income results in ₹80,000 annual tax before credits.',
     source: 'Tax policy + payroll summary + payroll register',
+    downloadUrl: '/samples/downloads/payroll-tax.zip',
     files: [
       { name: '01_Orchid_Tax_Slab_Policy_FY2026-27.pdf', url: '/samples/payroll-tax/01_Orchid_Tax_Slab_Policy_FY2026-27.pdf' },
       { name: '02_Priya_Nair_Payroll_Summary_FY2026-27.pdf', url: '/samples/payroll-tax/02_Priya_Nair_Payroll_Summary_FY2026-27.pdf' },
@@ -121,6 +123,7 @@ const PRESETS: Preset[] = [
     tint: '#dc6b66',
     answer: 'Yes. The executed NDA requires 30 days\' written notice; the executed MSA requires 60 days. The register shows no signed amendment resolving the difference.',
     source: 'Executed NDA + executed MSA + contract register',
+    downloadUrl: '/samples/downloads/contract-conflict.zip',
     files: [
       { name: '01_Brightline_Mutual_NDA_Executed.pdf', url: '/samples/contract-conflict/01_Brightline_Mutual_NDA_Executed.pdf' },
       { name: '02_Brightline_Master_Services_Agreement_Executed.pdf', url: '/samples/contract-conflict/02_Brightline_Master_Services_Agreement_Executed.pdf' },
@@ -135,6 +138,7 @@ const PRESETS: Preset[] = [
     tint: '#529cca',
     answer: 'Acme Services billed ₹14.2L against a ₹12L cap (₹2.2L over); Zenith Office billed ₹6.8L against a ₹6L cap (₹0.8L over).',
     source: 'Vendor agreement + Q3 invoice register + AP reconciliation',
+    downloadUrl: '/samples/downloads/vendor-caps.zip',
     files: [
       { name: '01_Vendor_Agreement_and_Annual_Caps.pdf', url: '/samples/vendor-caps/01_Vendor_Agreement_and_Annual_Caps.pdf' },
       { name: '02_Q3_2026_Vendor_Invoice_Register.xlsx', url: '/samples/vendor-caps/02_Q3_2026_Vendor_Invoice_Register.xlsx' },
@@ -149,6 +153,7 @@ const PRESETS: Preset[] = [
     tint: '#9a6dd7',
     answer: 'A-102 maps to the 8.5% annual reducing-balance rate. A ₹10,00,000 loan over 20 years has an estimated EMI of ₹8,678.',
     source: 'Credit rate policy + loan product terms + applicant register',
+    downloadUrl: '/samples/downloads/loan-applicants.zip',
     files: [
       { name: '01_Cedar_Credit_Rate_Policy.pdf', url: '/samples/loan-applicants/01_Cedar_Credit_Rate_Policy.pdf' },
       { name: '02_Cedar_Retail_Loan_Product_Terms.pdf', url: '/samples/loan-applicants/02_Cedar_Retail_Loan_Product_Terms.pdf' },
@@ -163,6 +168,7 @@ const PRESETS: Preset[] = [
     tint: '#4dab9a',
     answer: 'Claim 4821 is covered for ₹3,00,000. After the policy\'s ₹25,000 deductible, the estimated payable amount is ₹2,75,000.',
     source: 'Policy wording + claims guide + claims register',
+    downloadUrl: '/samples/downloads/insurance.zip',
     files: [
       { name: '01_Harbor_Health_Policy_Wording.pdf', url: '/samples/insurance/01_Harbor_Health_Policy_Wording.pdf' },
       { name: '02_Harbor_Claims_Handling_Guide.pdf', url: '/samples/insurance/02_Harbor_Claims_Handling_Guide.pdf' },
@@ -177,6 +183,7 @@ const PRESETS: Preset[] = [
     tint: '#7c8cf0',
     answer: 'Rahul earns ₹82,000: 5% on the first ₹10,00,000 of eligible Q3 sales and 8% on the remaining ₹4,00,000.',
     source: 'Commission plan + Q3 transactions + regional sales review',
+    downloadUrl: '/samples/downloads/sales-commission.zip',
     files: [
       { name: '01_Northstar_Q3_2026_Commission_Plan.pdf', url: '/samples/sales-commission/01_Northstar_Q3_2026_Commission_Plan.pdf' },
       { name: '02_Northstar_Q3_2026_Sales_Transactions.xlsx', url: '/samples/sales-commission/02_Northstar_Q3_2026_Sales_Transactions.xlsx' },
@@ -662,61 +669,30 @@ function TemplateIcon({ p }: { p: Preset }) {
 
 function TemplateCard({ p, busy, disabled, onPick }: { p: Preset; busy: boolean; disabled: boolean; onPick: (p: Preset) => void }) {
   return (
-    <button
-      type="button"
-      onClick={() => onPick(p)}
-      disabled={disabled}
-      className={`flex w-full flex-col rounded-lg border border-white/[0.1] px-4 py-3.5 text-left transition-colors enabled:hover:border-white/[0.18] enabled:hover:bg-white/[0.04] focus-visible:border-white/[0.18] focus-visible:bg-white/[0.04] active:bg-white/[0.06] disabled:cursor-not-allowed disabled:opacity-60 ${focusRing}`}
-    >
-      <span className="flex items-center gap-2.5">
-        <TemplateIcon p={p} />
-        <span className="min-w-0 flex-1 truncate text-[14px] font-medium leading-5 text-[#ececec]">{p.name}</span>
-        {busy && <span className="flex-none text-[12px] text-[#9a9a9a]">Creating…</span>}
-      </span>
-      <span className="mt-1.5 block text-[13px] leading-5 text-[#8c8c8c] [text-wrap:pretty]">“{p.ask}”</span>
-    </button>
-  )
-}
-
-/**
- * Keep downloads outside the clickable template button so the two actions never nest.
- * Filenames open the original sample (PDFs preview in the browser); the download icon
- * explicitly downloads that same file with its original filename.
- */
-function TemplateDownloads({ p }: { p: Preset }) {
-  return (
-    <details className="group mt-1.5 px-4">
-      <summary
-        className={`flex cursor-pointer list-none items-center gap-1.5 py-1 text-[11px] text-[#777] outline-none transition-colors hover:text-[#b8b8b8] focus-visible:text-[#e6e6e6] [&::-webkit-details-marker]:hidden ${focusRing}`}
+    <div className={`flex w-full flex-col rounded-lg border border-white/[0.1] px-4 py-3.5 text-left transition-colors hover:border-white/[0.18] hover:bg-white/[0.04] ${disabled ? 'opacity-60' : ''}`}>
+      <button
+        type="button"
+        onClick={() => onPick(p)}
+        disabled={disabled}
+        className={`flex w-full flex-col text-left outline-none disabled:cursor-not-allowed ${focusRing}`}
+      >
+        <span className="flex items-center gap-2.5">
+          <TemplateIcon p={p} />
+          <span className="min-w-0 flex-1 truncate text-[14px] font-medium leading-5 text-[#ececec]">{p.name}</span>
+          {busy && <span className="flex-none text-[12px] text-[#9a9a9a]">Creating…</span>}
+        </span>
+        <span className="mt-1.5 block text-[13px] leading-5 text-[#8c8c8c] [text-wrap:pretty]">“{p.ask}”</span>
+      </button>
+      <a
+        href={p.downloadUrl}
+        download
+        onClick={(event) => event.stopPropagation()}
+        className={`mt-2 inline-flex w-fit items-center gap-1.5 text-[11px] leading-4 text-[#777] outline-none transition-colors hover:text-[#c4c4c4] ${focusRing}`}
       >
         <Download size={12} strokeWidth={1.7} aria-hidden="true" />
-        <span>View / download sample files ({p.files.length})</span>
-      </summary>
-      <div className="mb-1 ml-0.5 space-y-0.5 border-l border-white/[0.1] pl-2.5">
-        {p.files.map((file) => (
-          <div key={file.name} className="flex min-w-0 items-center gap-2 rounded-md py-1">
-            <a
-              href={file.url}
-              target="_blank"
-              rel="noreferrer"
-              className={`min-w-0 flex-1 truncate text-[11px] text-[#999] transition-colors hover:text-[#e6e6e6] ${focusRing}`}
-              title={`Open ${file.name}`}
-            >
-              {file.name}
-            </a>
-            <a
-              href={file.url}
-              download={file.name}
-              aria-label={`Download ${file.name}`}
-              title={`Download ${file.name}`}
-              className={`grid size-6 flex-none place-items-center rounded text-[#888] transition-colors hover:bg-white/[0.07] hover:text-[#e6e6e6] ${focusRing}`}
-            >
-              <Download size={12} strokeWidth={1.7} aria-hidden="true" />
-            </a>
-          </div>
-        ))}
-      </div>
-    </details>
+        <span>View/download source files</span>
+      </a>
+    </div>
   )
 }
 
@@ -1515,7 +1491,7 @@ export function NotebookHome() {
 
                   {presets.length > 0 && (
                     <section id="templates" className="mt-10 scroll-mt-6">
-                      <SectionHead hint="Creates a private workspace with these sample documents. You can open the chat as soon as the uploads finish while indexing continues in the background.">
+                      <SectionHead>
                         Start from a template
                       </SectionHead>
                       <div className={GRID}>
@@ -1527,7 +1503,6 @@ export function NotebookHome() {
                               disabled={creating}
                               onPick={startPreset}
                             />
-                            <TemplateDownloads p={p} />
                           </div>
                         ))}
                       </div>
