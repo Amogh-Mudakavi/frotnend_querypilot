@@ -15,35 +15,26 @@ import {
   type ReactNode,
 } from 'react'
 import {
-  ArrowUpRight,
-  BarChart3,
   Calculator,
   FileSpreadsheet,
   FileText,
-  FlaskConical,
   GitMerge,
   Landmark,
-  Package,
   Percent,
   ShieldCheck,
   Wallet,
   ChevronRight,
   ChevronsUpDown,
-  Code2,
   Folder,
   FolderOpen,
-  Headphones,
   LayoutGrid,
   LayoutTemplate,
   LogOut,
   MoreHorizontal,
   Plus,
-  Receipt,
-  Scale,
   Search,
   Settings,
   Trash2,
-  Users,
   X,
   type LucideIcon,
 } from 'lucide-react'
@@ -94,10 +85,9 @@ const MENU_PANEL =
 const NAV_ITEM =
   'flex h-8 w-full items-center gap-2.5 rounded-md px-2.5 text-left text-[13px] text-[#a8a8a8] transition-colors hover:bg-white/[0.04] hover:text-[#ececec]'
 
-/* ---------------- Templates: each one shows the kind of question it answers ---------------- */
-type Category = 'Finance' | 'People & pay' | 'Legal' | 'Operations' | 'Technical'
-const CATEGORIES: Category[] = ['Finance', 'People & pay', 'Legal', 'Operations', 'Technical']
-
+/* ---------------- Six runnable sample templates ---------------- */
+type Category = 'Finance' | 'People & pay' | 'Legal'
+type SampleFile = { name: string; url: string }
 type Preset = {
   name: string
   ask: string
@@ -106,31 +96,124 @@ type Preset = {
   answer: string
   source: string
   cat: Category
+  files: SampleFile[]
 }
+
 const PRESETS: Preset[] = [
-  // Cross-document templates: every question needs facts from two files (rules in a PDF, data in a sheet, or two PDFs compared).
-  { name: 'Payroll & Tax Slab Joins', cat: 'People & pay', ask: 'How much tax does Priya owe this year?', Icon: Calculator, tint: '#e0a54a', answer: 'Her ₹12,00,000 taxable income (payroll.xlsx) spans three slabs in the PDF: ₹80,000 a year, about ₹6,667 a month.', source: 'tax-slabs.pdf + payroll.xlsx' },
-  { name: 'Contract Conflict Check', cat: 'Legal', ask: 'Do the NDA and MSA disagree on termination notice?', Icon: GitMerge, tint: '#dc6b66', answer: "Yes. The NDA allows 30 days' notice, while the MSA requires 60.", source: 'nda.pdf + vendor-msa.pdf' },
-  { name: 'Vendor Spend vs Contract Caps', cat: 'Finance', ask: 'Which vendors billed above their contract cap?', Icon: Landmark, tint: '#529cca', answer: 'Acme billed ₹14.2L against a ₹12L cap, and Zenith ₹6.8L against ₹6L.', source: 'vendor-msa.pdf + invoices.xlsx' },
-  { name: 'Loan Rates & Applicants', cat: 'Finance', ask: "What is applicant A-102's monthly EMI?", Icon: Percent, tint: '#9a6dd7', answer: 'A credit score of 760 sits in the 8.5% band, so the EMI on ₹10L over 20 years is about ₹8,678.', source: 'rate-sheet.pdf + applicants.xlsx' },
-  { name: 'Insurance Claims & Policies', cat: 'Finance', ask: 'Is claim 4821 covered, and for how much?', Icon: ShieldCheck, tint: '#4dab9a', answer: 'A ₹3,00,000 claim is within the ₹5L limit; after the ₹25,000 deductible the payout is ₹2,75,000.', source: 'policy.pdf + claims.xlsx' },
-  { name: 'Sales Commission Plans', cat: 'People & pay', ask: 'What commission does Rahul earn for Q3?', Icon: Wallet, tint: '#7c8cf0', answer: '₹82,000: 5% on his first ₹10L of sales and 8% on the remaining ₹4L.', source: 'commission-plan.pdf + q3-sales.xlsx' },
-  { name: 'Research Paper Comparison', cat: 'Technical', ask: 'Which paper reports the best F1 on SQuAD?', Icon: FlaskConical, tint: '#9a6dd7', answer: 'Paper B reports 0.91 F1, ahead of Paper A at 0.88, both on the same test split.', source: 'paper-a.pdf + paper-b.pdf' },
-  { name: 'Inventory & Supplier Terms', cat: 'Operations', ask: 'Which SKUs need reordering, and from whom?', Icon: Package, tint: '#4dab9a', answer: 'SKU-114 and SKU-207 are below reorder level; order from Nova Parts and Kite Supply.', source: 'reorder-rules.pdf + stock.xlsx' },
-  { name: 'HR & Onboarding', cat: 'People & pay', ask: 'How many leave days carry over?', Icon: Users, tint: '#4dab9a', answer: 'Up to 10 unused days carry over into the next year.', source: 'leave-policy.pdf' },
-  { name: 'Customer Support Runbooks', cat: 'Operations', ask: 'How do I refund a duplicate charge?', Icon: Headphones, tint: '#529cca', answer: 'Open the charge in Billing, choose Refund duplicate, then confirm.', source: 'refund-runbook.md' },
-  { name: 'Salary & Tax Policies', cat: 'People & pay', ask: 'Which deductions apply to my CTC?', Icon: Receipt, tint: '#e0a54a', answer: 'HRA and the standard deduction apply to your CTC breakdown.', source: 'tax-policy.pdf' },
-  { name: 'Financial 10-K Reports', cat: 'Finance', ask: 'What drove operating margin last year?', Icon: BarChart3, tint: '#9a6dd7', answer: 'Margin rose as cost of revenue grew slower than sales.', source: 'form-10k.pdf' },
-  { name: 'Legal & Vendor Contracts', cat: 'Legal', ask: 'When does the vendor contract renew?', Icon: Scale, tint: '#dc6b66', answer: 'It renews each year unless cancelled 60 days before the term ends.', source: 'vendor-msa.pdf' },
-  { name: 'Engineering Specs', cat: 'Technical', ask: 'Which endpoints need the admin scope?', Icon: Code2, tint: '#7c8cf0', answer: 'Every /admin route requires the admin scope.', source: 'api-spec.yaml' },
+  {
+    name: 'Payroll & Tax Slab Joins',
+    cat: 'People & pay',
+    ask: 'How much tax does Priya owe this year?',
+    Icon: Calculator,
+    tint: '#e0a54a',
+    answer: 'Under the sample FY 2026-27 tax policy, Priya\'s ₹12,00,000 taxable income results in ₹80,000 annual tax before credits.',
+    source: 'Tax policy + payroll summary + payroll register',
+    files: [
+      { name: '01_Orchid_Tax_Slab_Policy_FY2026-27.pdf', url: '/samples/payroll-tax/01_Orchid_Tax_Slab_Policy_FY2026-27.pdf' },
+      { name: '02_Priya_Nair_Payroll_Summary_FY2026-27.pdf', url: '/samples/payroll-tax/02_Priya_Nair_Payroll_Summary_FY2026-27.pdf' },
+      { name: '03_Payroll_Register_FY2026-27.xlsx', url: '/samples/payroll-tax/03_Payroll_Register_FY2026-27.xlsx' },
+    ],
+  },
+  {
+    name: 'Contract Conflict Check',
+    cat: 'Legal',
+    ask: 'Do the NDA and MSA disagree on termination notice?',
+    Icon: GitMerge,
+    tint: '#dc6b66',
+    answer: 'Yes. The executed NDA requires 30 days\' written notice; the executed MSA requires 60 days. The register shows no signed amendment resolving the difference.',
+    source: 'Executed NDA + executed MSA + contract register',
+    files: [
+      { name: '01_Brightline_Mutual_NDA_Executed.pdf', url: '/samples/contract-conflict/01_Brightline_Mutual_NDA_Executed.pdf' },
+      { name: '02_Brightline_Master_Services_Agreement_Executed.pdf', url: '/samples/contract-conflict/02_Brightline_Master_Services_Agreement_Executed.pdf' },
+      { name: '03_Brightline_Contract_Register.xlsx', url: '/samples/contract-conflict/03_Brightline_Contract_Register.xlsx' },
+    ],
+  },
+  {
+    name: 'Vendor Spend vs Contract Caps',
+    cat: 'Finance',
+    ask: 'Which vendors billed above their contract cap?',
+    Icon: Landmark,
+    tint: '#529cca',
+    answer: 'Acme Services billed ₹14.2L against a ₹12L cap (₹2.2L over); Zenith Office billed ₹6.8L against a ₹6L cap (₹0.8L over).',
+    source: 'Vendor agreement + Q3 invoice register + AP reconciliation',
+    files: [
+      { name: '01_Vendor_Agreement_and_Annual_Caps.pdf', url: '/samples/vendor-caps/01_Vendor_Agreement_and_Annual_Caps.pdf' },
+      { name: '02_Q3_2026_Vendor_Invoice_Register.xlsx', url: '/samples/vendor-caps/02_Q3_2026_Vendor_Invoice_Register.xlsx' },
+      { name: '03_Q3_2026_Accounts_Payable_Reconciliation.pdf', url: '/samples/vendor-caps/03_Q3_2026_Accounts_Payable_Reconciliation.pdf' },
+    ],
+  },
+  {
+    name: 'Loan Rates & Applicants',
+    cat: 'Finance',
+    ask: "What is applicant A-102's monthly EMI?",
+    Icon: Percent,
+    tint: '#9a6dd7',
+    answer: 'A-102 maps to the 8.5% annual reducing-balance rate. A ₹10,00,000 loan over 20 years has an estimated EMI of ₹8,678.',
+    source: 'Credit rate policy + loan product terms + applicant register',
+    files: [
+      { name: '01_Cedar_Credit_Rate_Policy.pdf', url: '/samples/loan-applicants/01_Cedar_Credit_Rate_Policy.pdf' },
+      { name: '02_Cedar_Retail_Loan_Product_Terms.pdf', url: '/samples/loan-applicants/02_Cedar_Retail_Loan_Product_Terms.pdf' },
+      { name: '03_Cedar_Applicant_Assessment_Register.xlsx', url: '/samples/loan-applicants/03_Cedar_Applicant_Assessment_Register.xlsx' },
+    ],
+  },
+  {
+    name: 'Insurance Claims & Policies',
+    cat: 'Finance',
+    ask: 'Is claim 4821 covered, and for how much?',
+    Icon: ShieldCheck,
+    tint: '#4dab9a',
+    answer: 'Claim 4821 is covered for ₹3,00,000. After the policy\'s ₹25,000 deductible, the estimated payable amount is ₹2,75,000.',
+    source: 'Policy wording + claims guide + claims register',
+    files: [
+      { name: '01_Harbor_Health_Policy_Wording.pdf', url: '/samples/insurance/01_Harbor_Health_Policy_Wording.pdf' },
+      { name: '02_Harbor_Claims_Handling_Guide.pdf', url: '/samples/insurance/02_Harbor_Claims_Handling_Guide.pdf' },
+      { name: '03_Harbor_Q3_2026_Claims_Register.xlsx', url: '/samples/insurance/03_Harbor_Q3_2026_Claims_Register.xlsx' },
+    ],
+  },
+  {
+    name: 'Sales Commission Plans',
+    cat: 'People & pay',
+    ask: 'What commission does Rahul earn for Q3?',
+    Icon: Wallet,
+    tint: '#7c8cf0',
+    answer: 'Rahul earns ₹82,000: 5% on the first ₹10,00,000 of eligible Q3 sales and 8% on the remaining ₹4,00,000.',
+    source: 'Commission plan + Q3 transactions + regional sales review',
+    files: [
+      { name: '01_Northstar_Q3_2026_Commission_Plan.pdf', url: '/samples/sales-commission/01_Northstar_Q3_2026_Commission_Plan.pdf' },
+      { name: '02_Northstar_Q3_2026_Sales_Transactions.xlsx', url: '/samples/sales-commission/02_Northstar_Q3_2026_Sales_Transactions.xlsx' },
+      { name: '03_Northstar_Q3_2026_Regional_Sales_Review.pdf', url: '/samples/sales-commission/03_Northstar_Q3_2026_Regional_Sales_Review.pdf' },
+    ],
+  },
 ]
 
-const sourceFiles = (source: string) =>
-  source
-    .split('+')
-    .map((s) => s.trim())
-    .filter(Boolean)
 const isSheet = (file: string) => /\.(xlsx|xls|csv)$/i.test(file)
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
+async function waitForDocumentReady(documentId: number) {
+  const deadline = Date.now() + 4 * 60 * 1000
+  let lastStatus = 'pending'
+
+  while (Date.now() < deadline) {
+    const current = await documentApi.status(documentId)
+    const status = String(current.status || '').toLowerCase()
+    const jobStatus = String(current.job_status || '').toLowerCase()
+    lastStatus = jobStatus ? `${status} / ${jobStatus}` : status || 'pending'
+
+    if (['ready', 'completed', 'complete', 'succeeded', 'success'].includes(status) ||
+        ['ready', 'completed', 'complete', 'succeeded', 'success'].includes(jobStatus)) {
+      return
+    }
+
+    if (/fail|error|cancel/.test(`${status} ${jobStatus}`)) {
+      throw new Error(current.error_message || `A sample document could not be processed (${lastStatus}).`)
+    }
+
+    await sleep(2500)
+  }
+
+  throw new Error(`Sample document processing timed out. Last status: ${lastStatus}. You can retry this template.`)
+}
 
 /* ---------------- Status ---------------- */
 type StatusKey = 'synced' | 'indexing' | 'idle'
@@ -596,32 +679,56 @@ function WorkspaceRow({ w, onOpen, onDelete }: { w: Workspace; onOpen: (w: Works
   )
 }
 
-/* ---------------- Templates ---------------- */
+/* ---------------- Template cards ---------------- */
 function TemplateIcon({ p }: { p: Preset }) {
   return (
-    <span
-      aria-hidden="true"
-      className="grid size-6 flex-none place-items-center rounded-md border border-[var(--qp-border)] bg-[var(--qp-input)] text-[var(--qp-text-secondary)]"
-    >
+    <span aria-hidden="true" className="grid size-6 flex-none place-items-center rounded-md border border-[var(--qp-border)] bg-[var(--qp-input)] text-[var(--qp-text-secondary)]">
       <p.Icon size={14} strokeWidth={1.6} />
     </span>
   )
 }
 
-function TemplateCard({ p, busy, disabled, onPick }: { p: Preset; busy: boolean; disabled: boolean; onPick: (p: Preset) => void }) {
+function FileChip({ file }: { file: string }) {
+  const Glyph = isSheet(file) ? FileSpreadsheet : FileText
+  return (
+    <span className="inline-flex h-5 max-w-full items-center gap-1 rounded bg-[var(--qp-input)] px-1.5 text-[11px] text-[var(--qp-text-secondary)]">
+      <Glyph size={11} strokeWidth={1.6} className="flex-none text-[var(--qp-text-muted)]" aria-hidden="true" />
+      <span className="truncate">{file}</span>
+    </span>
+  )
+}
+
+function TemplateCard({ p, busy, disabled, exists, progress, onPick }: {
+  p: Preset
+  busy: boolean
+  disabled: boolean
+  exists: boolean
+  progress: string
+  onPick: (p: Preset) => void
+}) {
   return (
     <button
       type="button"
       onClick={() => onPick(p)}
       disabled={disabled}
-      className={`flex w-full flex-col rounded-lg border border-white/[0.1] px-4 py-3.5 text-left transition-colors enabled:hover:border-white/[0.18] enabled:hover:bg-white/[0.04] focus-visible:border-white/[0.18] focus-visible:bg-white/[0.04] active:bg-white/[0.06] disabled:cursor-not-allowed disabled:opacity-60 ${focusRing}`}
+      className={`group flex h-full w-full flex-col rounded-lg border border-[var(--qp-border)] bg-[var(--qp-surface)] p-4 text-left transition-colors enabled:hover:bg-[var(--qp-surface-hover)] focus-visible:bg-[var(--qp-surface-hover)] disabled:cursor-not-allowed disabled:opacity-60 ${focusRing}`}
     >
       <span className="flex items-center gap-2.5">
         <TemplateIcon p={p} />
-        <span className="min-w-0 flex-1 truncate text-[14px] font-medium leading-5 text-[#ececec]">{p.name}</span>
-        {busy && <span className="flex-none text-[12px] text-[#9a9a9a]">Creating…</span>}
+        <span className="min-w-0 flex-1 break-words text-[14px] font-medium leading-5 text-[var(--qp-text-primary)]">{p.name}</span>
+        <span className="flex-none text-[11px] text-[var(--qp-text-muted)]">{busy ? 'Preparing…' : exists ? 'Open' : '3 files'}</span>
       </span>
-      <span className="mt-1.5 block text-[13px] leading-5 text-[#8c8c8c] [text-wrap:pretty]">“{p.ask}”</span>
+      <span className="mt-2 block text-[13px] leading-5 text-[var(--qp-text-secondary)] [text-wrap:pretty]">“{p.ask}”</span>
+      <span className="mt-auto block pt-4">
+        <span className="block rounded-md border border-[var(--qp-border-subtle)] bg-[var(--qp-background)] px-3 pb-3 pt-2.5">
+          <span className="block text-[11px] leading-4 text-[var(--qp-text-muted)]">Example answer</span>
+          <span className="mt-1 block text-[13px] leading-[18px] text-[var(--qp-text-primary)] [text-wrap:pretty]">{p.answer}</span>
+          <span className="mt-2.5 flex flex-wrap gap-1.5">
+            {p.files.map((f) => <FileChip key={f.name} file={f.name} />)}
+          </span>
+          {busy && <span className="mt-2 block text-[11px] text-[var(--qp-text-secondary)]" aria-live="polite">{progress || 'Uploading and indexing sample documents…'}</span>}
+        </span>
+      </span>
     </button>
   )
 }
@@ -639,233 +746,6 @@ function SectionHead({ children, hint, action }: { children: ReactNode; hint?: s
       </div>
       {hint && <p className="max-w-[640px] text-[13px] leading-5 text-[#8c8c8c] [text-wrap:pretty]">{hint}</p>}
     </div>
-  )
-}
-
-/* ---------------- Template gallery (opened from the sidebar or "Browse all") ---------------- */
-/*
- * Cards are neutral surfaces. The template's tint appears in exactly three places: the icon tile,
- * the file glyphs, and the border on hover. No colour washes on the card itself.
- * The answer panel sits fully inside the card and is pinned to the bottom, so every row lines up
- * even when the questions wrap to a different number of lines.
- */
-function FileChip({ file }: { file: string }) {
-  const Glyph = isSheet(file) ? FileSpreadsheet : FileText
-  return (
-    <span className="inline-flex h-5 max-w-full items-center gap-1 rounded bg-[var(--qp-input)] px-1.5 text-[11px] text-[var(--qp-text-secondary)]">
-      <Glyph size={11} strokeWidth={1.6} className="flex-none text-[var(--qp-text-muted)]" aria-hidden="true" />
-      <span className="truncate">{file}</span>
-    </span>
-  )
-}
-
-function GalleryCard({ p, exists, busy, disabled, onPick }: { p: Preset; exists: boolean; busy: boolean; disabled: boolean; onPick: (p: Preset) => void }) {
-  const files = sourceFiles(p.source)
-  return (
-    <button
-      type="button"
-      onClick={() => onPick(p)}
-      disabled={disabled}
-      className={`group flex h-full w-full flex-col rounded-lg border border-[var(--qp-border)] bg-[var(--qp-surface)] p-4 text-left transition-colors enabled:hover:bg-[var(--qp-surface-hover)] focus-visible:bg-[var(--qp-surface-hover)] disabled:cursor-not-allowed disabled:opacity-60 ${focusRing}`}
-    >
-      <span className="flex items-center gap-2.5">
-        <TemplateIcon p={p} />
-        <span className="min-w-0 flex-1 break-words text-[14px] font-medium leading-5 text-[var(--qp-text-primary)]">{p.name}</span>
-        {busy ? (
-          <span className="flex-none text-[12px] text-[var(--qp-text-secondary)]">Creating…</span>
-        ) : exists ? (
-          <span className="inline-flex flex-none items-center gap-1 text-[12px] text-[var(--qp-text-secondary)]">
-            Open <ArrowUpRight size={12} strokeWidth={1.8} aria-hidden="true" />
-          </span>
-        ) : (
-          <ArrowUpRight
-            size={14}
-            strokeWidth={1.8}
-            aria-hidden="true"
-            className="flex-none text-[var(--qp-text-muted)] opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
-          />
-        )}
-      </span>
-
-      <span className="mt-2 block text-[13px] leading-5 text-[var(--qp-text-secondary)] [text-wrap:pretty]">“{p.ask}”</span>
-
-      <span className="mt-auto block pt-4">
-        <span className="block rounded-md border border-[var(--qp-border-subtle)] bg-[var(--qp-background)] px-3 pb-3 pt-2.5">
-          <span className="block text-[11px] leading-4 text-[var(--qp-text-muted)]">Sample answer</span>
-          <span className="mt-1 block text-[13px] leading-[18px] text-[var(--qp-text-primary)] [text-wrap:pretty]">{p.answer}</span>
-          <span className="mt-2.5 flex flex-wrap gap-1.5">
-            {files.map((f) => (
-              <FileChip key={f} file={f} />
-            ))}
-          </span>
-        </span>
-      </span>
-    </button>
-  )
-}
-
-function TemplateGallery({
-  open,
-  onClose,
-  presets,
-  existing,
-  pending,
-  creating,
-  onPick,
-}: {
-  open: boolean
-  onClose: () => void
-  presets: Preset[]
-  existing: Set<string>
-  pending: string | null
-  creating: boolean
-  onPick: (p: Preset) => void
-}) {
-  const [q, setQ] = useState('')
-  const [cat, setCat] = useState<Category | 'All'>('All')
-  useEffect(() => {
-    if (open) {
-      setQ('')
-      setCat('All')
-    }
-  }, [open])
-
-  const needle = q.trim().toLowerCase()
-  const matched = useMemo(
-    () => (needle ? presets.filter((p) => `${p.name} ${p.ask} ${p.source}`.toLowerCase().includes(needle)) : presets),
-    [presets, needle]
-  )
-  // Category counts follow the search, so the rail always tells you where the matches are.
-  const counts = useMemo(() => {
-    const c: Record<string, number> = { All: matched.length }
-    for (const p of matched) c[p.cat] = (c[p.cat] ?? 0) + 1
-    return c
-  }, [matched])
-  const shown = cat === 'All' ? matched : matched.filter((p) => p.cat === cat)
-  const created = presets.filter((p) => existing.has(p.name.toLowerCase())).length
-  const tabs: (Category | 'All')[] = ['All', ...CATEGORIES]
-
-  return (
-    // Fixed height so the dialog does not jump while you filter; only the card area scrolls.
-    <Dialog open={open} onClose={onClose} labelledBy="tpl-title" width="max-w-[1080px]" height="h-[min(780px,calc(100dvh-2rem))]" padded={false}>
-      <div className="flex h-14 flex-none items-center gap-3 border-b border-white/[0.08] px-5">
-        <h2 id="tpl-title" className="flex items-baseline gap-2 text-[15px] font-semibold tracking-tight text-white">
-          Templates
-          <span className="text-[13px] font-normal tabular-nums text-[#7e7e7e]">{presets.length}</span>
-        </h2>
-        <div className="relative ml-auto min-w-0 flex-1 sm:max-w-[260px]">
-          <Search size={14} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-500" />
-          <input
-            autoFocus
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Search templates"
-            aria-label="Search templates"
-            spellCheck={false}
-            className={`${FIELD_SM} !pl-8`}
-          />
-        </div>
-        <button
-          type="button"
-          aria-label="Close"
-          onClick={onClose}
-          className={`-mr-2 grid size-8 flex-none place-items-center rounded-md text-[#8a8a8a] transition-colors hover:bg-white/[0.07] hover:text-[#e6e6e6] ${focusRing}`}
-        >
-          <X size={15} />
-        </button>
-      </div>
-
-      <div className="flex min-h-0 flex-1">
-        <nav
-          aria-label="Template categories"
-          className="hidden w-[188px] flex-none flex-col gap-0.5 overflow-y-auto border-r border-white/[0.08] p-2.5 sm:flex"
-        >
-          {tabs.map((t) => {
-            const active = cat === t
-            const n = counts[t] ?? 0
-            return (
-              <button
-                key={t}
-                type="button"
-                aria-pressed={active}
-                onClick={() => setCat(t)}
-                className={`flex h-8 w-full items-center justify-between gap-2 rounded-md px-2.5 text-left text-[13px] transition-colors ${
-                  active ? 'bg-white/[0.06] text-[#ececec]' : 'text-[#a8a8a8] hover:bg-white/[0.04] hover:text-[#ececec]'
-                } ${focusRing}`}
-              >
-                <span className="truncate">{t}</span>
-                <span className={`flex-none text-[12px] tabular-nums ${active ? 'text-[#a8a8a8]' : n === 0 ? 'text-[#4f4f4f]' : 'text-[#6f6f6f]'}`}>{n}</span>
-              </button>
-            )
-          })}
-        </nav>
-
-        <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain p-5 [scrollbar-color:#3a3a3a_transparent] [scrollbar-width:thin]">
-          <div className="-mx-5 mb-4 flex gap-1.5 overflow-x-auto px-5 [scrollbar-width:none] sm:hidden" role="group" aria-label="Template categories">
-            {tabs.map((t) => {
-              const active = cat === t
-              return (
-                <button
-                  key={t}
-                  type="button"
-                  aria-pressed={active}
-                  onClick={() => setCat(t)}
-                  className={`h-7 flex-none whitespace-nowrap rounded-full border px-3 text-[12px] transition-colors ${
-                    active
-                      ? 'border-white/[0.2] bg-white/[0.08] text-[#ececec]'
-                      : 'border-white/[0.1] text-[#a8a8a8] hover:text-[#ececec]'
-                  } ${focusRing}`}
-                >
-                  {t}
-                </button>
-              )
-            })}
-          </div>
-
-          <p className="mb-4 max-w-[60ch] text-[13px] leading-5 text-[#8c8c8c]">
-            Each template starts an empty workspace with this name. Add your own documents, then ask questions like these.
-          </p>
-
-          {shown.length === 0 ? (
-            <div className="flex flex-col items-center gap-3 py-14 text-center">
-              <p className="text-[13px] text-zinc-500">{q.trim() ? <>No templates match “{q.trim()}”</> : 'No templates in this category'}</p>
-              <Pill
-                onClick={() => {
-                  setQ('')
-                  setCat('All')
-                }}
-              >
-                Clear filters
-              </Pill>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 auto-rows-fr gap-3 lg:grid-cols-2">
-              {shown.map((p) => (
-                <GalleryCard
-                  key={p.name}
-                  p={p}
-                  exists={existing.has(p.name.toLowerCase())}
-                  busy={pending === p.name}
-                  disabled={creating}
-                  onPick={onPick}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div className="flex h-11 flex-none items-center gap-4 border-t border-white/[0.08] px-5 text-[12px] text-[#8c8c8c]">
-        <span className="tabular-nums" aria-live="polite">
-          {shown.length === presets.length ? `${presets.length} templates` : `${shown.length} of ${presets.length} templates`}
-        </span>
-        {created > 0 && <span className="tabular-nums">{created} already in your workspaces</span>}
-        <span className="ml-auto hidden items-center gap-1.5 sm:flex">
-          <kbd className="rounded border border-white/[0.12] px-1.5 py-px text-[10px] text-[#8a8a8a]">Esc</kbd>
-          to close
-        </span>
-      </div>
-    </Dialog>
   )
 }
 
@@ -1163,7 +1043,7 @@ export function NotebookHome() {
   const [createOpen, setCreateOpen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<Workspace | null>(null)
   const [paletteOpen, setPaletteOpen] = useState(false)
-  const [galleryOpen, setGalleryOpen] = useState(false)
+  const [presetProgress, setPresetProgress] = useState('')
   const mounted = useRef(true)
   const loadSeq = useRef(0)
   const canCreateRef = useRef(false)
@@ -1268,11 +1148,8 @@ export function NotebookHome() {
 
   const recent = useMemo(() => [...workspaces].sort(byRecent), [workspaces])
 
-  // Templates you already turned into a workspace are not offered again.
-  const presets = useMemo(() => {
-    const taken = new Set(workspaces.map((w) => w.title.trim().toLowerCase()))
-    return PRESETS.filter((p) => !taken.has(p.name.toLowerCase()))
-  }, [workspaces])
+  // Keep all six examples visible; clicking an existing example reuses its own workspace.
+  const presets = PRESETS
 
   const totals = useMemo(() => {
     let documents = 0
@@ -1319,17 +1196,75 @@ export function NotebookHome() {
 
   const startPreset = async (p: Preset) => {
     if (creating) return
-    const existing = workspaces.find((w) => w.title.trim().toLowerCase() === p.name.toLowerCase())
-    if (existing) return openWorkspace(existing)
     setCreating(true)
     setPendingPreset(p.name)
+    setPresetProgress('Preparing sample documents…')
     setError('')
+
+    let workspace: Workspace | undefined
     try {
-      await makeWorkspace(p.name)
+      workspace = workspaces.find((w) => w.title.trim().toLowerCase() === p.name.toLowerCase())
+      if (!workspace) {
+        workspace = await workspaceApi.create(p.name)
+        setWorkspaces((current) => [workspace!, ...current.filter((w) => w.id !== workspace!.id)])
+      }
+
+      selectWorkspace(workspace.id)
+
+      // Never mix a public demo bundle into a user's unrelated workspace with the same name.
+      const documents = await documentApi.list(workspace.id)
+      const expectedNames = new Set(p.files.map((f) => f.name.toLowerCase()))
+      const unexpected = documents.filter((d) => !expectedNames.has(String(d.title).split('/').pop()!.toLowerCase()))
+      if (unexpected.length > 0) {
+        throw new Error(`“${p.name}” already contains other documents. Rename that workspace or remove its documents before using this sample.`)
+      }
+      if (documents.length > p.files.length) {
+        throw new Error(`This sample workspace already contains more than ${p.files.length} documents. Remove the extras before retrying.`)
+      }
+
+      for (let index = 0; index < p.files.length; index += 1) {
+        const sample = p.files[index]
+        let existingDoc = documents.find((d) => String(d.title).split('/').pop()!.toLowerCase() === sample.name.toLowerCase())
+
+        if (existingDoc && /fail|error/.test(String(existingDoc.status).toLowerCase())) {
+          await documentApi.remove(existingDoc.id)
+          existingDoc = undefined
+        }
+
+        if (existingDoc) {
+          setPresetProgress(`Checking document ${index + 1} of ${p.files.length}…`)
+          await waitForDocumentReady(existingDoc.id)
+          continue
+        }
+
+        setPresetProgress(`Uploading document ${index + 1} of ${p.files.length}…`)
+        const response = await fetch(sample.url, { cache: 'force-cache' })
+        if (!response.ok) {
+          throw new Error(`Could not load ${sample.name} from the deployed sample files (HTTP ${response.status}).`)
+        }
+        const blob = await response.blob()
+        const file = new File([blob], sample.name, { type: blob.type || (isSheet(sample.name)
+          ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+          : 'application/pdf') })
+        const uploaded = await documentApi.upload(workspace.id, file)
+        await waitForDocumentReady(uploaded.document_id)
+        documents.push({
+          id: uploaded.document_id,
+          title: sample.name,
+          source_type: isSheet(sample.name) ? 'xlsx' : 'pdf',
+          status: 'ready',
+          uploaded_at: new Date().toISOString(),
+        })
+      }
+
+      setPresetProgress('All sample documents are ready. Opening workspace…')
+      router.push(`/workspaces/${workspace.id}?new=1`)
     } catch (err) {
       setError(errorMessage(err))
       setCreating(false)
       setPendingPreset(null)
+      setPresetProgress('')
+      return
     }
   }
 
@@ -1359,7 +1294,6 @@ export function NotebookHome() {
   const paletteItems: PaletteItem[] = paletteOpen
     ? [
         { id: 'new', group: 'Actions', label: 'New workspace', hint: 'Create', Icon: Plus, run: () => setCreateOpen(true) },
-        { id: 'browse', group: 'Actions', label: 'Browse templates', hint: 'Open', Icon: LayoutTemplate, run: () => setGalleryOpen(true) },
         ...recent.map((w) => ({ id: `w${w.id}`, group: 'Workspaces', label: w.title, hint: 'Open', Icon: Folder, run: () => openWorkspace(w) })),
         ...presets.map((p) => ({ id: `t${p.name}`, group: 'Templates', label: p.name, hint: 'Template', Icon: p.Icon, run: () => void startPreset(p) })),
       ]
@@ -1402,7 +1336,7 @@ export function NotebookHome() {
               <LayoutGrid size={15} strokeWidth={1.6} className="flex-none" /> Overview
             </Link>
             {loaded && (
-              <button type="button" onClick={() => setGalleryOpen(true)} className={`${NAV_ITEM} mt-0.5 ${focusRing}`}>
+              <button type="button" onClick={() => document.getElementById('templates')?.scrollIntoView({ behavior: 'smooth' })} className={`${NAV_ITEM} mt-0.5 ${focusRing}`}>
                 <LayoutTemplate size={15} strokeWidth={1.6} className="flex-none" /> Templates
               </button>
             )}
@@ -1567,26 +1501,20 @@ export function NotebookHome() {
 
                   {presets.length > 0 && (
                     <section id="templates" className="mt-10 scroll-mt-6">
-                      <SectionHead
-                        hint="Starts an empty workspace with this name. Add your own documents, then ask questions like these."
-                        action={
-                          <PixelDissolveButton
-                            type="button"
-                            label="Browse all"
-                            onClick={() => setGalleryOpen(true)}
-                            color="transparent"
-                            textColor="#a8a8a8"
-                            dissolveColor="rgba(255,255,255,0.28)"
-                            cellSize={4}
-                            className={`${PILL_BASE} !h-7 !px-3 border !border-white/10`}
-                          />
-                        }
-                      >
-                        Start from a template
+                      <SectionHead hint="Each example creates a private workspace and uploads three ready-to-use sample documents. Once indexing finishes, the example question is ready to ask.">
+                        Try with sample documents
                       </SectionHead>
                       <div className={GRID}>
-                        {presets.slice(0, 6).map((p) => (
-                          <TemplateCard key={p.name} p={p} busy={pendingPreset === p.name} disabled={creating} onPick={startPreset} />
+                        {presets.map((p) => (
+                          <TemplateCard
+                            key={p.name}
+                            p={p}
+                            busy={pendingPreset === p.name}
+                            disabled={creating}
+                            exists={workspaces.some((w) => w.title.trim().toLowerCase() === p.name.toLowerCase())}
+                            progress={pendingPreset === p.name ? presetProgress : ''}
+                            onPick={startPreset}
+                          />
                         ))}
                       </div>
                     </section>
@@ -1608,19 +1536,6 @@ export function NotebookHome() {
           </p>
           <CreateForm creating={creating} autoFocus onCreate={createWorkspace} onCancel={() => setCreateOpen(false)} />
         </Dialog>
-
-        <TemplateGallery
-          open={galleryOpen}
-          onClose={() => setGalleryOpen(false)}
-          presets={PRESETS}
-          existing={new Set(workspaces.map((w) => w.title.trim().toLowerCase()))}
-          pending={pendingPreset}
-          creating={creating}
-          onPick={(p) => {
-            setGalleryOpen(false)
-            void startPreset(p)
-          }}
-        />
 
         <DeleteDialog workspace={deleteTarget} onClose={() => setDeleteTarget(null)} onConfirm={removeWorkspace} />
       </main>
