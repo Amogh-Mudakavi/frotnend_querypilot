@@ -16,8 +16,6 @@ import {
 } from 'react'
 import {
   Calculator,
-  FileSpreadsheet,
-  FileText,
   GitMerge,
   Landmark,
   Percent,
@@ -187,33 +185,6 @@ const PRESETS: Preset[] = [
 ]
 
 const isSheet = (file: string) => /\.(xlsx|xls|csv)$/i.test(file)
-
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
-
-async function waitForDocumentReady(documentId: number) {
-  const deadline = Date.now() + 4 * 60 * 1000
-  let lastStatus = 'pending'
-
-  while (Date.now() < deadline) {
-    const current = await documentApi.status(documentId)
-    const status = String(current.status || '').toLowerCase()
-    const jobStatus = String(current.job_status || '').toLowerCase()
-    lastStatus = jobStatus ? `${status} / ${jobStatus}` : status || 'pending'
-
-    if (['ready', 'completed', 'complete', 'succeeded', 'success'].includes(status) ||
-        ['ready', 'completed', 'complete', 'succeeded', 'success'].includes(jobStatus)) {
-      return
-    }
-
-    if (/fail|error|cancel/.test(`${status} ${jobStatus}`)) {
-      throw new Error(current.error_message || `A sample document could not be processed (${lastStatus}).`)
-    }
-
-    await sleep(2500)
-  }
-
-  throw new Error(`Sample document processing timed out. Last status: ${lastStatus}. You can retry this template.`)
-}
 
 /* ---------------- Status ---------------- */
 type StatusKey = 'synced' | 'indexing' | 'idle'
@@ -688,47 +659,20 @@ function TemplateIcon({ p }: { p: Preset }) {
   )
 }
 
-function FileChip({ file }: { file: string }) {
-  const Glyph = isSheet(file) ? FileSpreadsheet : FileText
-  return (
-    <span className="inline-flex h-5 max-w-full items-center gap-1 rounded bg-[var(--qp-input)] px-1.5 text-[11px] text-[var(--qp-text-secondary)]">
-      <Glyph size={11} strokeWidth={1.6} className="flex-none text-[var(--qp-text-muted)]" aria-hidden="true" />
-      <span className="truncate">{file}</span>
-    </span>
-  )
-}
-
-function TemplateCard({ p, busy, disabled, exists, progress, onPick }: {
-  p: Preset
-  busy: boolean
-  disabled: boolean
-  exists: boolean
-  progress: string
-  onPick: (p: Preset) => void
-}) {
+function TemplateCard({ p, busy, disabled, onPick }: { p: Preset; busy: boolean; disabled: boolean; onPick: (p: Preset) => void }) {
   return (
     <button
       type="button"
       onClick={() => onPick(p)}
       disabled={disabled}
-      className={`group flex h-full w-full flex-col rounded-lg border border-[var(--qp-border)] bg-[var(--qp-surface)] p-4 text-left transition-colors enabled:hover:bg-[var(--qp-surface-hover)] focus-visible:bg-[var(--qp-surface-hover)] disabled:cursor-not-allowed disabled:opacity-60 ${focusRing}`}
+      className={`flex w-full flex-col rounded-lg border border-white/[0.1] px-4 py-3.5 text-left transition-colors enabled:hover:border-white/[0.18] enabled:hover:bg-white/[0.04] focus-visible:border-white/[0.18] focus-visible:bg-white/[0.04] active:bg-white/[0.06] disabled:cursor-not-allowed disabled:opacity-60 ${focusRing}`}
     >
       <span className="flex items-center gap-2.5">
         <TemplateIcon p={p} />
-        <span className="min-w-0 flex-1 break-words text-[14px] font-medium leading-5 text-[var(--qp-text-primary)]">{p.name}</span>
-        <span className="flex-none text-[11px] text-[var(--qp-text-muted)]">{busy ? 'Preparing…' : exists ? 'Open' : '3 files'}</span>
+        <span className="min-w-0 flex-1 truncate text-[14px] font-medium leading-5 text-[#ececec]">{p.name}</span>
+        {busy && <span className="flex-none text-[12px] text-[#9a9a9a]">Creating…</span>}
       </span>
-      <span className="mt-2 block text-[13px] leading-5 text-[var(--qp-text-secondary)] [text-wrap:pretty]">“{p.ask}”</span>
-      <span className="mt-auto block pt-4">
-        <span className="block rounded-md border border-[var(--qp-border-subtle)] bg-[var(--qp-background)] px-3 pb-3 pt-2.5">
-          <span className="block text-[11px] leading-4 text-[var(--qp-text-muted)]">Example answer</span>
-          <span className="mt-1 block text-[13px] leading-[18px] text-[var(--qp-text-primary)] [text-wrap:pretty]">{p.answer}</span>
-          <span className="mt-2.5 flex flex-wrap gap-1.5">
-            {p.files.map((f) => <FileChip key={f.name} file={f.name} />)}
-          </span>
-          {busy && <span className="mt-2 block text-[11px] text-[var(--qp-text-secondary)]" aria-live="polite">{progress || 'Uploading and indexing sample documents…'}</span>}
-        </span>
-      </span>
+      <span className="mt-1.5 block text-[13px] leading-5 text-[#8c8c8c] [text-wrap:pretty]">“{p.ask}”</span>
     </button>
   )
 }
@@ -1043,7 +987,6 @@ export function NotebookHome() {
   const [createOpen, setCreateOpen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<Workspace | null>(null)
   const [paletteOpen, setPaletteOpen] = useState(false)
-  const [presetProgress, setPresetProgress] = useState('')
   const mounted = useRef(true)
   const loadSeq = useRef(0)
   const canCreateRef = useRef(false)
@@ -1196,14 +1139,16 @@ export function NotebookHome() {
 
   const startPreset = async (p: Preset) => {
     if (creating) return
+
     setCreating(true)
     setPendingPreset(p.name)
-    setPresetProgress('Preparing sample documents…')
     setError('')
 
-    let workspace: Workspace | undefined
     try {
-      workspace = workspaces.find((w) => w.title.trim().toLowerCase() === p.name.toLowerCase())
+      let workspace = workspaces.find(
+        (w) => w.title.trim().toLowerCase() === p.name.toLowerCase(),
+      )
+
       if (!workspace) {
         workspace = await workspaceApi.create(p.name)
         setWorkspaces((current) => [workspace!, ...current.filter((w) => w.id !== workspace!.id)])
@@ -1211,60 +1156,86 @@ export function NotebookHome() {
 
       selectWorkspace(workspace.id)
 
-      // Never mix a public demo bundle into a user's unrelated workspace with the same name.
+      // Reuse files already uploaded for this sample. This also makes a retry after a
+      // partial upload safe: only files that are still missing are uploaded again.
       const documents = await documentApi.list(workspace.id)
-      const expectedNames = new Set(p.files.map((f) => f.name.toLowerCase()))
-      const unexpected = documents.filter((d) => !expectedNames.has(String(d.title).split('/').pop()!.toLowerCase()))
+      const expectedNames = new Set(p.files.map((file) => file.name.toLowerCase()))
+      const documentName = (title: string) =>
+        String(title).replace(/\\/g, '/').split('/').pop()?.toLowerCase() ?? ''
+
+      const unexpected = documents.filter((doc) => !expectedNames.has(documentName(doc.title)))
       if (unexpected.length > 0) {
-        throw new Error(`“${p.name}” already contains other documents. Rename that workspace or remove its documents before using this sample.`)
+        throw new Error(
+          `“${p.name}” already contains other documents. Rename that workspace or remove its documents before using this sample.`,
+        )
       }
+
       if (documents.length > p.files.length) {
-        throw new Error(`This sample workspace already contains more than ${p.files.length} documents. Remove the extras before retrying.`)
+        throw new Error(
+          `This sample workspace already contains more than ${p.files.length} documents. Remove the extras before retrying.`,
+        )
       }
 
-      for (let index = 0; index < p.files.length; index += 1) {
-        const sample = p.files[index]
-        let existingDoc = documents.find((d) => String(d.title).split('/').pop()!.toLowerCase() === sample.name.toLowerCase())
-
-        if (existingDoc && /fail|error/.test(String(existingDoc.status).toLowerCase())) {
-          await documentApi.remove(existingDoc.id)
-          existingDoc = undefined
-        }
-
-        if (existingDoc) {
-          setPresetProgress(`Checking document ${index + 1} of ${p.files.length}…`)
-          await waitForDocumentReady(existingDoc.id)
-          continue
-        }
-
-        setPresetProgress(`Uploading document ${index + 1} of ${p.files.length}…`)
-        const response = await fetch(sample.url, { cache: 'force-cache' })
-        if (!response.ok) {
-          throw new Error(`Could not load ${sample.name} from the deployed sample files (HTTP ${response.status}).`)
-        }
-        const blob = await response.blob()
-        const file = new File([blob], sample.name, { type: blob.type || (isSheet(sample.name)
-          ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-          : 'application/pdf') })
-        const uploaded = await documentApi.upload(workspace.id, file)
-        await waitForDocumentReady(uploaded.document_id)
-        documents.push({
-          id: uploaded.document_id,
-          title: sample.name,
-          source_type: isSheet(sample.name) ? 'xlsx' : 'pdf',
-          status: 'ready',
-          uploaded_at: new Date().toISOString(),
-        })
+      // A failed prior upload is not a usable copy. Remove it so this click can retry it.
+      const failedDocuments = documents.filter((doc) =>
+        /fail|error/.test(String(doc.status).toLowerCase()),
+      )
+      if (failedDocuments.length > 0) {
+        await Promise.all(failedDocuments.map((doc) => documentApi.remove(doc.id)))
       }
 
-      setPresetProgress('All sample documents are ready. Opening workspace…')
+      const usableDocuments = documents.filter(
+        (doc) => !failedDocuments.some((failed) => failed.id === doc.id),
+      )
+      const uploadedNames = new Set(usableDocuments.map((doc) => documentName(doc.title)))
+      const missingFiles = p.files.filter((file) => !uploadedNames.has(file.name.toLowerCase()))
+
+      // Upload the complete bundle together. The API response confirms the file has
+      // been accepted; indexing continues in the background through the existing worker.
+      // Wait for all upload requests to settle (not for document processing) so a retry
+      // cannot race with requests that are still in flight.
+      const uploadResults = await Promise.allSettled(
+        missingFiles.map(async (sample) => {
+          const response = await fetch(sample.url, { cache: 'force-cache' })
+          if (!response.ok) {
+            throw new Error(
+              `Could not load ${sample.name} from the deployed sample files (HTTP ${response.status}).`,
+            )
+          }
+
+          const blob = await response.blob()
+          const file = new File(
+            [blob],
+            sample.name,
+            {
+              type:
+                blob.type ||
+                (isSheet(sample.name)
+                  ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                  : 'application/pdf'),
+            },
+          )
+
+          return documentApi.upload(workspace!.id, file)
+        }),
+      )
+
+      const failedUpload = uploadResults.find(
+        (result): result is PromiseRejectedResult => result.status === 'rejected',
+      )
+      if (failedUpload) {
+        throw failedUpload.reason instanceof Error
+          ? failedUpload.reason
+          : new Error('One or more sample documents could not be uploaded. Please retry.')
+      }
+
+      // Do not poll documentApi.status here. The workspace chat page displays the
+      // existing indexing state while the ingestion worker processes the files.
       router.push(`/workspaces/${workspace.id}?new=1`)
     } catch (err) {
       setError(errorMessage(err))
       setCreating(false)
       setPendingPreset(null)
-      setPresetProgress('')
-      return
     }
   }
 
@@ -1501,8 +1472,8 @@ export function NotebookHome() {
 
                   {presets.length > 0 && (
                     <section id="templates" className="mt-10 scroll-mt-6">
-                      <SectionHead hint="Each example creates a private workspace and uploads three ready-to-use sample documents. Once indexing finishes, the example question is ready to ask.">
-                        Try with sample documents
+                      <SectionHead hint="Creates a private workspace with these sample documents. You can open the chat as soon as the uploads finish while indexing continues in the background.">
+                        Start from a template
                       </SectionHead>
                       <div className={GRID}>
                         {presets.map((p) => (
@@ -1511,8 +1482,6 @@ export function NotebookHome() {
                             p={p}
                             busy={pendingPreset === p.name}
                             disabled={creating}
-                            exists={workspaces.some((w) => w.title.trim().toLowerCase() === p.name.toLowerCase())}
-                            progress={pendingPreset === p.name ? presetProgress : ''}
                             onPick={startPreset}
                           />
                         ))}
