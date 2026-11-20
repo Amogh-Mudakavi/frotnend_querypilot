@@ -229,8 +229,8 @@ export function MobileGate() {
               id="qpg-title"
               className="mt-6 text-[30px] font-medium leading-[1.08] tracking-[-0.03em]"
             >
-              <span className="block text-white/50">Nice phone.</span>
-              <span className="block">Wrong screen.</span>
+              <span className="block text-white/50">Built for a</span>
+              <span className="block">wider screen.</span>
             </h2>
 
             <p id="qpg-desc" className="mt-4 text-[15px] leading-[1.55] text-white/60">
