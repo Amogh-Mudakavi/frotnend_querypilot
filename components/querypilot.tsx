@@ -1192,7 +1192,7 @@ function Composer(props: ComposerProps) {
           <SendButton sending={sending} canSend={canSend} onSend={onSend} onStop={onStop} />
         </div>
         <p className="mt-2 text-center text-[13px] leading-5 text-zinc-500">
-          Answers come from your sources. Check key details in the citations.
+          QueryPilot runs on free-tier AI models, which have limits on how much text they can read and write at once. On questions that need a lot of evidence, some of it may get left out, so answers can occasionally be incomplete or wrong. Please verify key details in the citations.
         </p>
       </div>
     </div>

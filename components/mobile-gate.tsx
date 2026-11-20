@@ -234,9 +234,7 @@ export function MobileGate() {
             </h2>
 
             <p id="qpg-desc" className="mt-4 text-[15px] leading-[1.55] text-white/60">
-              This page has a live graph, a chat and a whole docs site, and they all need some
-              elbow room. On a phone they get squished, and I put a lot of work into them.
-              Give it two minutes on a laptop.
+              QueryPilot includes a live pipeline view, a chat workspace and detailed engineering docs. They are built for a wider screen and feel cramped on a phone. For the full experience, open it on a laptop.
             </p>
 
             <div className="mt-6 flex flex-col gap-2.5">
@@ -265,7 +263,7 @@ export function MobileGate() {
             </div>
 
             <p className="mt-4 text-center text-[12.5px] text-white/35">
-              Tip: WhatsApp it to yourself and open it at your desk.
+              Tip: WhatsApp the link to yourself and open it on a laptop.
             </p>
           </div>
         </div>
