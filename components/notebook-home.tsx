@@ -667,7 +667,19 @@ function TemplateIcon({ p }: { p: Preset }) {
   )
 }
 
-function TemplateCard({ p, busy, disabled, onPick }: { p: Preset; busy: boolean; disabled: boolean; onPick: (p: Preset) => void }) {
+function TemplateCard({
+  p,
+  busy,
+  disabled,
+  onPick,
+  onDownload,
+}: {
+  p: Preset
+  busy: boolean
+  disabled: boolean
+  onPick: (p: Preset) => void
+  onDownload: (p: Preset) => void
+}) {
   return (
     <div className={`flex w-full flex-col rounded-lg border border-white/[0.1] px-4 py-3.5 text-left transition-colors hover:border-white/[0.18] hover:bg-white/[0.04] ${disabled ? 'opacity-60' : ''}`}>
       <button
@@ -683,15 +695,14 @@ function TemplateCard({ p, busy, disabled, onPick }: { p: Preset; busy: boolean;
         </span>
         <span className="mt-1.5 block text-[13px] leading-5 text-[#8c8c8c] [text-wrap:pretty]">“{p.ask}”</span>
       </button>
-      <a
-        href={p.downloadUrl}
-        download
-        onClick={(event) => event.stopPropagation()}
+      <button
+        type="button"
+        onClick={() => onDownload(p)}
         className={`mt-2 inline-flex w-fit items-center gap-1.5 text-[11px] leading-4 text-[#777] outline-none transition-colors hover:text-[#c4c4c4] ${focusRing}`}
       >
         <Download size={12} strokeWidth={1.7} aria-hidden="true" />
         <span>View/download source files</span>
-      </a>
+      </button>
     </div>
   )
 }
@@ -1258,6 +1269,45 @@ export function NotebookHome() {
     }
   }
 
+  // Fetch the static ZIP and save it through a Blob URL. This keeps the user on
+  // the overview page instead of navigating the tab to the static asset URL.
+  const downloadPresetFiles = async (p: Preset) => {
+    setError('')
+
+    try {
+      const response = await fetch(p.downloadUrl, {
+        method: 'GET',
+        cache: 'no-store',
+        credentials: 'same-origin',
+      })
+
+      if (!response.ok) {
+        throw new Error(
+          `The ${p.name} download is missing from the deployed site (HTTP ${response.status}). ` +
+          'Add the contents of the sample-assets archive to public/ and redeploy.',
+        )
+      }
+
+      const blob = await response.blob()
+      if (blob.size === 0) {
+        throw new Error(`The ${p.name} download is empty. Please redeploy the sample assets.`)
+      }
+
+      const objectUrl = window.URL.createObjectURL(blob)
+      const anchor = document.createElement('a')
+      const filename = p.downloadUrl.split('/').pop() || 'querypilot-sample-files.zip'
+      anchor.href = objectUrl
+      anchor.download = filename
+      anchor.style.display = 'none'
+      document.body.appendChild(anchor)
+      anchor.click()
+      anchor.remove()
+      window.setTimeout(() => window.URL.revokeObjectURL(objectUrl), 1500)
+    } catch (err) {
+      setError(errorMessage(err))
+    }
+  }
+
   const removeWorkspace = async (w: Workspace) => {
     await workspaceApi.remove(w.id)
     setWorkspaces((cur) => cur.filter((x) => x.id !== w.id))
@@ -1502,6 +1552,7 @@ export function NotebookHome() {
                               busy={pendingPreset === p.name}
                               disabled={creating}
                               onPick={startPreset}
+                              onDownload={(preset) => void downloadPresetFiles(preset)}
                             />
                           </div>
                         ))}
